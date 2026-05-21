@@ -19,6 +19,50 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color: var(--text); min-height: 100vh; }
+
+/* ── 로그인 화면 ── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 50%, #1a1a2e 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+#login-screen.hidden { display: none; }
+.login-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 20px; padding: 48px;
+  width: 380px; backdrop-filter: blur(20px);
+  text-align: center;
+}
+.login-logo { font-family: 'Noto Serif KR', serif; font-size: 11px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+.login-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 32px; }
+.login-input {
+  width: 100%; padding: 13px 16px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; color: #fff;
+  font-size: 15px; font-family: 'Pretendard', sans-serif;
+  outline: none; text-align: center; letter-spacing: 4px;
+  margin-bottom: 14px; transition: border-color 0.2s;
+}
+.login-input:focus { border-color: var(--gold); }
+.login-input::placeholder { letter-spacing: 1px; color: rgba(255,255,255,0.3); }
+.login-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--gold), #c49a20);
+  color: #1a1a2e; border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700;
+  font-family: 'Pretendard', sans-serif;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.login-btn:hover { opacity: 0.88; }
+.login-error { color: #f87171; font-size: 13px; margin-top: 10px; min-height: 20px; }
+
+/* ── 앱 ── */
+#app { display: none; }
+#app.visible { display: flex; }
 .sidebar { width: 220px; min-height: 100vh; background: var(--dark); flex-shrink: 0; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; }
 .sidebar-header { padding: 28px 22px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .sidebar-logo { font-family: 'Noto Serif KR', serif; font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
@@ -27,6 +71,9 @@ body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
 .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
 .nav-item.active { background: rgba(176,28,46,0.35); color: #fff; }
+.sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.logout-btn { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.logout-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); }
 .main-content { margin-left: 220px; flex: 1; min-height: 100vh; }
 .panel { display: none; padding: 36px 40px; }
 .panel.active { display: block; }
@@ -99,7 +146,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 </style>
 </head>
 <body>
-<div style="display:flex">
+
+<!-- 로그인 화면 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Chaeum English Academy</div>
+    <div class="login-title">채움영어 관리 시스템</div>
+    <div class="login-sub">비밀번호를 입력해주세요</div>
+    <input class="login-input" type="password" id="pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter') tryLogin()">
+    <button class="login-btn" onclick="tryLogin()">입장하기</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- 앱 본체 -->
+<div id="app">
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">Chaeum English</div>
@@ -110,6 +171,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="nav-item"        onclick="showPanel('report')"   id="nav-report">📋 &nbsp;보고서 생성</div>
       <div class="nav-item"        onclick="showPanel('students')" id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
     </nav>
+    <div class="sidebar-footer">
+      <div class="logout-btn" onclick="logout()">🔓 &nbsp;로그아웃</div>
+    </div>
   </aside>
   <main class="main-content">
     <div class="panel active" id="panel-record">
@@ -181,15 +245,50 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   </main>
 </div>
 <div id="toast"></div>
+
 <script>
+// ── 비밀번호 설정 (여기서 변경하세요) ──
+const PASSWORD = 'cu0623';
+
+function tryLogin() {
+  const pw = document.getElementById('pw-input').value;
+  if(pw === PASSWORD) {
+    sessionStorage.setItem('chaeum_auth', '1');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    initApp();
+  } else {
+    document.getElementById('login-error').textContent = '비밀번호가 틀렸습니다.';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('chaeum_auth');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
 window.onload = function() {
+  if(sessionStorage.getItem('chaeum_auth') === '1') {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    initApp();
+  }
+};
+
+function initApp() {
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
   document.getElementById('r-date').value = today;
   document.getElementById('rep-end').value = today;
   document.getElementById('rep-start').value = weekAgo;
   updateGrades();
-};
+}
+
 function showPanel(n) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -197,6 +296,7 @@ function showPanel(n) {
   document.getElementById('nav-'+n).classList.add('active');
   if(n==='students') loadStudents();
 }
+
 function updateGrades() {
   const type = document.getElementById('r-type').value;
   const sel = document.getElementById('r-grade');
@@ -204,12 +304,14 @@ function updateGrades() {
   const max = type==='초등'?6:3;
   for(let i=1;i<=max;i++) sel.innerHTML+=`<option>${i}학년</option>`;
 }
+
 async function api(endpoint, body) {
   const res = await fetch('/api/'+endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const data = await res.json();
   if(!res.ok||data.error) throw new Error(data.error||'오류 발생');
   return data;
 }
+
 async function saveRecord() {
   const name = document.getElementById('r-name').value.trim();
   if(!name){toast('이름을 입력해주세요.');return;}
@@ -232,9 +334,10 @@ async function saveRecord() {
     });
     status.className='status-msg success'; status.textContent=r.message;
     ['r-name','r-word','r-grammar','r-reading','r-listening','r-writing','r-note'].forEach(id=>document.getElementById(id).value='');
-  } catch(e) { status.className='status-msg error'; status.textContent='❌ '+e.message; }
+  } catch(e){status.className='status-msg error'; status.textContent='❌ '+e.message;}
   btn.disabled=false;
 }
+
 function smartRange(arr) {
   const u=[...new Set(arr)].filter(Boolean);
   if(!u.length) return '완료';
@@ -242,7 +345,9 @@ function smartRange(arr) {
   if(days.length>1) return `Day ${Math.min(...days)} ~ ${Math.max(...days)}`;
   return u.join(', ');
 }
+
 let lastData=null;
+
 async function generateReport(withAI=false) {
   const name=document.getElementById('rep-name').value.trim();
   const type=document.getElementById('rep-type').value;
@@ -261,6 +366,7 @@ async function generateReport(withAI=false) {
     status.className='status-msg success'; status.textContent=`✅ ${d.count}개 기록으로 보고서 생성 완료`;
   } catch(e){status.className='status-msg error';status.textContent='❌ '+e.message;}
 }
+
 function renderReport({name,grade,type,start,end,words,grammars,readings,listenings,writings,feedback}) {
   const clean=arr=>[...new Set(arr)].filter(Boolean).join(', ')||'완료';
   const period=`${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
@@ -321,6 +427,7 @@ function renderReport({name,grade,type,start,end,words,grammars,readings,listeni
   card.innerHTML=html; card.style.display='block';
   document.getElementById('report-actions').classList.add('visible');
 }
+
 async function regenFeedback() {
   if(!lastData) return;
   const btn=document.querySelector('.btn-regen');
@@ -333,6 +440,7 @@ async function regenFeedback() {
   } catch(e){toast('재생성 실패: '+e.message);}
   btn.textContent='🔄 피드백 재생성'; btn.disabled=false;
 }
+
 function saveReportImage() {
   const card=document.getElementById('reportCard');
   const end=document.getElementById('rep-end').value;
@@ -345,6 +453,7 @@ function saveReportImage() {
     toast('이미지가 저장되었습니다');
   });
 }
+
 function copyReportText() {
   const name=lastData?`${lastData.grade} ${lastData.name} 학생`:'';
   const period=lastData?`${lastData.start.replace(/-/g,'.')} ~ ${lastData.end.replace(/-/g,'.')}`:'';
@@ -352,6 +461,7 @@ function copyReportText() {
   const feedback=document.querySelector('.rc-feedback-high,.rc-feedback-mid')?.innerText||'';
   navigator.clipboard.writeText(`📚 [채움영어 학습 보고]\n\n학생: ${name}\n기간: ${period}\n\n✅ 학습 내용\n${contents}\n\n✅ 원장 피드백\n${feedback}\n\n감사합니다! 😊`).then(()=>toast('카톡용 텍스트가 복사되었습니다'));
 }
+
 async function loadStudents() {
   const c=document.getElementById('student-list-container');
   c.innerHTML='<div class="loading-spinner">노션에서 불러오는 중...</div>';
@@ -368,6 +478,7 @@ async function loadStudents() {
     c.innerHTML=''; c.appendChild(grid);
   } catch(e){c.innerHTML=`<div class="loading-spinner">오류: ${e.message}</div>`;}
 }
+
 function toast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
