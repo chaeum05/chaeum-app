@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채움영어 관리 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+:root {
+  --burgundy: #b01c2e; --gold: #d4af37;
+  --dark: #1a1a2e; --surface: #ffffff;
+  --surface2: #f8f7f4; --border: #e5e0d5;
+  --text: #1a1a2e; --text2: #5a5a6e; --text3: #9a9aaa;
+  --success: #2d8a4e; --radius: 12px;
+  --shadow: 0 2px 16px rgba(26,26,46,0.08);
+  --shadow-lg: 0 8px 40px rgba(26,26,46,0.14);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color: var(--text); min-height: 100vh; }
+
+.sidebar {
+  width: 220px; min-height: 100vh; background: var(--dark);
+  padding: 0; flex-shrink: 0; display: flex; flex-direction: column;
+  position: fixed; left: 0; top: 0; bottom: 0;
+}
+.sidebar-header { padding: 28px 22px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo { font-family: 'Noto Serif KR', serif; font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
+.sidebar-title { font-size: 15px; font-weight: 700; color: #fff; }
+.sidebar-nav { padding: 14px 10px; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
+.nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+.nav-item.active { background: rgba(176,28,46,0.35); color: #fff; }
+
+.main-content { margin-left: 220px; flex: 1; min-height: 100vh; }
+.panel { display: none; padding: 36px 40px; }
+.panel.active { display: block; }
+.panel-title { font-family: 'Noto Serif KR', serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.panel-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+
+.form-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 28px 32px; box-shadow: var(--shadow); max-width: 680px; }
+.form-row { display: flex; gap: 14px; margin-bottom: 18px; }
+.form-group { flex: 1; }
+label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 7px; }
+input[type="text"], input[type="date"], select, textarea {
+  width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 14px; font-family: 'Pretendard', sans-serif; color: var(--text);
+  background: var(--surface); outline: none; transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--burgundy); box-shadow: 0 0 0 3px rgba(176,28,46,0.07); }
+textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.subject-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+.subject-item label { font-size: 11px; }
+
+.btn-primary { width: 100%; padding: 13px; background: var(--burgundy); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; margin-top: 6px; }
+.btn-primary:hover { background: #8e1624; transform: translateY(-1px); }
+.btn-primary:disabled { background: #ccc; transform: none; cursor: not-allowed; }
+
+.status-msg { text-align: center; font-size: 13px; font-weight: 600; padding: 11px; border-radius: 8px; margin-top: 12px; display: none; }
+.status-msg.success { background: #eaf7ee; color: var(--success); display: block; }
+.status-msg.error   { background: #fdecea; color: var(--burgundy); display: block; }
+.status-msg.loading { background: #f0f0f8; color: var(--text2); display: block; }
+
+/* 보고서 */
+.report-controls { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 28px; max-width: 680px; margin-bottom: 24px; box-shadow: var(--shadow); }
+.btn-row { display: flex; gap: 10px; margin-top: 14px; }
+.btn-secondary { flex: 1; padding: 11px; background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; }
+.btn-secondary:hover { border-color: var(--burgundy); color: var(--burgundy); }
+.btn-gold { flex: 1; padding: 11px; background: linear-gradient(135deg, #1a1a2e, #2d1f3d); color: var(--gold); border: 1px solid var(--gold); border-radius: 8px; font-size: 13px; font-weight: 700; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover { background: var(--gold); color: #1a1a2e; }
+
+.report-actions { display: none; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.report-actions.visible { display: flex; }
+.btn-action { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; border: none; }
+.btn-save-img { background: var(--dark); color: #fff; }
+.btn-save-img:hover { background: #2d2d4e; }
+.btn-regen { background: var(--surface); color: var(--burgundy); border: 1.5px solid var(--burgundy); }
+.btn-regen:hover { background: var(--burgundy); color: #fff; }
+.btn-copy-text { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border); }
+.btn-copy-text:hover { border-color: var(--text2); color: var(--text); }
+
+/* 리포트 카드 */
+#reportCard { background: white; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid #eee; max-width: 680px; display: none; }
+.rc-header { background: var(--burgundy); color: white; padding: 30px 26px; text-align: center; border-bottom: 5px solid var(--gold); }
+.rc-academy { font-size: 10px; text-transform: uppercase; letter-spacing: 4px; color: var(--gold); margin-bottom: 8px; font-weight: 700; }
+.rc-report-title { font-family: 'Noto Serif KR', serif; font-size: 21px; font-weight: 700; margin-bottom: 8px; }
+.rc-student { font-size: 15px; font-weight: 600; opacity: 0.95; }
+.rc-section { padding: 16px 26px; border-bottom: 1px solid #f0ece5; }
+.rc-section:last-child { border-bottom: none; }
+.rc-section-title { font-size: 13px; font-weight: 700; color: var(--text); border-left: 4px solid var(--gold); padding-left: 12px; margin-bottom: 10px; }
+.rc-date-label { color: var(--burgundy); font-weight: 700; }
+.rc-content-grid { background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.9; color: var(--text); outline: none; }
+.rc-content-grid[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
+.rc-item { display: block; }
+.rc-feedback { background: #fff9f9; border: 1px solid #f5e0e0; border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.9; color: var(--text); outline: none; min-height: 90px; white-space: pre-wrap; }
+.rc-feedback[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
+.rc-footer { text-align: center; padding: 16px; font-size: 11px; color: #aaa; background: #fafafa; border-top: 1px solid #f0ece5; }
+
+/* 학생 목록 */
+.student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-width: 900px; }
+.student-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); }
+.student-card:hover { border-color: var(--burgundy); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.student-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.student-meta { font-size: 12px; color: var(--text3); }
+.student-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-bottom: 6px; }
+.badge-초등 { background: #e8f7ee; color: #2d8a4e; }
+.badge-중등 { background: #e8f0ff; color: #3a5fd9; }
+.badge-고등 { background: #fdecea; color: var(--burgundy); }
+.loading-spinner { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
+
+#toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); color: #fff; padding: 11px 22px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9000; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div style="display:flex">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">Chaeum English</div>
+      <div class="sidebar-title">관리 시스템</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPanel('record')"  id="nav-record">✏️ &nbsp;일일 기록</div>
+      <div class="nav-item"        onclick="showPanel('report')"  id="nav-report">📋 &nbsp;보고서 생성</div>
+      <div class="nav-item"        onclick="showPanel('students')" id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- 일일 기록 -->
+    <div class="panel active" id="panel-record">
+      <div class="panel-title">일일 수업 기록</div>
+      <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
+      <div class="form-card">
+        <div class="form-row">
+          <div class="form-group"><label>날짜</label><input type="date" id="r-date"></div>
+          <div class="form-group"><label>구분</label>
+            <select id="r-type" onchange="updateGrades()">
+              <option value="초등">초등</option>
+              <option value="중등">중등</option>
+              <option value="고등" selected>고등</option>
+            </select>
+          </div>
+          <div class="form-group"><label>학년</label><select id="r-grade"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>학생 이름</label><input type="text" id="r-name" placeholder="이름 입력"></div>
+        </div>
+        <div class="subject-grid">
+          <div class="subject-item"><label>📝 단어</label><input type="text" id="r-word" placeholder="Day 1~5"></div>
+          <div class="subject-item"><label>📐 문법</label><input type="text" id="r-grammar" placeholder="천일문 Ch.1"></div>
+          <div class="subject-item"><label>📖 독해</label><input type="text" id="r-reading" placeholder="리딩마스터 3-1"></div>
+          <div class="subject-item"><label>🎧 듣기</label><input type="text" id="r-listening" placeholder="수능듣기 Day1"></div>
+          <div class="subject-item"><label>✍️ 라이팅</label><input type="text" id="r-writing" placeholder="쓰작 Unit1"></div>
+        </div>
+        <div class="form-group">
+          <label>수업 메모 / 특이사항</label>
+          <textarea id="r-note" placeholder="오늘 수업 내용, 학생 태도, 과제 등 자유롭게 기록"></textarea>
+        </div>
+        <button class="btn-primary" id="save-btn" onclick="saveRecord()">노션에 저장</button>
+        <div class="status-msg" id="save-status"></div>
+      </div>
+    </div>
+
+    <!-- 보고서 생성 -->
+    <div class="panel" id="panel-report">
+      <div class="panel-title">학습 보고서 생성</div>
+      <div class="panel-sub">노션 기록을 불러와 AI가 피드백을 자동으로 다듬습니다</div>
+      <div class="report-controls">
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="form-group"><label>학생 이름</label><input type="text" id="rep-name" placeholder="예: 김민재"></div>
+          <div class="form-group"><label>구분</label>
+            <select id="rep-type">
+              <option value="초등">초등</option>
+              <option value="중등">중등</option>
+              <option value="고등" selected>고등</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group"><label>시작일</label><input type="date" id="rep-start"></div>
+          <div class="form-group"><label>종료일</label><input type="date" id="rep-end"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="generateReport(false)">📊 보고서 생성</button>
+          <button class="btn-gold"      onclick="generateReport(true)">✨ AI 피드백 포함</button>
+        </div>
+        <div class="status-msg" id="rep-status"></div>
+      </div>
+
+      <div class="report-actions" id="report-actions">
+        <button class="btn-action btn-save-img"  onclick="saveReportImage()">📸 이미지 저장</button>
+        <button class="btn-action btn-regen"      onclick="regenFeedback()">🔄 피드백 재생성</button>
+        <button class="btn-action btn-copy-text"  onclick="copyReportText()">📋 카톡용 복사</button>
+      </div>
+
+      <div id="reportCard">
+        <div class="rc-header">
+          <div class="rc-academy">Chaeum English Academy</div>
+          <div class="rc-report-title" id="rc-title">Premium Monthly Report</div>
+          <div class="rc-student" id="rc-student"></div>
+        </div>
+        <div class="rc-section">
+          <div class="rc-section-title">01. 학습 기간</div>
+          <div style="font-size:15px"><span class="rc-date-label" id="rc-period"></span></div>
+        </div>
+        <div class="rc-section">
+          <div class="rc-section-title">02. 학습 내용 (Contents)</div>
+          <div class="rc-content-grid" id="rc-contents" contenteditable="true"></div>
+        </div>
+        <div class="rc-section">
+          <div class="rc-section-title">03. 선생님 전달사항 (Feedback)</div>
+          <div class="rc-feedback" id="rc-feedback" contenteditable="true"></div>
+        </div>
+        <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
+      </div>
+    </div>
+
+    <!-- 학생 목록 -->
+    <div class="panel" id="panel-students">
+      <div class="panel-title">학생 목록</div>
+      <div class="panel-sub">클릭하면 바로 해당 학생 보고서 화면으로 이동합니다</div>
+      <div id="student-list-container"><div class="loading-spinner">불러오는 중...</div></div>
+    </div>
+
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── 날짜 초기값 ──
+window.onload = function() {
+  const today   = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+  document.getElementById('r-date').value    = today;
+  document.getElementById('rep-end').value   = today;
+  document.getElementById('rep-start').value = weekAgo;
+  updateGrades();
+};
+
+// ── 패널 전환 ──
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'students') loadStudents();
+}
+
+// ── 학년 옵션 ──
+function updateGrades() {
+  const type = document.getElementById('r-type').value;
+  const sel  = document.getElementById('r-grade');
+  sel.innerHTML = '';
+  const max = type === '초등' ? 6 : 3;
+  for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
+}
+
+// ── API 호출 공통 (Vercel 서버리스 함수 경유) ──
+async function api(endpoint, body) {
+  const res = await fetch('/api/' + endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || '알 수 없는 오류');
+  return data;
+}
+
+// ── 일일 기록 저장 ──
+async function saveRecord() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+
+  const btn    = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  status.className = 'status-msg loading';
+  status.textContent = '⏳ 노션에 저장 중...';
+
+  try {
+    const result = await api('save-record', {
+      date:      document.getElementById('r-date').value,
+      type:      document.getElementById('r-type').value,
+      grade:     document.getElementById('r-grade').value,
+      name,
+      word:      document.getElementById('r-word').value,
+      grammar:   document.getElementById('r-grammar').value,
+      reading:   document.getElementById('r-reading').value,
+      listening: document.getElementById('r-listening').value,
+      writing:   document.getElementById('r-writing').value,
+      note:      document.getElementById('r-note').value
+    });
+    status.className = 'status-msg success';
+    status.textContent = result.message;
+    ['r-name','r-word','r-grammar','r-reading','r-listening','r-writing','r-note']
+      .forEach(id => document.getElementById(id).value = '');
+  } catch(e) {
+    status.className = 'status-msg error';
+    status.textContent = '❌ 저장 실패: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+// ── 스마트 범위 ──
+function smartRange(arr) {
+  const unique = [...new Set(arr)].filter(Boolean);
+  if (!unique.length) return '완료';
+  const days = unique.map(s => { const m = s.match(/\d+/); return m ? +m[0] : null; }).filter(n => n !== null).sort((a,b)=>a-b);
+  if (days.length > 1) return `Day ${Math.min(...days)} ~ ${Math.max(...days)}`;
+  return unique.join(', ');
+}
+
+// ── 보고서 생성 ──
+let lastData = null;
+
+async function generateReport(withAI = false) {
+  const name  = document.getElementById('rep-name').value.trim();
+  const type  = document.getElementById('rep-type').value;
+  const start = document.getElementById('rep-start').value;
+  const end   = document.getElementById('rep-end').value;
+  if (!name) { toast('학생 이름을 입력해주세요.'); return; }
+
+  const status = document.getElementById('rep-status');
+  status.className = 'status-msg loading';
+  status.textContent = withAI ? '⏳ 데이터 조회 중... AI 피드백 생성 중...' : '⏳ 노션 데이터 조회 중...';
+
+  try {
+    const d = await api('get-report', { name, type, start, end });
+    lastData = { ...d, name, type, start, end };
+
+    let feedback = [...new Set(d.notes)].join(' ') || '성실하게 학습 중입니다.';
+    if (withAI && d.notes.length) {
+      const r = await api('polish-feedback', { notes: d.notes, name, grade: d.grade, type });
+      feedback = r.feedback;
+    }
+
+    renderReport({ ...d, name, type, start, end, feedback });
+    status.className = 'status-msg success';
+    status.textContent = `✅ ${d.count}개 기록으로 보고서 생성 완료`;
+  } catch(e) {
+    status.className = 'status-msg error';
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+function renderReport({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
+  const typeTitle = type === '초등' ? 'Elementary' : type === '중등' ? 'Middle' : 'Premium';
+  document.getElementById('rc-title').textContent   = `${typeTitle} Monthly Report`;
+  document.getElementById('rc-student').textContent = `${grade} ${name} 학생`;
+  document.getElementById('rc-period').textContent  = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
+  const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
+  document.getElementById('rc-contents').innerHTML =
+    `<span class="rc-item">· 단어: ${smartRange(words)}</span>` +
+    `<span class="rc-item">· 문법: ${clean(grammars)}</span>` +
+    `<span class="rc-item">· 독해: ${clean(readings)}</span>` +
+    `<span class="rc-item">· 듣기: ${clean(listenings)}</span>` +
+    `<span class="rc-item">· 라이팅: ${clean(writings)}</span>`;
+  document.getElementById('rc-feedback').textContent = feedback;
+  document.getElementById('reportCard').style.display = 'block';
+  document.getElementById('report-actions').classList.add('visible');
+}
+
+// ── 피드백 재생성 ──
+async function regenFeedback() {
+  if (!lastData) return;
+  const btn = document.querySelector('.btn-regen');
+  btn.textContent = '⏳ 재생성 중...'; btn.disabled = true;
+  try {
+    const r = await api('polish-feedback', { notes: lastData.notes, name: lastData.name, grade: lastData.grade, type: lastData.type });
+    document.getElementById('rc-feedback').textContent = r.feedback;
+    toast('피드백이 재생성되었습니다');
+  } catch(e) { toast('재생성 실패: ' + e.message); }
+  btn.textContent = '🔄 피드백 재생성'; btn.disabled = false;
+}
+
+// ── 이미지 저장 ──
+function saveReportImage() {
+  const card = document.getElementById('reportCard');
+  const name = document.getElementById('rc-student').textContent.replace(' 학생','');
+  const end  = document.getElementById('rep-end').value;
+  html2canvas(card, { scale: 3, useCORS: true, backgroundColor: '#fff' }).then(canvas => {
+    const a = document.createElement('a');
+    a.download = `${end}_${name}_채움리포트.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    toast('이미지가 저장되었습니다');
+  });
+}
+
+// ── 카톡용 텍스트 복사 ──
+function copyReportText() {
+  const name     = document.getElementById('rc-student').textContent;
+  const period   = document.getElementById('rc-period').textContent;
+  const contents = document.getElementById('rc-contents').innerText;
+  const feedback = document.getElementById('rc-feedback').innerText;
+  const text = `📚 [채움영어 학습 보고]\n\n학생: ${name}\n기간: ${period}\n\n✅ 학습 내용\n${contents}\n\n✅ 원장 피드백\n${feedback}\n\n감사합니다! 😊`;
+  navigator.clipboard.writeText(text).then(() => toast('카톡용 텍스트가 복사되었습니다'));
+}
+
+// ── 학생 목록 ──
+async function loadStudents() {
+  const container = document.getElementById('student-list-container');
+  container.innerHTML = '<div class="loading-spinner">노션에서 불러오는 중...</div>';
+  try {
+    const d = await api('get-students', {});
+    if (!d.students.length) {
+      container.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.<br>일일 기록을 저장하면 자동으로 생성됩니다.</div>';
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'student-grid';
+    d.students.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'student-card';
+      card.innerHTML = `<span class="student-badge badge-${s.type}">${s.type}</span><div class="student-name">${s.name}</div><div class="student-meta">${s.grade}</div>`;
+      card.onclick = () => {
+        document.getElementById('rep-name').value = s.name;
+        document.getElementById('rep-type').value = s.type;
+        showPanel('report');
+      };
+      grid.appendChild(card);
+    });
+    container.innerHTML = '';
+    container.appendChild(grid);
+  } catch(e) {
+    container.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
