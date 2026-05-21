@@ -9,6 +9,7 @@
 <style>
 :root {
   --burgundy: #b01c2e; --gold: #d4af37;
+  --blue: #3498db; --blue-dark: #2c7dbf;
   --dark: #1a1a2e; --surface: #ffffff;
   --surface2: #f8f7f4; --border: #e5e0d5;
   --text: #1a1a2e; --text2: #5a5a6e; --text3: #9a9aaa;
@@ -19,11 +20,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color: var(--text); min-height: 100vh; }
 
-.sidebar {
-  width: 220px; min-height: 100vh; background: var(--dark);
-  padding: 0; flex-shrink: 0; display: flex; flex-direction: column;
-  position: fixed; left: 0; top: 0; bottom: 0;
-}
+.sidebar { width: 220px; min-height: 100vh; background: var(--dark); flex-shrink: 0; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; }
 .sidebar-header { padding: 28px 22px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .sidebar-logo { font-family: 'Noto Serif KR', serif; font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
 .sidebar-title { font-size: 15px; font-weight: 700; color: #fff; }
@@ -38,16 +35,11 @@ body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color
 .panel-title { font-family: 'Noto Serif KR', serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
 .panel-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
 
-.form-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 28px 32px; box-shadow: var(--shadow); max-width: 680px; }
+.form-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 28px 32px; box-shadow: var(--shadow); max-width: 600px; }
 .form-row { display: flex; gap: 14px; margin-bottom: 18px; }
 .form-group { flex: 1; }
 label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 7px; }
-input[type="text"], input[type="date"], select, textarea {
-  width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 14px; font-family: 'Pretendard', sans-serif; color: var(--text);
-  background: var(--surface); outline: none; transition: border-color 0.2s;
-  -webkit-appearance: none;
-}
+input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'Pretendard', sans-serif; color: var(--text); background: var(--surface); outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
 input:focus, select:focus, textarea:focus { border-color: var(--burgundy); box-shadow: 0 0 0 3px rgba(176,28,46,0.07); }
 textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
@@ -63,15 +55,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .status-msg.error   { background: #fdecea; color: var(--burgundy); display: block; }
 .status-msg.loading { background: #f0f0f8; color: var(--text2); display: block; }
 
-/* 보고서 */
-.report-controls { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 28px; max-width: 680px; margin-bottom: 24px; box-shadow: var(--shadow); }
+/* 보고서 컨트롤 */
+.report-controls { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 28px; max-width: 600px; margin-bottom: 24px; box-shadow: var(--shadow); }
 .btn-row { display: flex; gap: 10px; margin-top: 14px; }
 .btn-secondary { flex: 1; padding: 11px; background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; }
 .btn-secondary:hover { border-color: var(--burgundy); color: var(--burgundy); }
 .btn-gold { flex: 1; padding: 11px; background: linear-gradient(135deg, #1a1a2e, #2d1f3d); color: var(--gold); border: 1px solid var(--gold); border-radius: 8px; font-size: 13px; font-weight: 700; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; }
 .btn-gold:hover { background: var(--gold); color: #1a1a2e; }
 
-.report-actions { display: none; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.report-actions { display: none; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; max-width: 600px; }
 .report-actions.visible { display: flex; }
 .btn-action { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: all 0.2s; border: none; }
 .btn-save-img { background: var(--dark); color: #fff; }
@@ -81,22 +73,94 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .btn-copy-text { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border); }
 .btn-copy-text:hover { border-color: var(--text2); color: var(--text); }
 
-/* 리포트 카드 */
-#reportCard { background: white; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid #eee; max-width: 680px; display: none; }
-.rc-header { background: var(--burgundy); color: white; padding: 30px 26px; text-align: center; border-bottom: 5px solid var(--gold); }
-.rc-academy { font-size: 10px; text-transform: uppercase; letter-spacing: 4px; color: var(--gold); margin-bottom: 8px; font-weight: 700; }
-.rc-report-title { font-family: 'Noto Serif KR', serif; font-size: 21px; font-weight: 700; margin-bottom: 8px; }
-.rc-student { font-size: 15px; font-weight: 600; opacity: 0.95; }
-.rc-section { padding: 16px 26px; border-bottom: 1px solid #f0ece5; }
-.rc-section:last-child { border-bottom: none; }
-.rc-section-title { font-size: 13px; font-weight: 700; color: var(--text); border-left: 4px solid var(--gold); padding-left: 12px; margin-bottom: 10px; }
-.rc-date-label { color: var(--burgundy); font-weight: 700; }
-.rc-content-grid { background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.9; color: var(--text); outline: none; }
-.rc-content-grid[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
+/* ── 리포트 카드 공통 ── */
+#reportCard {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #eee;
+  max-width: 560px;   /* 너비 줄임 */
+  display: none;
+  font-family: 'Noto Serif KR', serif;
+}
+
+/* 고등 헤더 (버건디) */
+.rc-header-high {
+  background: var(--burgundy);
+  color: white;
+  padding: 28px 24px;
+  text-align: center;
+  border-bottom: 5px solid var(--gold);
+}
+/* 중등/초등 헤더 (파란색) */
+.rc-header-mid {
+  background: var(--blue);
+  color: white;
+  padding: 24px 20px;
+  text-align: center;
+  border-bottom: 4px solid #ffcc00;
+}
+
+.rc-academy { font-size: 10px; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 8px; font-weight: 700; }
+.rc-header-high .rc-academy { color: var(--gold); }
+.rc-header-mid .rc-academy  { color: rgba(255,255,255,0.9); }
+
+.rc-report-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.rc-student-high { font-size: 15px; font-weight: 600; opacity: 0.95; }
+.rc-student-mid  { font-size: 14px; font-weight: 700; background: rgba(255,255,255,0.2); display: inline-block; padding: 3px 18px; border-radius: 20px; margin-top: 4px; }
+
+/* 섹션 공통 */
+.rc-section { padding: 16px 24px; border-bottom: 1px solid #f0ece5; }
+.rc-section:last-of-type { border-bottom: none; }
+
+/* 고등 섹션 타이틀 */
+.rc-section-title-high { font-size: 13px; font-weight: 700; color: var(--text); border-left: 4px solid var(--gold); padding-left: 12px; margin-bottom: 10px; }
+/* 중등 섹션 타이틀 */
+.rc-section-title-mid { font-size: 14px; font-weight: 700; color: #2c3e50; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+
+/* 날짜 강조 */
+.rc-date-high { color: var(--burgundy); font-weight: 700; font-size: 18px; display: block; margin-top: 4px; }
+.rc-date-mid  { color: var(--blue); font-weight: 700; font-size: 15px; margin-left: 4px; }
+
+/* 학습내용 카드 */
+.rc-content-box {
+  background: #fdfdfd; border: 1px solid #eee;
+  border-radius: 10px; padding: 14px 16px;
+  font-size: 14px; line-height: 1.9; color: var(--text);
+  outline: none;
+}
+.rc-content-box[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
 .rc-item { display: block; }
-.rc-feedback { background: #fff9f9; border: 1px solid #f5e0e0; border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.9; color: var(--text); outline: none; min-height: 90px; white-space: pre-wrap; }
-.rc-feedback[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
-.rc-footer { text-align: center; padding: 16px; font-size: 11px; color: #aaa; background: #fafafa; border-top: 1px solid #f0ece5; }
+
+/* 피드백 박스 - 고등 */
+.rc-feedback-high {
+  background: #fff9f9; border: 1px solid #f5e0e0;
+  border-radius: 10px; padding: 16px;
+  font-size: 14px; line-height: 1.9; color: var(--text);
+  outline: none; min-height: 90px; white-space: pre-wrap;
+}
+.rc-feedback-high[contenteditable="true"]:focus { background: #fffde0; border-color: var(--gold); }
+
+/* 피드백 박스 - 중등 */
+.rc-feedback-mid {
+  background: #f0f9ff; border: 1px solid #bee3f8;
+  border-radius: 10px; padding: 16px;
+  font-size: 14px; line-height: 1.9; color: #2c3e50;
+  outline: none; min-height: 80px; white-space: pre-wrap;
+}
+.rc-feedback-mid[contenteditable="true"]:focus { background: #fffde0; }
+
+/* 다음 계획 박스 (중등 전용) */
+.rc-plan-box {
+  background: #fffdf0; border: 1px solid #fef3c7;
+  border-radius: 10px; padding: 14px 16px;
+  font-size: 14px; line-height: 1.8; color: #92400e;
+  outline: none; white-space: pre-wrap;
+}
+.rc-plan-box[contenteditable="true"]:focus { background: #fffde0; }
+
+.rc-footer { text-align: center; padding: 14px; font-size: 11px; color: #aaa; background: #fafafa; border-top: 1px solid #f0ece5; font-family: 'Pretendard', sans-serif; }
 
 /* 학생 목록 */
 .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-width: 900px; }
@@ -122,8 +186,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="sidebar-title">관리 시스템</div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active" onclick="showPanel('record')"  id="nav-record">✏️ &nbsp;일일 기록</div>
-      <div class="nav-item"        onclick="showPanel('report')"  id="nav-report">📋 &nbsp;보고서 생성</div>
+      <div class="nav-item active" onclick="showPanel('record')"   id="nav-record">✏️ &nbsp;일일 기록</div>
+      <div class="nav-item"        onclick="showPanel('report')"   id="nav-report">📋 &nbsp;보고서 생성</div>
       <div class="nav-item"        onclick="showPanel('students')" id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
     </nav>
   </aside>
@@ -193,29 +257,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
       <div class="report-actions" id="report-actions">
         <button class="btn-action btn-save-img"  onclick="saveReportImage()">📸 이미지 저장</button>
-        <button class="btn-action btn-regen"      onclick="regenFeedback()">🔄 피드백 재생성</button>
-        <button class="btn-action btn-copy-text"  onclick="copyReportText()">📋 카톡용 복사</button>
+        <button class="btn-action btn-regen"     onclick="regenFeedback()">🔄 피드백 재생성</button>
+        <button class="btn-action btn-copy-text" onclick="copyReportText()">📋 카톡용 복사</button>
       </div>
 
+      <!-- 리포트 카드 -->
       <div id="reportCard">
-        <div class="rc-header">
-          <div class="rc-academy">Chaeum English Academy</div>
-          <div class="rc-report-title" id="rc-title">Premium Monthly Report</div>
-          <div class="rc-student" id="rc-student"></div>
-        </div>
-        <div class="rc-section">
-          <div class="rc-section-title">01. 학습 기간</div>
-          <div style="font-size:15px"><span class="rc-date-label" id="rc-period"></span></div>
-        </div>
-        <div class="rc-section">
-          <div class="rc-section-title">02. 학습 내용 (Contents)</div>
-          <div class="rc-content-grid" id="rc-contents" contenteditable="true"></div>
-        </div>
-        <div class="rc-section">
-          <div class="rc-section-title">03. 선생님 전달사항 (Feedback)</div>
-          <div class="rc-feedback" id="rc-feedback" contenteditable="true"></div>
-        </div>
-        <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
+        <!-- JS로 동적 렌더링 -->
       </div>
     </div>
 
@@ -231,7 +279,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 <div id="toast"></div>
 
 <script>
-// ── 날짜 초기값 ──
 window.onload = function() {
   const today   = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
@@ -241,7 +288,6 @@ window.onload = function() {
   updateGrades();
 };
 
-// ── 패널 전환 ──
 function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -250,7 +296,6 @@ function showPanel(name) {
   if (name === 'students') loadStudents();
 }
 
-// ── 학년 옵션 ──
 function updateGrades() {
   const type = document.getElementById('r-type').value;
   const sel  = document.getElementById('r-grade');
@@ -259,7 +304,6 @@ function updateGrades() {
   for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
 }
 
-// ── API 호출 공통 (Vercel 서버리스 함수 경유) ──
 async function api(endpoint, body) {
   const res = await fetch('/api/' + endpoint, {
     method: 'POST',
@@ -271,22 +315,19 @@ async function api(endpoint, body) {
   return data;
 }
 
-// ── 일일 기록 저장 ──
 async function saveRecord() {
   const name = document.getElementById('r-name').value.trim();
   if (!name) { toast('이름을 입력해주세요.'); return; }
-
-  const btn    = document.getElementById('save-btn');
+  const btn = document.getElementById('save-btn');
   const status = document.getElementById('save-status');
   btn.disabled = true;
   status.className = 'status-msg loading';
   status.textContent = '⏳ 노션에 저장 중...';
-
   try {
     const result = await api('save-record', {
-      date:      document.getElementById('r-date').value,
-      type:      document.getElementById('r-type').value,
-      grade:     document.getElementById('r-grade').value,
+      date: document.getElementById('r-date').value,
+      type: document.getElementById('r-type').value,
+      grade: document.getElementById('r-grade').value,
       name,
       word:      document.getElementById('r-word').value,
       grammar:   document.getElementById('r-grammar').value,
@@ -306,7 +347,6 @@ async function saveRecord() {
   btn.disabled = false;
 }
 
-// ── 스마트 범위 ──
 function smartRange(arr) {
   const unique = [...new Set(arr)].filter(Boolean);
   if (!unique.length) return '완료';
@@ -315,7 +355,6 @@ function smartRange(arr) {
   return unique.join(', ');
 }
 
-// ── 보고서 생성 ──
 let lastData = null;
 
 async function generateReport(withAI = false) {
@@ -349,60 +388,112 @@ async function generateReport(withAI = false) {
 }
 
 function renderReport({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
-  const typeTitle = type === '초등' ? 'Elementary' : type === '중등' ? 'Middle' : 'Premium';
-  document.getElementById('rc-title').textContent   = `${typeTitle} Monthly Report`;
-  document.getElementById('rc-student').textContent = `${grade} ${name} 학생`;
-  document.getElementById('rc-period').textContent  = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
   const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
-  document.getElementById('rc-contents').innerHTML =
+  const period = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
+  const isHigh = type === '고등';
+  const isMid  = type === '중등';
+  const typeTitle = isHigh ? 'Premium Monthly Report' : isMid ? 'Weekly Middle Report' : 'Weekly Elementary Report';
+
+  const contentsHTML =
     `<span class="rc-item">· 단어: ${smartRange(words)}</span>` +
     `<span class="rc-item">· 문법: ${clean(grammars)}</span>` +
     `<span class="rc-item">· 독해: ${clean(readings)}</span>` +
     `<span class="rc-item">· 듣기: ${clean(listenings)}</span>` +
     `<span class="rc-item">· 라이팅: ${clean(writings)}</span>`;
-  document.getElementById('rc-feedback').textContent = feedback;
-  document.getElementById('reportCard').style.display = 'block';
+
+  let html = '';
+
+  if (isHigh) {
+    // ── 고등 리포트 (버건디) ──
+    html = `
+      <div class="rc-header-high">
+        <div class="rc-academy">Chaeum English Academy</div>
+        <div class="rc-report-title">${typeTitle}</div>
+        <div class="rc-student-high">${grade} ${name} 학생</div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-high">01. 학습 기간</div>
+        <span class="rc-date-high">${period}</span>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-high">02. 학습 내용 (Contents)</div>
+        <div class="rc-content-box" contenteditable="true">${contentsHTML}</div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-high">03. 선생님 전달사항 (Feedback)</div>
+        <div class="rc-feedback-high" contenteditable="true">${feedback}</div>
+      </div>
+      <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
+    `;
+  } else {
+    // ── 중등/초등 리포트 (파란색) ──
+    html = `
+      <div class="rc-header-mid">
+        <div class="rc-academy">Chaeum English Academy</div>
+        <div class="rc-report-title">${typeTitle}</div>
+        <div class="rc-student-mid">${grade} ${name} 학생</div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-mid">📅 1. 학습 기간 : <span class="rc-date-mid">${period}</span></div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-mid">📚 2. 학습 내용</div>
+        <div class="rc-content-box" contenteditable="true">${contentsHTML}</div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-mid">💬 3. 선생님 전달사항</div>
+        <div class="rc-feedback-mid" contenteditable="true">${feedback}</div>
+      </div>
+      <div class="rc-section">
+        <div class="rc-section-title-mid">🚀 4. 다음 계획</div>
+        <div class="rc-plan-box" contenteditable="true">이번 주 학습 내용을 바탕으로 다음 수업을 준비해 주세요!</div>
+      </div>
+      <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
+    `;
+  }
+
+  const card = document.getElementById('reportCard');
+  card.innerHTML = html;
+  card.style.display = 'block';
   document.getElementById('report-actions').classList.add('visible');
 }
 
-// ── 피드백 재생성 ──
 async function regenFeedback() {
   if (!lastData) return;
   const btn = document.querySelector('.btn-regen');
   btn.textContent = '⏳ 재생성 중...'; btn.disabled = true;
   try {
     const r = await api('polish-feedback', { notes: lastData.notes, name: lastData.name, grade: lastData.grade, type: lastData.type });
-    document.getElementById('rc-feedback').textContent = r.feedback;
+    const feedbackEl = document.querySelector('.rc-feedback-high, .rc-feedback-mid');
+    if (feedbackEl) feedbackEl.textContent = r.feedback;
     toast('피드백이 재생성되었습니다');
   } catch(e) { toast('재생성 실패: ' + e.message); }
   btn.textContent = '🔄 피드백 재생성'; btn.disabled = false;
 }
 
-// ── 이미지 저장 ──
 function saveReportImage() {
   const card = document.getElementById('reportCard');
-  const name = document.getElementById('rc-student').textContent.replace(' 학생','');
+  const name = lastData ? lastData.name : '학생';
   const end  = document.getElementById('rep-end').value;
+  const type = lastData ? lastData.type : '';
   html2canvas(card, { scale: 3, useCORS: true, backgroundColor: '#fff' }).then(canvas => {
     const a = document.createElement('a');
-    a.download = `${end}_${name}_채움리포트.png`;
+    a.download = `${end}_${name}_채움${type}리포트.png`;
     a.href = canvas.toDataURL('image/png');
     a.click();
     toast('이미지가 저장되었습니다');
   });
 }
 
-// ── 카톡용 텍스트 복사 ──
 function copyReportText() {
-  const name     = document.getElementById('rc-student').textContent;
-  const period   = document.getElementById('rc-period').textContent;
-  const contents = document.getElementById('rc-contents').innerText;
-  const feedback = document.getElementById('rc-feedback').innerText;
+  const name     = lastData ? `${lastData.grade} ${lastData.name} 학생` : '';
+  const period   = lastData ? `${lastData.start.replace(/-/g,'.')} ~ ${lastData.end.replace(/-/g,'.')}` : '';
+  const contents = document.querySelector('.rc-content-box')?.innerText || '';
+  const feedback = document.querySelector('.rc-feedback-high, .rc-feedback-mid')?.innerText || '';
   const text = `📚 [채움영어 학습 보고]\n\n학생: ${name}\n기간: ${period}\n\n✅ 학습 내용\n${contents}\n\n✅ 원장 피드백\n${feedback}\n\n감사합니다! 😊`;
   navigator.clipboard.writeText(text).then(() => toast('카톡용 텍스트가 복사되었습니다'));
 }
 
-// ── 학생 목록 ──
 async function loadStudents() {
   const container = document.getElementById('student-list-container');
   container.innerHTML = '<div class="loading-spinner">노션에서 불러오는 중...</div>';
