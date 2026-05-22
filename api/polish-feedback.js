@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
+        max_tokens: 600,
         messages: [{
           role: 'user',
           content:
@@ -42,8 +42,6 @@ ${notes.join('\n')}
 - 잘한 점과 보완이 필요한 점을 균형 있게 서술
 - 마크다운 기호 없이 본문만 작성
 - 인사말이나 서명 불필요
-- 5/22일에 작성할때는 하단에 아래 내용 첨부해줘
-- *전달사항: 5/25일, 6월 3일 휴강입니다.
 
 [반드시 지켜야 할 어투]
 - "숙제" → "과제"
