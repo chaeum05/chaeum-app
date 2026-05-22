@@ -341,11 +341,25 @@ async function saveRecord() {
 function smartRange(arr) {
   const u=[...new Set(arr)].filter(Boolean);
   if(!u.length) return '완료';
-  const days=u.map(s=>{const m=s.match(/\d+/);return m?+m[0]:null;}).filter(n=>n!==null).sort((a,b)=>a-b);
-  if(days.length>1) return `Day ${Math.min(...days)} ~ ${Math.max(...days)}`;
+  // Day N 패턴만 추출 (Day 1, Day 3~5 등)
+  const dayNums = [];
+  u.forEach(s => {
+    const matches = s.match(/[Dd]ay\s*(\d+)(?:\s*[-~]\s*(\d+))?/g);
+    if(matches) {
+      matches.forEach(m => {
+        const nums = m.match(/\d+/g);
+        if(nums) nums.forEach(n => dayNums.push(parseInt(n)));
+      });
+    }
+  });
+  if(dayNums.length > 0) {
+    const min = Math.min(...dayNums);
+    const max = Math.max(...dayNums);
+    return min === max ? `Day ${min}` : `Day ${min} ~ ${max}`;
+  }
+  // Day 패턴 없으면 그냥 합쳐서 반환
   return u.join(', ');
 }
-
 let lastData=null;
 
 async function generateReport(withAI=false) {
