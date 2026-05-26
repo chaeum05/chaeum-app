@@ -81,29 +81,46 @@ export default async function handler(req, res) {
       }
     });
 
-    // 3. 보강 대기 목록 (결석 미보강 + 보강 예정 모두)
+    // 3. 결석 전체 조회 (보강 날짜 잡힌 것 제외 위해 모두 가져옴)
     const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        filter: {
-          or: [
-            { property: '출결상태', select: { equals: '결석' } },
-            { property: '출결상태', select: { equals: '보강' } }
-          ]
-        },
+        filter: { property: '출결상태', select: { equals: '결석' } },
         sorts: [{ property: '날짜', direction: 'ascending' }]
       })
     });
     const makeupData = await makeupRes.json();
 
-    const makeupList = (makeupData.results || []).map(p => ({
-      id:          p.id,
-      name:        p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
-      type:        p.properties['구분']?.select?.name || '',
-      grade:       p.properties['학년']?.select?.name || '',
-      absentDate:  p.properties['원래날짜']?.date?.start || p.properties['날짜']?.date?.start || '',
-      memo:        p.properties['메모']?.rich_text?.[0]?.text?.content || '',
-    }));
+    // 보강 날짜가 잡힌 학생 목록 조회 (출결상태 = 보강)
+    const scheduledRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        filter: { property: '출결상태', select: { equals: '보강' } }
+      })
+    });
+    const scheduledData = await scheduledRes.json();
+
+    // 보강 날짜가 잡힌 학생+결석일 조합 Set 만들기
+    // 원래날짜(결석일) 기준으로 매칭
+    const scheduledSet = new Set(
+      (scheduledData.results || []).map(p => {
+        const name       = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+        const absentDate = p.properties['원래날짜']?.date?.start || '';
+        return `${name}__${absentDate}`;
+      })
+    );
+
+    // 결석 중 보강 날짜가 아직 안 잡힌 것만 보강 대기로
+    const makeupList = (makeupData.results || [])
+      .map(p => ({
+        id:          p.id,
+        name:        p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
+        type:        p.properties['구분']?.select?.name || '',
+        grade:       p.properties['학년']?.select?.name || '',
+        absentDate:  p.properties['날짜']?.date?.start || '',
+        memo:        p.properties['메모']?.rich_text?.[0]?.text?.content || '',
+      }))
+      .filter(m => m.name && !scheduledSet.has(`${m.name}__${m.absentDate}`));
 
     return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
 
