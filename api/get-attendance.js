@@ -50,6 +50,7 @@ export default async function handler(req, res) {
       name:  p.properties['학생이름']?.title?.[0]?.text?.content || '',
       type:  p.properties['구분']?.select?.name || '',
       grade: p.properties['학년']?.select?.name || '',
+      isMakeup: false,  // 정규 수업
     })).filter(s => s.name);
 
     // 2. 오늘 날짜 출결 기록 조회
@@ -66,14 +67,31 @@ export default async function handler(req, res) {
       name:   p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
       status: p.properties['출결상태']?.select?.name || '',
       memo:   p.properties['메모']?.rich_text?.[0]?.text?.content || '',
+      type:   p.properties['구분']?.select?.name || '',
+      grade:  p.properties['학년']?.select?.name || '',
     }));
 
-    // 3. 보강 대기 목록 (결석 상태인 것들)
+    // 오늘 출결 기록에 있는 학생 중 정규 등원 목록에 없는 학생 추가 (보강 수동 등록 포함)
+    const studentNames = new Set(students.map(s => s.name));
+    attendance.forEach(a => {
+      if (a.name && !studentNames.has(a.name)) {
+        // 정규 목록에 없는 학생 → 보강으로 온 학생
+        students.push({ id: '', name: a.name, type: a.type, grade: a.grade, isMakeup: true });
+        studentNames.add(a.name);
+      }
+    });
+
+    // 3. 보강 대기 목록 (결석 미보강 + 보강 예정 모두)
     const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        filter: { property: '출결상태', select: { equals: '결석' } },
-        sorts: [{ property: '날짜', direction: 'descending' }]
+        filter: {
+          or: [
+            { property: '출결상태', select: { equals: '결석' } },
+            { property: '출결상태', select: { equals: '보강' } }
+          ]
+        },
+        sorts: [{ property: '날짜', direction: 'ascending' }]
       })
     });
     const makeupData = await makeupRes.json();
