@@ -711,47 +711,70 @@ function getStatus(name) {
 
 function renderAttGrid() {
   const grid = document.getElementById('att-grid');
-  if (!attStudents.length) {
+
+  const regular = attStudents.filter(s => !s.isMakeup);
+  const makeup  = attStudents.filter(s => s.isMakeup);
+
+  if (!regular.length && !makeup.length) {
     grid.innerHTML = '<div class="loading-spinner" style="padding:24px">오늘 등원 예정 학생이 없습니다</div>';
     return;
   }
 
-  // 초등 / 중등(학년순) / 고등(학년순) 그룹핑 후 각 그룹 내 이름순
-  const order = s => {
-    const g = parseInt(s.grade) || 0;
-    if (s.type === '초등') return [0, g, s.name];
-    if (s.type === '중등') return [1, g, s.name];
-    return [2, g, s.name];
+  const sortStudents = arr => {
+    return [...arr].sort((a,b) => {
+      const typeOrder = { '초등':0, '중등':1, '고등':2 };
+      const ta = typeOrder[a.type]??3, tb = typeOrder[b.type]??3;
+      const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
+      return ta-tb || ga-gb || a.name.localeCompare(b.name,'ko');
+    });
   };
-  const sorted = [...attStudents].sort((a,b) => {
-    const [at,ag,an] = order(a), [bt,bg,bn] = order(b);
-    return at-bt || ag-bg || an.localeCompare(bn,'ko');
-  });
 
-  // 구분별 섹션 렌더
+  const renderRows = (students, isMakeupSection) => {
+    let html = '', lastKey = null;
+    sortStudents(students).forEach(s => {
+      const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
+      const typeLabel  = s.type === '초등' ? '초등' : s.type === '중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+      if (sectionKey !== lastKey) {
+        lastKey = sectionKey;
+        html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
+      }
+      const st  = getStatus(s.name);
+      const enc = encodeURIComponent(s.name);
+
+      const btns = isMakeupSection
+        ? /* 보강 학생: 출석 + 결석(재보강 가능) + 기록 */
+          `<button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+           <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
+           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>`
+        : /* 정규 학생: 출석 + 결석 + 기록 */
+          `<button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+           <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
+           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>`;
+
+      html += `
+        <div class="att-row s-${st||''}" id="arow-${enc}">
+          <span class="att-row-name">${s.name}</span>
+          <span class="att-row-meta">${s.grade}</span>
+          <div class="att-row-btns">${btns}</div>
+        </div>`;
+    });
+    return html;
+  };
+
   let html = '';
-  let lastType = null;
-  sorted.forEach(s => {
-    const typeLabel = s.type === '초등' ? '초등' : s.type === '중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
-    const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
-    if (sectionKey !== lastType) {
-      lastType = sectionKey;
-      html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
-    }
-    const st = getStatus(s.name);
-    const enc = encodeURIComponent(s.name);
-    html += `
-      <div class="att-row s-${st||''}" id="arow-${enc}">
-        <span class="att-row-name">${s.name}</span>
-        <span class="att-row-meta">${s.grade}</span>
-        <div class="att-row-btns">
-          <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
-          <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
-          <button class="amini m ${st==='보강'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','보강')">🔄 보강</button>
-          <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
-        </div>
-      </div>`;
-  });
+
+  // 정규 수업 섹션
+  if (regular.length) {
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:8px 6px 4px;border-bottom:2px solid var(--dark);margin-bottom:4px;">📚 정규 수업 (${regular.length}명)</div>`;
+    html += renderRows(regular, false);
+  }
+
+  // 보강 섹션
+  if (makeup.length) {
+    html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;text-transform:uppercase;padding:16px 6px 4px;border-bottom:2px solid #d4af37;margin-bottom:4px;">🔄 보강 수업 (${makeup.length}명)</div>`;
+    html += renderRows(makeup, true);
+  }
+
   grid.innerHTML = html;
 }
 
