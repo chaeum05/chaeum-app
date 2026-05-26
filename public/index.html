@@ -175,42 +175,68 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .loading-spinner { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
 
 /* ── 출결 관리 ── */
-.att-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.att-date-input { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'Pretendard', sans-serif; outline: none; }
-.att-date-input:focus { border-color: var(--burgundy); }
-.att-day-badge { font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; background: var(--burgundy); color: white; }
-.att-refresh-btn { padding: 8px 16px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Pretendard', sans-serif; cursor: pointer; transition: 0.2s; }
-.att-refresh-btn:hover { border-color: var(--burgundy); color: var(--burgundy); }
-.att-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
-.att-tab { padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); transition: 0.2s; font-family: 'Pretendard', sans-serif; }
-.att-tab:hover { border-color: var(--burgundy); color: var(--burgundy); }
-.att-tab.active { background: var(--burgundy); color: white; border-color: var(--burgundy); }
-.att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; max-width: 900px; margin-bottom: 32px; }
-.att-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: 0.2s; }
-.att-card.status-출석 { border-color: #2d8a4e; background: #f0faf4; }
-.att-card.status-결석 { border-color: var(--burgundy); background: #fff5f5; }
-.att-card.status-보강 { border-color: #d4af37; background: #fffdf0; }
-.att-card-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.att-card-meta { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
-.att-btn-row { display: flex; gap: 6px; }
-.att-btn { flex: 1; padding: 7px 4px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: 'Pretendard', sans-serif; }
-.att-btn.present { background: #e8f7ee; color: #2d8a4e; }
-.att-btn.present:hover, .att-btn.present.active { background: #2d8a4e; color: white; }
-.att-btn.absent  { background: #fdecea; color: var(--burgundy); }
-.att-btn.absent:hover,  .att-btn.absent.active  { background: var(--burgundy); color: white; }
-.att-btn.makeup  { background: #fffdf0; color: #92400e; }
-.att-btn.makeup:hover,  .att-btn.makeup.active  { background: #d4af37; color: white; }
-.makeup-section { max-width: 900px; }
-.makeup-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
-.makeup-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.makeup-card { background: #fffdf0; border: 1.5px solid #fef3c7; border-radius: var(--radius); padding: 14px 16px; }
-.makeup-card-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-.makeup-card-date { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
-.makeup-done-btn { width: 100%; padding: 7px; background: var(--dark); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: 0.2s; }
-.makeup-done-btn:hover { background: var(--burgundy); }
-.day-checkbox-row { display: flex; gap: 12px; margin: 10px 0; flex-wrap: wrap; }
-.day-cb-item { display: flex; align-items: center; gap: 5px; font-size: 14px; cursor: pointer; }
-.day-cb-item input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--burgundy); }
+
+/* ── 출결 관리 ── */
+.att-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.att-date-input { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; outline:none; }
+.att-date-input:focus { border-color:var(--burgundy); }
+.att-day-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; background:var(--burgundy); color:white; }
+.att-action-btn { padding:6px 14px; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; transition:0.2s; }
+.att-action-btn:hover { border-color:var(--burgundy); color:var(--burgundy); }
+.att-action-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
+.att-action-btn.primary:hover { background:#8e1624; }
+
+/* 구분 헤더 */
+.att-type-header { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; padding:10px 6px 6px; border-bottom:1.5px solid var(--border); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+
+/* 컴팩트 학생 행 */
+.att-row { display:flex; align-items:center; padding:6px 8px; border-radius:7px; gap:8px; transition:background 0.12s; }
+.att-row:hover { background:var(--surface2); }
+.att-row.s-출석 { background:#f0faf4; }
+.att-row.s-결석 { background:#fff5f5; }
+.att-row.s-보강 { background:#fffdf0; }
+.att-row-name { font-size:13px; font-weight:600; min-width:60px; }
+.att-row-meta { font-size:10px; color:var(--text3); min-width:52px; }
+.att-row-btns { display:flex; gap:4px; margin-left:auto; }
+.amini { padding:4px 9px; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.12s; }
+.amini.p { background:#e8f7ee; color:#2d8a4e; }
+.amini.p.on, .amini.p:hover { background:#2d8a4e; color:white; }
+.amini.a { background:#fdecea; color:var(--burgundy); }
+.amini.a.on, .amini.a:hover { background:var(--burgundy); color:white; }
+.amini.m { background:#fffdf0; color:#92400e; }
+.amini.m.on, .amini.m:hover { background:#d4af37; color:white; }
+.amini.r { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.amini.r:hover { background:var(--dark); color:white; border-color:var(--dark); }
+
+/* 보강 대기 행 */
+.makeup-row { display:flex; align-items:center; padding:7px 8px; border-radius:7px; background:#fffdf0; border:1px solid #fef3c7; margin-bottom:4px; gap:8px; }
+.makeup-row-name { font-size:13px; font-weight:700; min-width:60px; }
+.makeup-row-info { font-size:11px; color:var(--text3); flex:1; }
+.mkdone { padding:4px 12px; background:var(--dark); color:white; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.mkdone:hover { background:var(--burgundy); }
+
+/* 모달 */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:8000; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:26px 28px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.18); }
+.modal-title { font-size:15px; font-weight:700; margin-bottom:16px; }
+.modal-field { margin-bottom:12px; }
+.modal-field label { display:block; font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+.modal-field input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; outline:none; box-sizing:border-box; }
+.modal-field input:focus { border-color:var(--burgundy); }
+.modal-btn-row { display:flex; gap:8px; margin-top:16px; }
+.modal-btn { flex:1; padding:10px; background:var(--surface2); color:var(--text2); border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; transition:0.2s; }
+.modal-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
+.modal-btn.primary:hover { background:#8e1624; }
+.modal-cancel { width:100%; margin-top:8px; padding:8px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.search-dropdown { border:1px solid var(--border); border-radius:8px; margin-top:4px; display:none; max-height:140px; overflow-y:auto; }
+.search-item { padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); }
+.search-item:last-child { border-bottom:none; }
+.search-item:hover { background:var(--surface2); }
+.type-badge { font-size:9px; font-weight:700; padding:2px 6px; border-radius:8px; }
+.tb-초등 { background:#e8f7ee; color:#2d8a4e; }
+.tb-중등 { background:#e8f0ff; color:#3a5fd9; }
+.tb-고등 { background:#fdecea; color:var(--burgundy); }
 
 #toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); color: #fff; padding: 11px 22px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9000; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -316,73 +342,63 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     <!-- 출결 관리 패널 -->
     <div class="panel" id="panel-attendance">
       <div class="panel-title">출결 관리</div>
-      <div class="panel-sub">오늘 등원 예정 학생의 출석/결석/보강을 체크합니다</div>
-
       <div class="att-header">
-        <input type="date" class="att-date-input" id="att-date">
+        <input type="date" class="att-date-input" id="att-date" onchange="loadAttendance()">
         <span class="att-day-badge" id="att-day-badge">-요일</span>
-        <button class="att-refresh-btn" onclick="loadAttendance()">🔄 새로고침</button>
+        <button class="att-action-btn" onclick="loadAttendance()">🔄 새로고침</button>
+        <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
       </div>
-
-      <!-- 학년 탭 -->
-      <div class="att-tabs" id="att-tabs">
-        <div class="att-tab active" onclick="filterAttendance('전체')" data-group="전체">전체</div>
-        <div class="att-tab" onclick="filterAttendance('초등')" data-group="초등">초등</div>
-        <div class="att-tab" onclick="filterAttendance('중1')" data-group="중1">중1</div>
-        <div class="att-tab" onclick="filterAttendance('중2')" data-group="중2">중2</div>
-        <div class="att-tab" onclick="filterAttendance('중3')" data-group="중3">중3</div>
-        <div class="att-tab" onclick="filterAttendance('고1')" data-group="고1">고1</div>
-        <div class="att-tab" onclick="filterAttendance('고2')" data-group="고2">고2</div>
-        <div class="att-tab" onclick="filterAttendance('고3')" data-group="고3">고3</div>
+      <div id="att-grid" style="max-width:900px;"></div>
+      <div style="max-width:900px;margin-top:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:8px 0 8px;border-bottom:1.5px solid var(--border);margin-bottom:8px;">
+          🔄 보강 대기 <span id="makeup-count" style="font-weight:400;color:var(--text3);"></span>
+        </div>
+        <div id="makeup-list"></div>
       </div>
+    </div>
 
-      <!-- 학생 카드 그리드 -->
-      <div class="att-grid" id="att-grid">
-        <div class="loading-spinner">날짜를 선택하면 학생 목록이 표시됩니다</div>
+    <!-- 결석 팝업 -->
+    <div id="modal-absent" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">❌ 결석 처리</div>
+        <div style="font-size:14px;font-weight:600;color:var(--burgundy);margin-bottom:16px;" id="modal-absent-name"></div>
+        <div class="modal-field">
+          <label>결석 사유 (선택)</label>
+          <input type="text" id="modal-absent-reason" placeholder="예: 학교 행사, 개인 사정 등">
+        </div>
+        <div class="modal-field">
+          <label>보강 날짜 등록 (선택)</label>
+          <input type="date" id="modal-makeup-date">
+        </div>
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="confirmAbsent(true)">결석 + 보강 등록</button>
+          <button class="modal-btn" onclick="confirmAbsent(false)">결석만 처리</button>
+        </div>
+        <button class="modal-cancel" onclick="closeModal('modal-absent')">취소</button>
       </div>
+    </div>
 
-      <!-- 보강 대기 목록 -->
-      <div class="makeup-section">
-        <div class="makeup-title">🔄 보강 대기 <span id="makeup-count" style="font-size:12px;color:var(--text3);font-weight:400;"></span></div>
-        <div class="makeup-list" id="makeup-list">
-          <div class="loading-spinner" style="padding:20px">불러오는 중...</div>
+    <!-- 보강 추가 팝업 -->
+    <div id="modal-add-makeup" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">🔄 보강 학생 추가</div>
+        <div class="modal-field">
+          <label>학생 이름</label>
+          <input type="text" id="modal-makeup-name" placeholder="이름 검색" oninput="searchStudentForMakeup()">
+          <div id="makeup-search-results" class="search-dropdown"></div>
         </div>
-      </div>
-
-      <!-- 등원 일정 등록 -->
-      <div style="max-width:600px; margin-top:32px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px 28px; box-shadow:var(--shadow);">
-        <div class="panel-title" style="font-size:16px; margin-bottom:4px;">📅 등원 일정 등록 / 수정</div>
-        <div class="panel-sub" style="margin-bottom:16px;">학생의 정규 등원 요일을 등록합니다</div>
-        <div class="form-row" style="margin-bottom:14px;">
-          <div class="form-group"><label>학생 이름</label><input type="text" id="sch-name" placeholder="이름 입력"></div>
-          <div class="form-group"><label>구분</label>
-            <select id="sch-type">
-              <option value="초등">초등</option>
-              <option value="중등">중등</option>
-              <option value="고등" selected>고등</option>
-            </select>
-          </div>
-          <div class="form-group"><label>학년</label>
-            <select id="sch-grade">
-              <option>1학년</option><option>2학년</option><option>3학년</option>
-              <option>4학년</option><option>5학년</option><option>6학년</option>
-            </select>
-          </div>
+        <div class="modal-field">
+          <label>보강 날짜</label>
+          <input type="date" id="modal-add-makeup-date">
         </div>
-        <label style="font-size:12px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;">등원 요일</label>
-        <div class="day-checkbox-row">
-          <label class="day-cb-item"><input type="checkbox" id="sch-mon"> 월</label>
-          <label class="day-cb-item"><input type="checkbox" id="sch-tue"> 화</label>
-          <label class="day-cb-item"><input type="checkbox" id="sch-wed"> 수</label>
-          <label class="day-cb-item"><input type="checkbox" id="sch-thu"> 목</label>
-          <label class="day-cb-item"><input type="checkbox" id="sch-fri"> 금</label>
+        <div class="modal-field">
+          <label>원래 결석일 (선택)</label>
+          <input type="date" id="modal-add-absent-date">
         </div>
-        <div class="form-group" style="margin-top:12px;">
-          <label>메모 (선택)</label>
-          <input type="text" id="sch-memo" placeholder="예: 격주 수요일, 시간 변동 등">
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="confirmAddMakeup()">보강 추가</button>
+          <button class="modal-btn" onclick="closeModal('modal-add-makeup')">취소</button>
         </div>
-        <button class="btn-primary" style="margin-top:8px;" onclick="saveSchedule()">등원 일정 저장</button>
-        <div class="status-msg" id="sch-status"></div>
       </div>
     </div>
 
@@ -637,161 +653,251 @@ async function loadStudents() {
 }
 
 // ── 출결 관리 ──
-let attStudents = [];
-let attRecords  = [];
-let attMakeup   = [];
-let currentAttGroup = '전체';
+let attStudents = [], attRecords = [], attMakeup = [], allStudentsCache = [];
+let absentTarget = null; // 결석 팝업용 임시 저장
 
 function initAttendance() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('att-date').value = today;
+  // 보강 추가 팝업 기본 날짜
+  document.getElementById('modal-add-makeup-date').value = today;
   loadAttendance();
 }
 
 async function loadAttendance() {
   const date = document.getElementById('att-date').value;
-  const grid  = document.getElementById('att-grid');
-  const mkList = document.getElementById('makeup-list');
+  const grid = document.getElementById('att-grid');
   grid.innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
-
   try {
     const d = await api('get-attendance', { date });
-
-    // 요일 뱃지
-    const dayNames = { '월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말' };
-    document.getElementById('att-day-badge').textContent = dayNames[d.dayName] || d.dayName;
-
+    const dayLabel = { '월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말' };
+    document.getElementById('att-day-badge').textContent = dayLabel[d.dayName] || d.dayName;
     attStudents = d.students || [];
     attRecords  = d.attendance || [];
     attMakeup   = d.makeupList || [];
-
-    renderAttendanceGrid();
+    renderAttGrid();
     renderMakeupList();
-
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
 }
 
-function getStudentStatus(name) {
-  const rec = attRecords.find(r => r.name === name);
-  return rec ? rec.status : null;
+function getStatus(name) {
+  const r = attRecords.find(r => r.name === name);
+  return r ? r.status : null;
 }
 
-function filterAttendance(group) {
-  currentAttGroup = group;
-  document.querySelectorAll('.att-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.group === group);
-  });
-  renderAttendanceGrid();
-}
-
-function renderAttendanceGrid() {
+function renderAttGrid() {
   const grid = document.getElementById('att-grid');
-  let filtered = attStudents;
-
-  if (currentAttGroup !== '전체') {
-    filtered = attStudents.filter(s => {
-      const gradeNum = s.grade.replace(/[^0-9]/g,'');
-      if (currentAttGroup === '초등') return s.type === '초등';
-      if (currentAttGroup.startsWith('중')) return s.type === '중등' && gradeNum === currentAttGroup[1];
-      if (currentAttGroup.startsWith('고')) return s.type === '고등' && gradeNum === currentAttGroup[1];
-      return true;
-    });
-  }
-
-  if (!filtered.length) {
-    grid.innerHTML = '<div class="loading-spinner">오늘 등원 예정 학생이 없습니다</div>';
+  if (!attStudents.length) {
+    grid.innerHTML = '<div class="loading-spinner" style="padding:24px">오늘 등원 예정 학생이 없습니다</div>';
     return;
   }
 
-  grid.innerHTML = filtered.map(s => {
-    const status = getStudentStatus(s.name);
-    return `
-      <div class="att-card ${status ? 'status-'+status : ''}" id="card-${s.name}">
-        <div class="att-card-name">${s.name}</div>
-        <div class="att-card-meta">${s.type} ${s.grade}</div>
-        <div class="att-btn-row">
-          <button class="att-btn present ${status==='출석'?'active':''}"
-            onclick="markAttendance('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
-          <button class="att-btn absent ${status==='결석'?'active':''}"
-            onclick="markAttendance('${s.name}','${s.type}','${s.grade}','결석')">❌ 결석</button>
-          <button class="att-btn makeup ${status==='보강'?'active':''}"
-            onclick="markAttendance('${s.name}','${s.type}','${s.grade}','보강')">🔄 보강</button>
+  // 초등 / 중등(학년순) / 고등(학년순) 그룹핑 후 각 그룹 내 이름순
+  const order = s => {
+    const g = parseInt(s.grade) || 0;
+    if (s.type === '초등') return [0, g, s.name];
+    if (s.type === '중등') return [1, g, s.name];
+    return [2, g, s.name];
+  };
+  const sorted = [...attStudents].sort((a,b) => {
+    const [at,ag,an] = order(a), [bt,bg,bn] = order(b);
+    return at-bt || ag-bg || an.localeCompare(bn,'ko');
+  });
+
+  // 구분별 섹션 렌더
+  let html = '';
+  let lastType = null;
+  sorted.forEach(s => {
+    const typeLabel = s.type === '초등' ? '초등' : s.type === '중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+    const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
+    if (sectionKey !== lastType) {
+      lastType = sectionKey;
+      html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
+    }
+    const st = getStatus(s.name);
+    const enc = encodeURIComponent(s.name);
+    html += `
+      <div class="att-row s-${st||''}" id="arow-${enc}">
+        <span class="att-row-name">${s.name}</span>
+        <span class="att-row-meta">${s.grade}</span>
+        <div class="att-row-btns">
+          <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+          <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
+          <button class="amini m ${st==='보강'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','보강')">🔄 보강</button>
+          <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
         </div>
       </div>`;
-  }).join('');
+  });
+  grid.innerHTML = html;
 }
 
-async function markAttendance(name, type, grade, status) {
+// 출석/보강 바로 처리
+async function doAttend(name, type, grade, status) {
   const date = document.getElementById('att-date').value;
   try {
-    await api('save-attendance', { action: 'upsert', name, type, grade, date, status });
-    // 로컬 업데이트
+    await api('save-attendance', { action:'upsert', name, type, grade, date, status });
     const idx = attRecords.findIndex(r => r.name === name);
     if (idx >= 0) attRecords[idx].status = status;
     else attRecords.push({ name, status });
-    renderAttendanceGrid();
-    toast(`${name} — ${status} 처리 완료`);
+    renderAttGrid();
+    toast(`${name} — ${status} ✓`);
   } catch(e) { toast('오류: ' + e.message); }
 }
 
+// 결석 팝업 열기
+function openAbsentModal(name, type, grade) {
+  absentTarget = { name, type, grade };
+  document.getElementById('modal-absent-name').textContent = `${name} (${type} ${grade})`;
+  document.getElementById('modal-absent-reason').value = '';
+  // 보강 날짜 기본값: 다음 주 같은 요일
+  const date = document.getElementById('att-date').value;
+  const next = new Date(date); next.setDate(next.getDate() + 7);
+  document.getElementById('modal-makeup-date').value = next.toISOString().split('T')[0];
+  document.getElementById('modal-absent').classList.add('open');
+}
+
+async function confirmAbsent(withMakeup) {
+  if (!absentTarget) return;
+  const { name, type, grade } = absentTarget;
+  const date        = document.getElementById('att-date').value;
+  const reason      = document.getElementById('modal-absent-reason').value;
+  const makeupDate  = document.getElementById('modal-makeup-date').value;
+  closeModal('modal-absent');
+
+  try {
+    // 1. 결석 처리
+    await api('save-attendance', { action:'upsert', name, type, grade, date, status:'결석', memo: reason });
+    const idx = attRecords.findIndex(r => r.name === name);
+    if (idx >= 0) attRecords[idx].status = '결석';
+    else attRecords.push({ name, status:'결석' });
+
+    // 2. 보강 등록
+    if (withMakeup && makeupDate) {
+      await api('save-attendance', { action:'upsert', name, type, grade, date: makeupDate, status:'보강', absentDate: date });
+      toast(`${name} — 결석 처리 + ${makeupDate} 보강 등록 ✓`);
+    } else {
+      toast(`${name} — 결석 처리 ✓`);
+    }
+    renderAttGrid();
+    await loadMakeupOnly();
+  } catch(e) { toast('오류: ' + e.message); }
+  absentTarget = null;
+}
+
+// 기록 버튼 → 일일기록 탭으로 이동
+function goRecord(name, type, grade) {
+  document.getElementById('r-name').value  = name;
+  document.getElementById('r-type').value  = type;
+  // 학년 select 업데이트
+  const typeEl = document.getElementById('r-type');
+  typeEl.value = type;
+  updateGrades();
+  // 학년 select에서 해당 학년 선택
+  const sel = document.getElementById('r-grade');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].text === grade) { sel.selectedIndex = i; break; }
+  }
+  // 날짜 동기화
+  document.getElementById('r-date').value = document.getElementById('att-date').value;
+  showPanel('record');
+  toast(`${name} 학생 기록 탭으로 이동`);
+}
+
+// 보강 대기 렌더
 function renderMakeupList() {
   const list = document.getElementById('makeup-list');
-  document.getElementById('makeup-count').textContent = attMakeup.length ? `(${attMakeup.length}명)` : '';
-
+  const cnt  = document.getElementById('makeup-count');
+  cnt.textContent = attMakeup.length ? `(${attMakeup.length}명)` : '';
   if (!attMakeup.length) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:12px 0;">보강 대기 학생이 없습니다 🎉</div>';
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">보강 대기 학생이 없습니다 🎉</div>';
     return;
   }
-
   list.innerHTML = attMakeup.map(m => `
-    <div class="makeup-card">
-      <div class="makeup-card-name">${m.name}</div>
-      <div class="makeup-card-date">${m.type} ${m.grade} · 결석일: ${m.absentDate}</div>
-      <button class="makeup-done-btn" onclick="completeMakeup('${m.id}','${m.name}','${m.absentDate}')">
-        ✅ 보강 완료 처리
-      </button>
+    <div class="makeup-row">
+      <span class="makeup-row-name">${m.name}</span>
+      <span class="makeup-row-info">${m.type} ${m.grade} · 결석일: ${m.absentDate||'-'}</span>
+      <button class="amini r" onclick="goRecord('${m.name}','${m.type}','${m.grade}')">📝 기록</button>
+      <button class="mkdone" onclick="completeMakeup('${m.id}','${m.name}','${m.absentDate||''}')">완료</button>
     </div>`).join('');
+}
+
+async function loadMakeupOnly() {
+  try {
+    const date = document.getElementById('att-date').value;
+    const d = await api('get-attendance', { date });
+    attMakeup = d.makeupList || [];
+    renderMakeupList();
+  } catch(e) {}
 }
 
 async function completeMakeup(recordId, name, absentDate) {
   const date = document.getElementById('att-date').value;
   try {
-    await api('save-attendance', { action: 'complete_makeup', recordId, name, date, absentDate });
+    await api('save-attendance', { action:'complete_makeup', recordId, name, date, absentDate });
     attMakeup = attMakeup.filter(m => m.id !== recordId);
     renderMakeupList();
-    toast(`${name} 보강 완료 처리되었습니다`);
+    toast(`${name} 보강 완료 ✓`);
   } catch(e) { toast('오류: ' + e.message); }
 }
 
-async function saveSchedule() {
-  const name  = document.getElementById('sch-name').value.trim();
-  const type  = document.getElementById('sch-type').value;
-  const grade = document.getElementById('sch-grade').value;
-  const memo  = document.getElementById('sch-memo').value;
-  if (!name) { toast('이름을 입력해주세요.'); return; }
+// 보강 추가 팝업
+function openAddMakeupModal() {
+  document.getElementById('modal-makeup-name').value = '';
+  document.getElementById('makeup-search-results').style.display = 'none';
+  document.getElementById('modal-add-absent-date').value = document.getElementById('att-date').value;
+  document.getElementById('modal-add-makeup-date').value = document.getElementById('att-date').value;
+  document.getElementById('modal-add-makeup').classList.add('open');
+}
 
-  const days = {
-    '월': document.getElementById('sch-mon').checked,
-    '화': document.getElementById('sch-tue').checked,
-    '수': document.getElementById('sch-wed').checked,
-    '목': document.getElementById('sch-thu').checked,
-    '금': document.getElementById('sch-fri').checked,
-  };
+async function searchStudentForMakeup() {
+  const q = document.getElementById('modal-makeup-name').value.trim();
+  const box = document.getElementById('makeup-search-results');
+  if (!q) { box.style.display = 'none'; return; }
 
-  const status = document.getElementById('sch-status');
-  status.className = 'status-msg loading'; status.textContent = '⏳ 저장 중...';
+  // allStudentsCache 없으면 fetch
+  if (!allStudentsCache.length) {
+    try { const d = await api('get-students', {}); allStudentsCache = d.students || []; } catch(e) {}
+  }
+  const matches = allStudentsCache.filter(s => s.name.includes(q)).slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
+
+  box.innerHTML = matches.map(s =>
+    `<div class="search-item" onclick="selectMakeupStudent('${s.name}','${s.type}','${s.grade}')">
+      ${s.name} <span style="font-size:11px;color:var(--text3)">${s.type} ${s.grade}</span>
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+let selectedMakeupStudent = null;
+function selectMakeupStudent(name, type, grade) {
+  selectedMakeupStudent = { name, type, grade };
+  document.getElementById('modal-makeup-name').value = `${name} (${type} ${grade})`;
+  document.getElementById('makeup-search-results').style.display = 'none';
+}
+
+async function confirmAddMakeup() {
+  if (!selectedMakeupStudent) { toast('학생을 선택해주세요.'); return; }
+  const { name, type, grade } = selectedMakeupStudent;
+  const makeupDate  = document.getElementById('modal-add-makeup-date').value;
+  const absentDate  = document.getElementById('modal-add-absent-date').value;
+  if (!makeupDate) { toast('보강 날짜를 선택해주세요.'); return; }
 
   try {
-    await api('save-attendance', { action: 'save_schedule', name, type, grade, days, memo });
-    status.className = 'status-msg success'; status.textContent = '✅ 등원 일정 저장 완료!';
-    document.getElementById('sch-name').value = '';
-    document.getElementById('sch-memo').value = '';
-    ['sch-mon','sch-tue','sch-wed','sch-thu','sch-fri'].forEach(id => document.getElementById(id).checked = false);
-  } catch(e) {
-    status.className = 'status-msg error'; status.textContent = '❌ ' + e.message;
-  }
+    await api('save-attendance', { action:'upsert', name, type, grade, date: makeupDate, status:'보강', absentDate });
+    closeModal('modal-add-makeup');
+    toast(`${name} 보강 등록 완료 (${makeupDate})`);
+    selectedMakeupStudent = null;
+    await loadMakeupOnly();
+    // 현재 날짜가 보강 날짜면 그리드 갱신
+    if (makeupDate === document.getElementById('att-date').value) loadAttendance();
+  } catch(e) { toast('오류: ' + e.message); }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
 }
 
 function toast(msg) {
