@@ -603,7 +603,10 @@ async function generateReport(withAI = false) {
 
     let feedback = [...new Set(d.notes)].join(' ') || '성실하게 학습 중입니다.';
     if (withAI && d.notes.length) {
-      const r = await api('polish-feedback', { notes: d.notes, name, grade: d.grade, type });
+      const r = await api('polish-feedback', {
+        notes: d.notes, name, grade: d.grade, type,
+        attendanceInfo: d.attendanceInfo || []
+      });
       feedback = r.feedback;
     }
 
@@ -692,7 +695,11 @@ async function regenFeedback() {
   const btn = document.querySelector('.btn-regen');
   btn.textContent = '⏳ 재생성 중...'; btn.disabled = true;
   try {
-    const r = await api('polish-feedback', { notes: lastData.notes, name: lastData.name, grade: lastData.grade, type: lastData.type });
+    const r = await api('polish-feedback', {
+        notes: lastData.notes, name: lastData.name,
+        grade: lastData.grade, type: lastData.type,
+        attendanceInfo: lastData.attendanceInfo || []
+      });
     const feedbackEl = document.querySelector('.rc-feedback-high, .rc-feedback-mid');
     if (feedbackEl) feedbackEl.textContent = r.feedback;
     toast('피드백이 재생성되었습니다');
