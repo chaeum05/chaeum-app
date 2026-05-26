@@ -175,8 +175,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .loading-spinner { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
 
 /* ── 출결 관리 ── */
-
-/* ── 출결 관리 ── */
 .att-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
 .att-date-input { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; outline:none; }
 .att-date-input:focus { border-color:var(--burgundy); }
@@ -186,34 +184,55 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-action-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
 .att-action-btn.primary:hover { background:#8e1624; }
 
+/* 2단 레이아웃 */
+.att-body { display:flex; gap:16px; align-items:flex-start; }
+.att-left { flex:1; min-width:0; }
+.att-right { width:240px; flex-shrink:0; position:sticky; top:20px; }
+
+/* 일일 메모판 */
+.daily-memo-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
+.daily-memo-title { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.daily-memo-area { width:100%; min-height:160px; border:1.5px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px; font-family:'Pretendard',sans-serif; color:var(--text); resize:vertical; outline:none; line-height:1.6; box-sizing:border-box; }
+.daily-memo-area:focus { border-color:var(--burgundy); }
+.daily-memo-save { width:100%; margin-top:8px; padding:8px; background:var(--dark); color:white; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.daily-memo-save:hover { background:var(--burgundy); }
+
 /* 구분 헤더 */
-.att-type-header { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; padding:10px 6px 6px; border-bottom:1.5px solid var(--border); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+.att-type-header { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; padding:8px 6px 4px; border-bottom:1.5px solid var(--border); margin-bottom:2px; display:flex; align-items:center; gap:6px; }
 
 /* 컴팩트 학생 행 */
-.att-row { display:flex; align-items:center; padding:6px 8px; border-radius:7px; gap:8px; transition:background 0.12s; }
+.att-row { display:flex; align-items:center; padding:4px 6px; border-radius:6px; gap:6px; transition:background 0.12s; }
 .att-row:hover { background:var(--surface2); }
 .att-row.s-출석 { background:#f0faf4; }
 .att-row.s-결석 { background:#fff5f5; }
 .att-row.s-보강 { background:#fffdf0; }
-.att-row-name { font-size:13px; font-weight:600; min-width:60px; }
-.att-row-meta { font-size:10px; color:var(--text3); min-width:52px; }
-.att-row-btns { display:flex; gap:4px; margin-left:auto; }
-.amini { padding:4px 9px; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.12s; }
+.att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
+.att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
+.att-row-memo { flex:1; font-size:11px; color:var(--text2); background:transparent; border:none; outline:none; font-family:'Pretendard',sans-serif; padding:2px 4px; cursor:text; min-width:0; border-radius:4px; }
+.att-row-memo::placeholder { color:#ccc; }
+.att-row-memo:focus { color:var(--text); background:#fff8e1; }
+.att-row-btns { display:flex; gap:3px; flex-shrink:0; }
+.amini { padding:3px 8px; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.12s; white-space:nowrap; }
 .amini.p { background:#e8f7ee; color:#2d8a4e; }
 .amini.p.on, .amini.p:hover { background:#2d8a4e; color:white; }
 .amini.a { background:#fdecea; color:var(--burgundy); }
 .amini.a.on, .amini.a:hover { background:var(--burgundy); color:white; }
-.amini.m { background:#fffdf0; color:#92400e; }
-.amini.m.on, .amini.m:hover { background:#d4af37; color:white; }
 .amini.r { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
 .amini.r:hover { background:var(--dark); color:white; border-color:var(--dark); }
 
 /* 보강 대기 행 */
-.makeup-row { display:flex; align-items:center; padding:7px 8px; border-radius:7px; background:#fffdf0; border:1px solid #fef3c7; margin-bottom:4px; gap:8px; }
-.makeup-row-name { font-size:13px; font-weight:700; min-width:60px; }
+.makeup-row { display:flex; align-items:center; padding:5px 8px; border-radius:7px; background:#fffdf0; border:1px solid #fef3c7; margin-bottom:3px; gap:5px; }
+.makeup-row-name { font-size:13px; font-weight:700; min-width:64px; }
 .makeup-row-info { font-size:11px; color:var(--text3); flex:1; }
-.mkdone { padding:4px 12px; background:var(--dark); color:white; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
-.mkdone:hover { background:var(--burgundy); }
+.mkdel { padding:3px 8px; background:#fdecea; color:var(--burgundy); border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.mkdel:hover { background:var(--burgundy); color:white; }
+
+/* 수동 추가 폼 */
+.att-add-form { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-top:12px; box-shadow:var(--shadow); }
+.att-add-form-title { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:10px; }
+.att-add-row { display:flex; gap:6px; align-items:flex-end; flex-wrap:wrap; }
+.att-add-row input, .att-add-row select { padding:6px 10px; border:1.5px solid var(--border); border-radius:7px; font-size:12px; font-family:'Pretendard',sans-serif; outline:none; }
+.att-add-row input:focus, .att-add-row select:focus { border-color:var(--burgundy); }
 
 /* 모달 */
 .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:8000; align-items:center; justify-content:center; }
@@ -222,17 +241,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .modal-title { font-size:15px; font-weight:700; margin-bottom:16px; }
 .modal-field { margin-bottom:12px; }
 .modal-field label { display:block; font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
-.modal-field input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; outline:none; box-sizing:border-box; }
-.modal-field input:focus { border-color:var(--burgundy); }
+.modal-field input, .modal-field select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; outline:none; box-sizing:border-box; background:var(--surface); }
+.modal-field input:focus, .modal-field select:focus { border-color:var(--burgundy); }
 .modal-btn-row { display:flex; gap:8px; margin-top:16px; }
 .modal-btn { flex:1; padding:10px; background:var(--surface2); color:var(--text2); border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; transition:0.2s; }
 .modal-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
 .modal-btn.primary:hover { background:#8e1624; }
 .modal-cancel { width:100%; margin-top:8px; padding:8px; background:none; border:none; color:var(--text3); font-size:12px; cursor:pointer; font-family:'Pretendard',sans-serif; }
-.search-dropdown { border:1px solid var(--border); border-radius:8px; margin-top:4px; display:none; max-height:140px; overflow-y:auto; }
-.search-item { padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); }
-.search-item:last-child { border-bottom:none; }
-.search-item:hover { background:var(--surface2); }
 .type-badge { font-size:9px; font-weight:700; padding:2px 6px; border-radius:8px; }
 .tb-초등 { background:#e8f7ee; color:#2d8a4e; }
 .tb-중등 { background:#e8f0ff; color:#3a5fd9; }
@@ -342,18 +357,67 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     <!-- 출결 관리 패널 -->
     <div class="panel" id="panel-attendance">
       <div class="panel-title">출결 관리</div>
+      <!-- 헤더 -->
       <div class="att-header">
         <input type="date" class="att-date-input" id="att-date" onchange="loadAttendance()">
         <span class="att-day-badge" id="att-day-badge">-요일</span>
         <button class="att-action-btn" onclick="loadAttendance()">🔄 새로고침</button>
         <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
       </div>
-      <div id="att-grid" style="max-width:900px;"></div>
-      <div style="max-width:900px;margin-top:20px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:8px 0 8px;border-bottom:1.5px solid var(--border);margin-bottom:8px;">
-          🔄 보강 대기 <span id="makeup-count" style="font-weight:400;color:var(--text3);"></span>
+
+      <!-- 2단 레이아웃 -->
+      <div class="att-body">
+
+        <!-- 왼쪽: 출결 목록 + 수동 추가 + 보강 대기 -->
+        <div class="att-left">
+          <div id="att-grid"></div>
+
+          <!-- 수동 학생 추가 -->
+          <div class="att-add-form" style="margin-top:10px;">
+            <div class="att-add-form-title">➕ 오늘 학생 추가</div>
+            <div class="att-add-row">
+              <input type="text" id="add-name" placeholder="이름" style="width:90px;">
+              <select id="add-type" onchange="updateAddGrades()" style="width:68px;">
+                <option value="초등">초등</option>
+                <option value="중등">중등</option>
+                <option value="고등" selected>고등</option>
+              </select>
+              <select id="add-grade" style="width:68px;"></select>
+              <select id="add-section" style="width:80px;">
+                <option value="정규">정규</option>
+                <option value="보강">보강</option>
+              </select>
+              <button class="att-action-btn primary" onclick="addStudentManually()">추가</button>
+            </div>
+          </div>
+
+          <!-- 보강 대기 -->
+          <div style="margin-top:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 0;border-bottom:1.5px solid var(--border);margin-bottom:6px;">
+              🔄 보강 대기 <span id="makeup-count" style="font-weight:400;color:var(--text3);"></span>
+            </div>
+            <div id="makeup-list"></div>
+          </div>
         </div>
-        <div id="makeup-list"></div>
+
+        <!-- 오른쪽: 일일 메모판 -->
+        <div class="att-right">
+          <div class="daily-memo-card">
+            <div class="daily-memo-title">📋 오늘의 메모</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;" id="daily-memo-date"></div>
+            <textarea class="daily-memo-area" id="daily-memo-area" placeholder="공지사항, 특이사항, 오늘의 할일 등 자유롭게 기록하세요"></textarea>
+            <button class="daily-memo-save" onclick="saveDailyMemo()">💾 저장</button>
+          </div>
+
+          <!-- 주간 출결 요약 -->
+          <div class="daily-memo-card" style="margin-top:12px;">
+            <div class="daily-memo-title">📊 오늘 출결 현황</div>
+            <div id="att-summary" style="font-size:12px;color:var(--text2);line-height:2;">
+              출결 체크 후 표시됩니다
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -389,7 +453,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <div style="display:flex;gap:8px;">
           <div class="modal-field" style="flex:1;">
             <label>구분</label>
-            <select id="modal-makeup-type" onchange="updateMakeupGrades()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+            <select id="modal-makeup-type" onchange="updateMakeupGrades()">
               <option value="초등">초등</option>
               <option value="중등">중등</option>
               <option value="고등" selected>고등</option>
@@ -397,7 +461,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           </div>
           <div class="modal-field" style="flex:1;">
             <label>학년</label>
-            <select id="modal-makeup-grade" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;"></select>
+            <select id="modal-makeup-grade"></select>
           </div>
         </div>
         <div class="modal-field">
@@ -406,7 +470,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         </div>
         <div class="modal-field">
           <label>보강 사유</label>
-          <select id="modal-makeup-reason" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+          <select id="modal-makeup-reason">
             <option value="사전보강">사전 보강 (결석 예정)</option>
             <option value="결석후보강">결석 후 보강</option>
             <option value="추가수업">추가 수업</option>
@@ -415,7 +479,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         </div>
         <div class="modal-field">
           <label>결석일 / 메모 (선택)</label>
-          <input type="text" id="modal-makeup-memo" placeholder="예: 5/28 결석 예정, 시험 대비 등">
+          <input type="text" id="modal-makeup-memo" placeholder="예: 5/28 결석 예정">
         </div>
         <div class="modal-btn-row">
           <button class="modal-btn primary" onclick="confirmAddMakeup()">보강 등록</button>
@@ -424,7 +488,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
     </div>
 
-    <!-- 보강 날짜 등록 팝업 (보강 대기에서) -->
+    <!-- 보강 날짜 등록 팝업 -->
     <div id="modal-schedule-makeup" class="modal-overlay">
       <div class="modal-box">
         <div class="modal-title">📅 보강 날짜 등록</div>
@@ -689,30 +753,35 @@ async function loadStudents() {
 }
 
 // ── 출결 관리 ──
-let attStudents = [], attRecords = [], attMakeup = [], allStudentsCache = [];
-let absentTarget = null; // 결석 팝업용 임시 저장
+let attStudents = [], attRecords = [], attMakeup = [];
+let absentTarget = null;
 
 function initAttendance() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('att-date').value = today;
-  // 보강 추가 팝업 기본 날짜
   document.getElementById('modal-add-makeup-date').value = today;
+  document.getElementById('daily-memo-date').textContent = today;
+  updateAddGrades();
+  updateMakeupGrades();
   loadAttendance();
+  loadDailyMemo(today);
 }
 
 async function loadAttendance() {
   const date = document.getElementById('att-date').value;
   const grid = document.getElementById('att-grid');
   grid.innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
+  document.getElementById('daily-memo-date').textContent = date;
   try {
     const d = await api('get-attendance', { date });
-    const dayLabel = { '월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말' };
+    const dayLabel = {'월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말'};
     document.getElementById('att-day-badge').textContent = dayLabel[d.dayName] || d.dayName;
     attStudents = d.students || [];
     attRecords  = d.attendance || [];
     attMakeup   = d.makeupList || [];
     renderAttGrid();
     renderMakeupList();
+    loadDailyMemo(date);
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
@@ -722,97 +791,141 @@ function getStatus(name) {
   const r = attRecords.find(r => r.name === name);
   return r ? r.status : null;
 }
+function getMemo(name) {
+  const r = attRecords.find(r => r.name === name);
+  return r ? (r.memo || '') : '';
+}
 
 function renderAttGrid() {
   const grid = document.getElementById('att-grid');
-
   const regular = attStudents.filter(s => !s.isMakeup);
   const makeup  = attStudents.filter(s => s.isMakeup);
 
   if (!regular.length && !makeup.length) {
-    grid.innerHTML = '<div class="loading-spinner" style="padding:24px">오늘 등원 예정 학생이 없습니다</div>';
+    grid.innerHTML = '<div class="loading-spinner" style="padding:20px">오늘 등원 예정 학생이 없습니다</div>';
+    updateSummary();
     return;
   }
 
-  const sortStudents = arr => {
-    return [...arr].sort((a,b) => {
-      const typeOrder = { '초등':0, '중등':1, '고등':2 };
-      const ta = typeOrder[a.type]??3, tb = typeOrder[b.type]??3;
-      const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
-      return ta-tb || ga-gb || a.name.localeCompare(b.name,'ko');
-    });
-  };
+  const sortStudents = arr => [...arr].sort((a,b) => {
+    const to = {'초등':0,'중등':1,'고등':2};
+    const ta = to[a.type]??3, tb = to[b.type]??3;
+    const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
+    return ta-tb || ga-gb || a.name.localeCompare(b.name,'ko');
+  });
 
-  const renderRows = (students, isMakeupSection) => {
+  const renderRows = (students) => {
     let html = '', lastKey = null;
     sortStudents(students).forEach(s => {
-      const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
-      const typeLabel  = s.type === '초등' ? '초등' : s.type === '중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+      const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
+      const typeLabel  = s.type==='초등' ? '초등' : s.type==='중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
       if (sectionKey !== lastKey) {
         lastKey = sectionKey;
         html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
       }
-      const st  = getStatus(s.name);
-      const enc = encodeURIComponent(s.name);
-
-      const btns = isMakeupSection
-        ? /* 보강 학생: 출석 + 결석(재보강 가능) + 기록 */
-          `<button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
-           <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
-           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>`
-        : /* 정규 학생: 출석 + 결석 + 기록 */
-          `<button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
-           <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
-           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>`;
-
+      const st   = getStatus(s.name);
+      const memo = getMemo(s.name);
+      const enc  = encodeURIComponent(s.name);
       html += `
         <div class="att-row s-${st||''}" id="arow-${enc}">
           <span class="att-row-name">${s.name}</span>
           <span class="att-row-meta">${s.grade}</span>
-          <div class="att-row-btns">${btns}</div>
+          <input class="att-row-memo" type="text" placeholder="메모..." value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
+            onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
+          <div class="att-row-btns">
+            <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+            <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
+            <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+          </div>
         </div>`;
     });
     return html;
   };
 
   let html = '';
-
-  // 정규 수업 섹션
   if (regular.length) {
-    html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:8px 6px 4px;border-bottom:2px solid var(--dark);margin-bottom:4px;">📚 정규 수업 (${regular.length}명)</div>`;
-    html += renderRows(regular, false);
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 4px 4px;border-bottom:2px solid var(--dark);margin-bottom:2px;">📚 정규 수업 (${regular.length}명)</div>`;
+    html += renderRows(regular);
   }
-
-  // 보강 섹션
   if (makeup.length) {
-    html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;text-transform:uppercase;padding:16px 6px 4px;border-bottom:2px solid #d4af37;margin-bottom:4px;">🔄 보강 수업 (${makeup.length}명)</div>`;
-    html += renderRows(makeup, true);
+    html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;text-transform:uppercase;padding:12px 4px 4px;border-bottom:2px solid #d4af37;margin-bottom:2px;">🔄 보강 수업 (${makeup.length}명)</div>`;
+    html += renderRows(makeup);
   }
-
   grid.innerHTML = html;
+  updateSummary();
 }
 
-// 출석/보강 바로 처리
+function updateSummary() {
+  const total   = attStudents.length;
+  const present = attRecords.filter(r=>r.status==='출석').length;
+  const absent  = attRecords.filter(r=>r.status==='결석').length;
+  const makeup  = attRecords.filter(r=>r.status==='보강').length;
+  const unchecked = total - attRecords.filter(r=>['출석','결석','보강'].includes(r.status)).length;
+  document.getElementById('att-summary').innerHTML =
+    `<div>전체: <b>${total}명</b></div>
+     <div style="color:#2d8a4e">✅ 출석: <b>${present}명</b></div>
+     <div style="color:var(--burgundy)">❌ 결석: <b>${absent}명</b></div>
+     <div style="color:#92400e">🔄 보강: <b>${makeup}명</b></div>
+     <div style="color:var(--text3)">미체크: <b>${unchecked}명</b></div>`;
+}
+
+// 수동 학생 추가
+function updateAddGrades() {
+  const type = document.getElementById('add-type').value;
+  const sel  = document.getElementById('add-grade');
+  sel.innerHTML = '';
+  const max = type==='초등' ? 6 : 3;
+  for (let i=1; i<=max; i++) sel.innerHTML += `<option>${i}학년</option>`;
+}
+
+function addStudentManually() {
+  const name    = document.getElementById('add-name').value.trim();
+  const type    = document.getElementById('add-type').value;
+  const grade   = document.getElementById('add-grade').value;
+  const section = document.getElementById('add-section').value;
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const exists = attStudents.find(s => s.name === name);
+  if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
+  attStudents.push({ name, type, grade, isMakeup: section==='보강' });
+  document.getElementById('add-name').value = '';
+  renderAttGrid();
+  toast(`${name} 추가됨`);
+}
+
+// 출석 처리
 async function doAttend(name, type, grade, status) {
   const date = document.getElementById('att-date').value;
+  const memo = document.getElementById(`memo-${encodeURIComponent(name)}`)?.value || '';
   try {
-    await api('save-attendance', { action:'upsert', name, type, grade, date, status });
-    const idx = attRecords.findIndex(r => r.name === name);
-    if (idx >= 0) attRecords[idx].status = status;
-    else attRecords.push({ name, status });
+    await api('save-attendance', { action:'upsert', name, type, grade, date, status, memo });
+    const idx = attRecords.findIndex(r=>r.name===name);
+    if (idx>=0) { attRecords[idx].status=status; attRecords[idx].memo=memo; }
+    else attRecords.push({ name, status, memo });
     renderAttGrid();
     toast(`${name} — ${status} ✓`);
-  } catch(e) { toast('오류: ' + e.message); }
+  } catch(e) { toast('오류: '+e.message); }
 }
 
-// 결석 팝업 열기
+// 메모 저장
+async function saveMemo(name, type, grade, memo) {
+  const date   = document.getElementById('att-date').value;
+  const status = getStatus(name) || '';
+  if (!status && !memo) return; // 출결 미체크 + 메모 없으면 스킵
+  try {
+    await api('save-attendance', { action:'upsert', name, type, grade, date, status: status||'출석', memo });
+    const idx = attRecords.findIndex(r=>r.name===name);
+    if (idx>=0) attRecords[idx].memo=memo;
+    else attRecords.push({ name, status:'출석', memo });
+  } catch(e) {}
+}
+
+// 결석 팝업
 function openAbsentModal(name, type, grade) {
   absentTarget = { name, type, grade };
   document.getElementById('modal-absent-name').textContent = `${name} (${type} ${grade})`;
   document.getElementById('modal-absent-reason').value = '';
-  // 보강 날짜 기본값: 다음 주 같은 요일
   const date = document.getElementById('att-date').value;
-  const next = new Date(date); next.setDate(next.getDate() + 7);
+  const next = new Date(date); next.setDate(next.getDate()+7);
   document.getElementById('modal-makeup-date').value = next.toISOString().split('T')[0];
   document.getElementById('modal-absent').classList.add('open');
 }
@@ -820,48 +933,39 @@ function openAbsentModal(name, type, grade) {
 async function confirmAbsent(withMakeup) {
   if (!absentTarget) return;
   const { name, type, grade } = absentTarget;
-  const date        = document.getElementById('att-date').value;
-  const reason      = document.getElementById('modal-absent-reason').value;
-  const makeupDate  = document.getElementById('modal-makeup-date').value;
+  const date       = document.getElementById('att-date').value;
+  const reason     = document.getElementById('modal-absent-reason').value;
+  const makeupDate = document.getElementById('modal-makeup-date').value;
   closeModal('modal-absent');
-
   try {
-    // 1. 결석 처리
-    await api('save-attendance', { action:'upsert', name, type, grade, date, status:'결석', memo: reason });
-    const idx = attRecords.findIndex(r => r.name === name);
-    if (idx >= 0) attRecords[idx].status = '결석';
-    else attRecords.push({ name, status:'결석' });
-
-    // 2. 보강 등록
+    await api('save-attendance', { action:'upsert', name, type, grade, date, status:'결석', memo:reason });
+    const idx = attRecords.findIndex(r=>r.name===name);
+    if (idx>=0) { attRecords[idx].status='결석'; attRecords[idx].memo=reason; }
+    else attRecords.push({ name, status:'결석', memo:reason });
     if (withMakeup && makeupDate) {
-      await api('save-attendance', { action:'upsert', name, type, grade, date: makeupDate, status:'보강', absentDate: date });
-      toast(`${name} — 결석 처리 + ${makeupDate} 보강 등록 ✓`);
+      await api('save-attendance', { action:'upsert', name, type, grade, date:makeupDate, status:'보강', absentDate:date });
+      toast(`${name} — 결석 + ${makeupDate} 보강 등록 ✓`);
     } else {
       toast(`${name} — 결석 처리 ✓`);
     }
     renderAttGrid();
     await loadMakeupOnly();
-  } catch(e) { toast('오류: ' + e.message); }
+  } catch(e) { toast('오류: '+e.message); }
   absentTarget = null;
 }
 
-// 기록 버튼 → 일일기록 탭으로 이동
+// 기록 탭 이동
 function goRecord(name, type, grade) {
-  document.getElementById('r-name').value  = name;
-  document.getElementById('r-type').value  = type;
-  // 학년 select 업데이트
-  const typeEl = document.getElementById('r-type');
-  typeEl.value = type;
+  document.getElementById('r-name').value = name;
+  document.getElementById('r-type').value = type;
   updateGrades();
-  // 학년 select에서 해당 학년 선택
   const sel = document.getElementById('r-grade');
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].text === grade) { sel.selectedIndex = i; break; }
+  for (let i=0; i<sel.options.length; i++) {
+    if (sel.options[i].text===grade) { sel.selectedIndex=i; break; }
   }
-  // 날짜 동기화
   document.getElementById('r-date').value = document.getElementById('att-date').value;
   showPanel('record');
-  toast(`${name} 학생 기록 탭으로 이동`);
+  toast(`${name} 기록 탭으로 이동`);
 }
 
 // 보강 대기 렌더
@@ -870,21 +974,18 @@ function renderMakeupList() {
   const cnt  = document.getElementById('makeup-count');
   cnt.textContent = attMakeup.length ? `(${attMakeup.length}명)` : '';
   if (!attMakeup.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">보강 대기 학생이 없습니다 🎉</div>';
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">보강 대기 없음 🎉</div>';
     return;
   }
   list.innerHTML = attMakeup.map(m => {
-    const info = [
-      m.type + ' ' + m.grade,
-      m.absentDate ? `결석일: ${m.absentDate}` : '',
-      m.memo || ''
-    ].filter(Boolean).join(' · ');
+    const info = [m.type+' '+m.grade, m.absentDate?`결석일:${m.absentDate}`:'', m.memo||''].filter(Boolean).join(' · ');
     return `
-    <div class="makeup-row">
+    <div class="makeup-row" id="mkrow-${m.id}">
       <span class="makeup-row-name">${m.name}</span>
       <span class="makeup-row-info">${info}</span>
-      <button class="amini r" style="white-space:nowrap;" onclick="openScheduleMakeupModal('${m.name}','${m.type}','${m.grade}','${m.absentDate}','${m.id}')">📅 보강날짜</button>
-      <button class="amini r" onclick="goRecord('${m.name}','${m.type}','${m.grade}')">📝 기록</button>
+      <button class="amini r" style="white-space:nowrap;font-size:10px;" onclick="openScheduleMakeupModal('${m.name}','${m.type}','${m.grade}','${m.absentDate}','${m.id}')">📅 날짜</button>
+      <button class="amini r" style="font-size:10px;" onclick="goRecord('${m.name}','${m.type}','${m.grade}')">📝</button>
+      <button class="mkdel" onclick="deleteMakeup('${m.id}','${m.name}')">🗑️</button>
     </div>`;
   }).join('');
 }
@@ -898,14 +999,15 @@ async function loadMakeupOnly() {
   } catch(e) {}
 }
 
-async function completeMakeup(recordId, name, absentDate) {
-  const date = document.getElementById('att-date').value;
+// 보강 대기 삭제
+async function deleteMakeup(recordId, name) {
+  if (!confirm(`${name}의 보강 대기를 삭제할까요?`)) return;
   try {
-    await api('save-attendance', { action:'complete_makeup', recordId, name, date, absentDate });
-    attMakeup = attMakeup.filter(m => m.id !== recordId);
+    await api('save-attendance', { action:'delete_makeup', recordId });
+    attMakeup = attMakeup.filter(m=>m.id!==recordId);
     renderMakeupList();
-    toast(`${name} 보강 완료 ✓`);
-  } catch(e) { toast('오류: ' + e.message); }
+    toast(`${name} 보강 대기 삭제 ✓`);
+  } catch(e) { toast('오류: '+e.message); }
 }
 
 // 보강 추가 팝업
@@ -913,8 +1015,7 @@ function openAddMakeupModal() {
   document.getElementById('modal-makeup-name').value = '';
   document.getElementById('modal-makeup-memo').value = '';
   document.getElementById('modal-makeup-reason').value = '사전보강';
-  const today = document.getElementById('att-date').value;
-  document.getElementById('modal-add-makeup-date').value = today;
+  document.getElementById('modal-add-makeup-date').value = document.getElementById('att-date').value;
   updateMakeupGrades();
   document.getElementById('modal-add-makeup').classList.add('open');
 }
@@ -923,8 +1024,8 @@ function updateMakeupGrades() {
   const type = document.getElementById('modal-makeup-type').value;
   const sel  = document.getElementById('modal-makeup-grade');
   sel.innerHTML = '';
-  const max = type === '초등' ? 6 : 3;
-  for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
+  const max = type==='초등' ? 6 : 3;
+  for (let i=1; i<=max; i++) sel.innerHTML += `<option>${i}학년</option>`;
 }
 
 async function confirmAddMakeup() {
@@ -934,35 +1035,26 @@ async function confirmAddMakeup() {
   const makeupDate = document.getElementById('modal-add-makeup-date').value;
   const reason     = document.getElementById('modal-makeup-reason').value;
   const memo       = document.getElementById('modal-makeup-memo').value;
-
-  if (!name)       { toast('학생 이름을 입력해주세요.'); return; }
+  if (!name)       { toast('이름을 입력해주세요.'); return; }
   if (!makeupDate) { toast('보강 날짜를 선택해주세요.'); return; }
-
-  const reasonLabel = { '사전보강':'사전 보강', '결석후보강':'결석 후 보강', '추가수업':'추가 수업', '기타':'기타' };
+  const reasonLabel = {'사전보강':'사전 보강','결석후보강':'결석 후 보강','추가수업':'추가 수업','기타':'기타'};
   const memoText = [reasonLabel[reason], memo].filter(Boolean).join(' · ');
-
   try {
-    await api('save-attendance', {
-      action: 'upsert', name, type, grade,
-      date: makeupDate, status: '보강',
-      memo: memoText
-    });
+    await api('save-attendance', { action:'upsert', name, type, grade, date:makeupDate, status:'보강', memo:memoText });
     closeModal('modal-add-makeup');
     toast(`${name} 보강 등록 완료 (${makeupDate})`);
     await loadMakeupOnly();
-    if (makeupDate === document.getElementById('att-date').value) loadAttendance();
-  } catch(e) { toast('오류: ' + e.message); }
+    if (makeupDate===document.getElementById('att-date').value) loadAttendance();
+  } catch(e) { toast('오류: '+e.message); }
 }
 
-// 보강 대기에서 날짜 등록
+// 보강 날짜 등록
 let scheduleMakeupTarget = null;
 
 function openScheduleMakeupModal(name, type, grade, absentDate, recordId) {
   scheduleMakeupTarget = { name, type, grade, absentDate, recordId };
   document.getElementById('modal-schedule-name').textContent = `${name} (${type} ${grade}) · 결석일: ${absentDate}`;
-  // 기본값: 결석일 + 7일
-  const next = new Date(absentDate);
-  next.setDate(next.getDate() + 7);
+  const next = new Date(absentDate); next.setDate(next.getDate()+7);
   document.getElementById('modal-schedule-date').value = next.toISOString().split('T')[0];
   document.getElementById('modal-schedule-makeup').classList.add('open');
 }
@@ -972,21 +1064,26 @@ async function confirmScheduleMakeup() {
   const { name, type, grade, absentDate } = scheduleMakeupTarget;
   const makeupDate = document.getElementById('modal-schedule-date').value;
   if (!makeupDate) { toast('날짜를 선택해주세요.'); return; }
-
   try {
-    // 보강 날짜에 새 레코드 등록 (원래날짜 = 결석일)
-    await api('save-attendance', {
-      action: 'upsert', name, type, grade,
-      date: makeupDate, status: '보강',
-      memo: `결석 후 보강`,
-      absentDate
-    });
+    await api('save-attendance', { action:'upsert', name, type, grade, date:makeupDate, status:'보강', memo:'결석 후 보강', absentDate });
     closeModal('modal-schedule-makeup');
-    toast(`${name} — ${makeupDate} 보강 등록 완료`);
+    toast(`${name} — ${makeupDate} 보강 등록 ✓`);
     scheduleMakeupTarget = null;
-    // 보강 대기 목록 갱신 (해당 학생 사라져야 함)
     await loadMakeupOnly();
-  } catch(e) { toast('오류: ' + e.message); }
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+// 일일 메모 (localStorage 사용)
+function loadDailyMemo(date) {
+  const saved = localStorage.getItem(`daily-memo-${date}`) || '';
+  document.getElementById('daily-memo-area').value = saved;
+}
+
+function saveDailyMemo() {
+  const date = document.getElementById('att-date').value;
+  const memo = document.getElementById('daily-memo-area').value;
+  localStorage.setItem(`daily-memo-${date}`, memo);
+  toast('메모 저장 ✓');
 }
 
 function closeModal(id) {
