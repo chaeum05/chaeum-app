@@ -208,9 +208,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
-.att-row-memo { flex:1; font-size:11px; color:var(--text2); background:transparent; border:none; outline:none; font-family:'Pretendard',sans-serif; padding:2px 4px; cursor:text; min-width:0; border-radius:4px; }
+.att-row-memo { width:100px; font-size:10px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; flex-shrink:0; }
 .att-row-memo::placeholder { color:#ccc; }
-.att-row-memo:focus { color:var(--text); background:#fff8e1; }
+.att-row-memo:focus { color:var(--text); background:#fff8e1; border-color:var(--gold); }
 .att-row-btns { display:flex; gap:3px; flex-shrink:0; }
 .amini { padding:3px 8px; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.12s; white-space:nowrap; }
 .amini.p { background:#e8f7ee; color:#2d8a4e; }
@@ -314,6 +314,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="panel-title">학습 보고서 생성</div>
       <div class="panel-sub">노션 기록을 불러와 AI가 피드백을 자동으로 다듬습니다</div>
       <div class="report-controls">
+        <!-- 학생 빠른 선택 -->
+        <div style="margin-bottom:14px;">
+          <label style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:7px;">학생 빠른 선택</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="rep-student-select" onchange="selectReportStudent()" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;background:var(--surface);">
+              <option value="">── 학생을 선택하세요 ──</option>
+            </select>
+            <button class="btn-secondary" style="padding:9px 14px;font-size:12px;white-space:nowrap;" onclick="loadStudentListForReport()">🔄 목록 불러오기</button>
+          </div>
+        </div>
         <div class="form-row" style="margin-bottom:12px">
           <div class="form-group"><label>학생 이름</label><input type="text" id="rep-name" placeholder="예: 김민재"></div>
           <div class="form-group"><label>구분</label>
@@ -523,6 +533,8 @@ function showPanel(name) {
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'students')   loadStudents();
   if (name === 'attendance') initAttendance();
+  if (name === 'report' && allStudentsCache.length) populateReportDropdown(allStudentsCache);
+  if (name === 'report' && !allStudentsCache.length) loadStudentListForReport();
 }
 
 function updateGrades() {
@@ -730,18 +742,21 @@ function copyReportText() {
   navigator.clipboard.writeText(text).then(() => toast('카톡용 텍스트가 복사되었습니다'));
 }
 
+let allStudentsCache = [];
+
 async function loadStudents() {
   const container = document.getElementById('student-list-container');
   container.innerHTML = '<div class="loading-spinner">노션에서 불러오는 중...</div>';
   try {
     const d = await api('get-students', {});
-    if (!d.students.length) {
-      container.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.<br>일일 기록을 저장하면 자동으로 생성됩니다.</div>';
+    allStudentsCache = d.students || [];
+    if (!allStudentsCache.length) {
+      container.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.</div>';
       return;
     }
     const grid = document.createElement('div');
     grid.className = 'student-grid';
-    d.students.forEach(s => {
+    allStudentsCache.forEach(s => {
       const card = document.createElement('div');
       card.className = 'student-card';
       card.innerHTML = `<span class="student-badge badge-${s.type}">${s.type}</span><div class="student-name">${s.name}</div><div class="student-meta">${s.grade}</div>`;
@@ -754,9 +769,59 @@ async function loadStudents() {
     });
     container.innerHTML = '';
     container.appendChild(grid);
+    populateReportDropdown(allStudentsCache);
   } catch(e) {
     container.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
+}
+
+function populateReportDropdown(students) {
+  const sel = document.getElementById('rep-student-select');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">── 학생 선택 ──</option>';
+  const typeOrder = {'초등':0,'중등':1,'고등':2};
+  const sorted = [...students].sort((a,b) => {
+    const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
+    const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
+    return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
+  });
+  let lastGroup = '', og = null;
+  sorted.forEach(s => {
+    const group = s.type==='초등' ? '초등' : `${s.type} ${s.grade}`;
+    if (group !== lastGroup) {
+      og = document.createElement('optgroup');
+      og.label = group;
+      sel.appendChild(og);
+      lastGroup = group;
+    }
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify({ name: s.name, type: s.type });
+    opt.textContent = s.name;
+    og.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+async function loadStudentListForReport() {
+  const sel = document.getElementById('rep-student-select');
+  sel.innerHTML = '<option>불러오는 중...</option>';
+  try {
+    const d = await api('get-students', {});
+    allStudentsCache = d.students || [];
+    populateReportDropdown(allStudentsCache);
+    toast('학생 목록 불러오기 완료');
+  } catch(e) { toast('오류: ' + e.message); }
+}
+
+function selectReportStudent() {
+  const val = document.getElementById('rep-student-select').value;
+  if (!val) return;
+  try {
+    const { name, type } = JSON.parse(val);
+    document.getElementById('rep-name').value = name;
+    document.getElementById('rep-type').value = type;
+  } catch(e) {}
 }
 
 // ── 출결 관리 ──
@@ -837,13 +902,13 @@ function renderAttGrid() {
         <div class="att-row s-${st||''}" id="arow-${enc}">
           <span class="att-row-name">${s.name}</span>
           <span class="att-row-meta">${s.grade}</span>
-          <input class="att-row-memo" type="text" placeholder="메모..." value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
-            onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
           <div class="att-row-btns">
             <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
             <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
             <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
           </div>
+          <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
+            onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
         </div>`;
     });
     return html;
