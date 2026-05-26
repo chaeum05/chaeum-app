@@ -380,23 +380,45 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
     <!-- 보강 추가 팝업 -->
     <div id="modal-add-makeup" class="modal-overlay">
-      <div class="modal-box">
-        <div class="modal-title">🔄 보강 학생 추가</div>
+      <div class="modal-box" style="width:380px;">
+        <div class="modal-title">🔄 보강 등록</div>
         <div class="modal-field">
-          <label>학생 이름</label>
-          <input type="text" id="modal-makeup-name" placeholder="이름 검색" oninput="searchStudentForMakeup()">
-          <div id="makeup-search-results" class="search-dropdown"></div>
+          <label>학생 이름 (직접 입력)</label>
+          <input type="text" id="modal-makeup-name" placeholder="예: 김도현">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:1;">
+            <label>구분</label>
+            <select id="modal-makeup-type" onchange="updateMakeupGrades()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+              <option value="초등">초등</option>
+              <option value="중등">중등</option>
+              <option value="고등" selected>고등</option>
+            </select>
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>학년</label>
+            <select id="modal-makeup-grade" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;"></select>
+          </div>
         </div>
         <div class="modal-field">
           <label>보강 날짜</label>
           <input type="date" id="modal-add-makeup-date">
         </div>
         <div class="modal-field">
-          <label>원래 결석일 (선택)</label>
-          <input type="date" id="modal-add-absent-date">
+          <label>보강 사유</label>
+          <select id="modal-makeup-reason" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+            <option value="사전보강">사전 보강 (결석 예정)</option>
+            <option value="결석후보강">결석 후 보강</option>
+            <option value="추가수업">추가 수업</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label>결석일 / 메모 (선택)</label>
+          <input type="text" id="modal-makeup-memo" placeholder="예: 5/28 결석 예정, 시험 대비 등">
         </div>
         <div class="modal-btn-row">
-          <button class="modal-btn primary" onclick="confirmAddMakeup()">보강 추가</button>
+          <button class="modal-btn primary" onclick="confirmAddMakeup()">보강 등록</button>
           <button class="modal-btn" onclick="closeModal('modal-add-makeup')">취소</button>
         </div>
       </div>
@@ -814,13 +836,20 @@ function renderMakeupList() {
     list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">보강 대기 학생이 없습니다 🎉</div>';
     return;
   }
-  list.innerHTML = attMakeup.map(m => `
+  list.innerHTML = attMakeup.map(m => {
+    const info = [
+      m.type + ' ' + m.grade,
+      m.absentDate ? `결석일: ${m.absentDate}` : '',
+      m.memo || ''
+    ].filter(Boolean).join(' · ');
+    return `
     <div class="makeup-row">
       <span class="makeup-row-name">${m.name}</span>
-      <span class="makeup-row-info">${m.type} ${m.grade} · 결석일: ${m.absentDate||'-'}</span>
+      <span class="makeup-row-info">${info}</span>
       <button class="amini r" onclick="goRecord('${m.name}','${m.type}','${m.grade}')">📝 기록</button>
       <button class="mkdone" onclick="completeMakeup('${m.id}','${m.name}','${m.absentDate||''}')">완료</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function loadMakeupOnly() {
@@ -845,53 +874,45 @@ async function completeMakeup(recordId, name, absentDate) {
 // 보강 추가 팝업
 function openAddMakeupModal() {
   document.getElementById('modal-makeup-name').value = '';
-  document.getElementById('makeup-search-results').style.display = 'none';
-  document.getElementById('modal-add-absent-date').value = document.getElementById('att-date').value;
-  document.getElementById('modal-add-makeup-date').value = document.getElementById('att-date').value;
+  document.getElementById('modal-makeup-memo').value = '';
+  document.getElementById('modal-makeup-reason').value = '사전보강';
+  const today = document.getElementById('att-date').value;
+  document.getElementById('modal-add-makeup-date').value = today;
+  updateMakeupGrades();
   document.getElementById('modal-add-makeup').classList.add('open');
 }
 
-async function searchStudentForMakeup() {
-  const q = document.getElementById('modal-makeup-name').value.trim();
-  const box = document.getElementById('makeup-search-results');
-  if (!q) { box.style.display = 'none'; return; }
-
-  // allStudentsCache 없으면 fetch
-  if (!allStudentsCache.length) {
-    try { const d = await api('get-students', {}); allStudentsCache = d.students || []; } catch(e) {}
-  }
-  const matches = allStudentsCache.filter(s => s.name.includes(q)).slice(0, 8);
-  if (!matches.length) { box.style.display = 'none'; return; }
-
-  box.innerHTML = matches.map(s =>
-    `<div class="search-item" onclick="selectMakeupStudent('${s.name}','${s.type}','${s.grade}')">
-      ${s.name} <span style="font-size:11px;color:var(--text3)">${s.type} ${s.grade}</span>
-    </div>`
-  ).join('');
-  box.style.display = 'block';
-}
-
-let selectedMakeupStudent = null;
-function selectMakeupStudent(name, type, grade) {
-  selectedMakeupStudent = { name, type, grade };
-  document.getElementById('modal-makeup-name').value = `${name} (${type} ${grade})`;
-  document.getElementById('makeup-search-results').style.display = 'none';
+function updateMakeupGrades() {
+  const type = document.getElementById('modal-makeup-type').value;
+  const sel  = document.getElementById('modal-makeup-grade');
+  sel.innerHTML = '';
+  const max = type === '초등' ? 6 : 3;
+  for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
 }
 
 async function confirmAddMakeup() {
-  if (!selectedMakeupStudent) { toast('학생을 선택해주세요.'); return; }
-  const { name, type, grade } = selectedMakeupStudent;
-  const makeupDate  = document.getElementById('modal-add-makeup-date').value;
-  const absentDate  = document.getElementById('modal-add-absent-date').value;
+  const name       = document.getElementById('modal-makeup-name').value.trim();
+  const type       = document.getElementById('modal-makeup-type').value;
+  const grade      = document.getElementById('modal-makeup-grade').value;
+  const makeupDate = document.getElementById('modal-add-makeup-date').value;
+  const reason     = document.getElementById('modal-makeup-reason').value;
+  const memo       = document.getElementById('modal-makeup-memo').value;
+
+  if (!name)       { toast('학생 이름을 입력해주세요.'); return; }
   if (!makeupDate) { toast('보강 날짜를 선택해주세요.'); return; }
 
+  const reasonLabel = { '사전보강':'사전 보강', '결석후보강':'결석 후 보강', '추가수업':'추가 수업', '기타':'기타' };
+  const memoText = [reasonLabel[reason], memo].filter(Boolean).join(' · ');
+
   try {
-    await api('save-attendance', { action:'upsert', name, type, grade, date: makeupDate, status:'보강', absentDate });
+    await api('save-attendance', {
+      action: 'upsert', name, type, grade,
+      date: makeupDate, status: '보강',
+      memo: memoText
+    });
     closeModal('modal-add-makeup');
     toast(`${name} 보강 등록 완료 (${makeupDate})`);
-    selectedMakeupStudent = null;
     await loadMakeupOnly();
-    // 현재 날짜가 보강 날짜면 그리드 갱신
     if (makeupDate === document.getElementById('att-date').value) loadAttendance();
   } catch(e) { toast('오류: ' + e.message); }
 }
