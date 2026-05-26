@@ -74,6 +74,15 @@ export default async function handler(req, res) {
       }
     }
 
+    // 보강 대기 삭제
+    if (action === 'delete_makeup' && recordId) {
+      await fetch(`https://api.notion.com/v1/pages/${recordId}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ archived: true })
+      });
+      return res.status(200).json({ ok: true, message: '보강 대기 삭제 완료' });
+    }
+
     // 보강 완료 처리
     if (action === 'complete_makeup' && recordId) {
       await fetch(`https://api.notion.com/v1/pages/${recordId}`, {
