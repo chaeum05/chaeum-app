@@ -424,7 +424,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
     </div>
 
-  </main>
+    <!-- 보강 날짜 등록 팝업 (보강 대기에서) -->
+    <div id="modal-schedule-makeup" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">📅 보강 날짜 등록</div>
+        <div style="font-size:14px;font-weight:600;color:var(--burgundy);margin-bottom:16px;" id="modal-schedule-name"></div>
+        <div class="modal-field">
+          <label>보강 날짜</label>
+          <input type="date" id="modal-schedule-date">
+        </div>
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="confirmScheduleMakeup()">보강 날짜 등록</button>
+          <button class="modal-btn" onclick="closeModal('modal-schedule-makeup')">취소</button>
+        </div>
+      </div>
+    </div>
 </div>
 <div id="toast"></div>
 
@@ -869,8 +883,8 @@ function renderMakeupList() {
     <div class="makeup-row">
       <span class="makeup-row-name">${m.name}</span>
       <span class="makeup-row-info">${info}</span>
+      <button class="amini r" style="white-space:nowrap;" onclick="openScheduleMakeupModal('${m.name}','${m.type}','${m.grade}','${m.absentDate}','${m.id}')">📅 보강날짜</button>
       <button class="amini r" onclick="goRecord('${m.name}','${m.type}','${m.grade}')">📝 기록</button>
-      <button class="mkdone" onclick="completeMakeup('${m.id}','${m.name}','${m.absentDate||''}')">완료</button>
     </div>`;
   }).join('');
 }
@@ -937,6 +951,41 @@ async function confirmAddMakeup() {
     toast(`${name} 보강 등록 완료 (${makeupDate})`);
     await loadMakeupOnly();
     if (makeupDate === document.getElementById('att-date').value) loadAttendance();
+  } catch(e) { toast('오류: ' + e.message); }
+}
+
+// 보강 대기에서 날짜 등록
+let scheduleMakeupTarget = null;
+
+function openScheduleMakeupModal(name, type, grade, absentDate, recordId) {
+  scheduleMakeupTarget = { name, type, grade, absentDate, recordId };
+  document.getElementById('modal-schedule-name').textContent = `${name} (${type} ${grade}) · 결석일: ${absentDate}`;
+  // 기본값: 결석일 + 7일
+  const next = new Date(absentDate);
+  next.setDate(next.getDate() + 7);
+  document.getElementById('modal-schedule-date').value = next.toISOString().split('T')[0];
+  document.getElementById('modal-schedule-makeup').classList.add('open');
+}
+
+async function confirmScheduleMakeup() {
+  if (!scheduleMakeupTarget) return;
+  const { name, type, grade, absentDate } = scheduleMakeupTarget;
+  const makeupDate = document.getElementById('modal-schedule-date').value;
+  if (!makeupDate) { toast('날짜를 선택해주세요.'); return; }
+
+  try {
+    // 보강 날짜에 새 레코드 등록 (원래날짜 = 결석일)
+    await api('save-attendance', {
+      action: 'upsert', name, type, grade,
+      date: makeupDate, status: '보강',
+      memo: `결석 후 보강`,
+      absentDate
+    });
+    closeModal('modal-schedule-makeup');
+    toast(`${name} — ${makeupDate} 보강 등록 완료`);
+    scheduleMakeupTarget = null;
+    // 보강 대기 목록 갱신 (해당 학생 사라져야 함)
+    await loadMakeupOnly();
   } catch(e) { toast('오류: ' + e.message); }
 }
 
