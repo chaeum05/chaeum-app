@@ -83,7 +83,8 @@ export default async function handler(req, res) {
       name:        p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
       type:        p.properties['구분']?.select?.name || '',
       grade:       p.properties['학년']?.select?.name || '',
-      absentDate:  p.properties['날짜']?.date?.start || '',
+      absentDate:  p.properties['원래날짜']?.date?.start || p.properties['날짜']?.date?.start || '',
+      memo:        p.properties['메모']?.rich_text?.[0]?.text?.content || '',
     }));
 
     return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
