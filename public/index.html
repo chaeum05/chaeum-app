@@ -216,7 +216,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
-.att-row-memo { width:150px; flex:0 0 150px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
+.att-row-memo { width:200px; flex:0 0 200px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
 .att-row-memo::placeholder { color:#ccc; }
 .att-row-memo:focus { background:#fff8e1; border-color:#d4af37; }
 .att-row-btns { display:flex; gap:3px; flex-shrink:0; }
@@ -375,7 +375,36 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     <!-- 출결 관리 패널 -->
     <div class="panel" id="panel-attendance">
       <div class="panel-title">출결 관리</div>
-      <!-- 헤더 -->
+
+      <!-- 학생 추가 폼 (맨 위) -->
+      <div class="att-add-form" style="margin-bottom:14px;">
+        <div class="att-add-form-title">➕ 학생 추가 (오늘 + 등원 요일 등록)</div>
+        <div class="att-add-row" style="flex-wrap:wrap;gap:6px;">
+          <input type="text" id="add-name" placeholder="이름" style="width:80px;">
+          <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:90px;" title="예: 형곡, 본교 등 — 김민재(형곡)으로 저장됩니다">
+          <select id="add-type" onchange="updateAddGrades()" style="width:62px;">
+            <option value="초등">초등</option>
+            <option value="중등">중등</option>
+            <option value="고등" selected>고등</option>
+          </select>
+          <select id="add-grade" style="width:62px;"></select>
+          <select id="add-section" style="width:70px;">
+            <option value="정규">정규</option>
+            <option value="보강">보강</option>
+          </select>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">등원 요일:</span>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-mon" style="accent-color:var(--burgundy)"> 월</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-tue" style="accent-color:var(--burgundy)"> 화</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-wed" style="accent-color:var(--burgundy)"> 수</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-thu" style="accent-color:var(--burgundy)"> 목</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-fri" style="accent-color:var(--burgundy)"> 금</label>
+          <button class="att-action-btn primary" style="margin-left:auto;" onclick="addStudentManually()">추가 + 등록</button>
+        </div>
+      </div>
+
+      <!-- 날짜 헤더 -->
       <div class="att-header">
         <input type="date" class="att-date-input" id="att-date" onchange="loadAttendance()">
         <span class="att-day-badge" id="att-day-badge">-요일</span>
@@ -385,39 +414,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
       <!-- 2단 레이아웃 -->
       <div class="att-body">
-
-        <!-- 왼쪽: 출결 목록 + 수동 추가 + 보강 대기 -->
+        <!-- 왼쪽 -->
         <div class="att-left">
           <div id="att-grid"></div>
-
-          <!-- 수동 학생 추가 -->
-          <div class="att-add-form" style="margin-top:10px;">
-            <div class="att-add-form-title">➕ 학생 추가 (오늘 + 등원 요일 등록)</div>
-            <div class="att-add-row" style="flex-wrap:wrap;gap:6px;">
-              <input type="text" id="add-name" placeholder="이름" style="width:80px;">
-              <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:90px;" title="예: (형곡), (본교) 등">
-              <select id="add-type" onchange="updateAddGrades()" style="width:62px;">
-                <option value="초등">초등</option>
-                <option value="중등">중등</option>
-                <option value="고등" selected>고등</option>
-              </select>
-              <select id="add-grade" style="width:62px;"></select>
-              <select id="add-section" style="width:70px;">
-                <option value="정규">정규</option>
-                <option value="보강">보강</option>
-              </select>
-            </div>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <span style="font-size:11px;font-weight:600;color:var(--text2);">등원 요일:</span>
-              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-mon" style="accent-color:var(--burgundy)"> 월</label>
-              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-tue" style="accent-color:var(--burgundy)"> 화</label>
-              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-wed" style="accent-color:var(--burgundy)"> 수</label>
-              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-thu" style="accent-color:var(--burgundy)"> 목</label>
-              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-fri" style="accent-color:var(--burgundy)"> 금</label>
-              <button class="att-action-btn primary" style="margin-left:auto;" onclick="addStudentManually()">추가 + 등록</button>
-            </div>
-          </div>
-
           <!-- 보강 대기 -->
           <div style="margin-top:16px;">
             <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 0;border-bottom:1.5px solid var(--border);margin-bottom:6px;">
@@ -435,16 +434,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <textarea class="daily-memo-area" id="daily-memo-area" placeholder="공지사항, 특이사항, 오늘의 할일 등 자유롭게 기록하세요"></textarea>
             <button class="daily-memo-save" onclick="saveDailyMemo()">💾 저장</button>
           </div>
-
-          <!-- 주간 출결 요약 -->
           <div class="daily-memo-card" style="margin-top:12px;">
             <div class="daily-memo-title">📊 오늘 출결 현황</div>
-            <div id="att-summary" style="font-size:12px;color:var(--text2);line-height:2;">
-              출결 체크 후 표시됩니다
-            </div>
+            <div id="att-summary" style="font-size:12px;color:var(--text2);line-height:2;">출결 체크 후 표시됩니다</div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -903,7 +897,7 @@ function renderAttGrid() {
     return ta-tb || ga-gb || a.name.localeCompare(b.name,'ko');
   });
 
-  const renderRows = (students) => {
+  const renderRows = (students, isMakeup) => {
     let html = '', lastKey = null;
     sortStudents(students).forEach(s => {
       const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
@@ -915,6 +909,9 @@ function renderAttGrid() {
       const st   = getStatus(s.name, s.type, s.grade);
       const memo = getMemo(s.name, s.type, s.grade);
       const enc  = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
+      const delBtn = isMakeup
+        ? `<button class="amini" style="background:#fdecea;color:var(--burgundy);padding:3px 6px;" onclick="removeMakeupFromGrid('${s.name}','${s.type}','${s.grade}')" title="보강 목록에서 제거">🗑️</button>`
+        : '';
       html += `
         <div class="att-row s-${st||''}" id="arow-${enc}">
           <span class="att-row-name">${s.name}</span>
@@ -923,6 +920,7 @@ function renderAttGrid() {
             <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
             <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
             <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+            ${delBtn}
           </div>
           <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
             onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
@@ -934,11 +932,11 @@ function renderAttGrid() {
   let html = '';
   if (regular.length) {
     html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 4px 4px;border-bottom:2px solid var(--dark);margin-bottom:2px;">📚 정규 수업 (${regular.length}명)</div>`;
-    html += renderRows(regular);
+    html += renderRows(regular, false);
   }
   if (makeup.length) {
     html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;text-transform:uppercase;padding:12px 4px 4px;border-bottom:2px solid #d4af37;margin-bottom:2px;">🔄 보강 수업 (${makeup.length}명)</div>`;
-    html += renderRows(makeup);
+    html += renderRows(makeup, true);
   }
   grid.innerHTML = html;
   updateSummary();
@@ -1131,7 +1129,19 @@ async function deleteMakeup(recordId, name) {
   } catch(e) { toast('오류: '+e.message); }
 }
 
-// 보강 추가 팝업
+// 보강 섹션에서 학생 제거 (잘못 등록된 경우)
+async function removeMakeupFromGrid(name, type, grade) {
+  if (!confirm(`${name} 학생을 오늘 보강 목록에서 제거할까요?`)) return;
+  // 노션에서 해당 날짜 보강 기록 삭제
+  const date = document.getElementById('att-date').value;
+  try {
+    await api('save-attendance', { action:'delete_by_date', name, type, grade, date, status:'보강' });
+  } catch(e) {} // 노션 삭제 실패해도 로컬은 제거
+  attStudents = attStudents.filter(s => !(s.name===name && s.type===type && s.grade===grade && s.isMakeup));
+  attRecords  = attRecords.filter(r => !(r.name===name && r.type===type && r.grade===grade));
+  renderAttGrid();
+  toast(`${name} 보강 목록에서 제거됨`);
+}
 function openAddMakeupModal() {
   document.getElementById('modal-makeup-name').value = '';
   document.getElementById('modal-makeup-memo').value = '';
