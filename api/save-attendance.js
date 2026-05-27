@@ -29,7 +29,9 @@ export default async function handler(req, res) {
           filter: {
             and: [
               { property: '학생이름', rich_text: { equals: name } },
-              { property: '날짜', date: { equals: date } }
+              { property: '날짜',     date:      { equals: date } },
+              { property: '구분',     select:    { equals: type } },
+              { property: '학년',     select:    { equals: grade } },
             ]
           }
         })
@@ -39,7 +41,7 @@ export default async function handler(req, res) {
       const title = `${name} — ${status} (${date})`;
 
       if (searchData.results && searchData.results.length > 0) {
-        // 기존 기록 업데이트
+        // 기존 기록 업데이트 (첫 번째만, 중복 기록이 있으면 나머지 삭제)
         const existingId = searchData.results[0].id;
         await fetch(`https://api.notion.com/v1/pages/${existingId}`, {
           method: 'PATCH', headers,
@@ -51,6 +53,13 @@ export default async function handler(req, res) {
             }
           })
         });
+        // 중복 기록 정리
+        for (let i = 1; i < searchData.results.length; i++) {
+          await fetch(`https://api.notion.com/v1/pages/${searchData.results[i].id}`, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ archived: true })
+          });
+        }
         return res.status(200).json({ ok: true, message: '출결 기록 업데이트 완료' });
       } else {
         // 새 기록 생성
