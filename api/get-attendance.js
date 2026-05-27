@@ -57,7 +57,8 @@ export default async function handler(req, res) {
     const attendRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        filter: { property: '날짜', date: { equals: today } }
+        filter: { property: '날짜', date: { equals: today } },
+        sorts: [{ property: '학생이름', direction: 'ascending' }]
       })
     });
     const attendData = await attendRes.json();
