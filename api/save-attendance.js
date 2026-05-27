@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    // 2. 보강 기록만 삭제 (결석 기록은 보존)
+    // 2. 보강 기록만 삭제 (결석 기록 보존)
     if (action === 'delete_by_date') {
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
         method: 'POST', headers,
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    // 3. 보강 완료 처리 (상태를 보강 -> 출석으로 변경)
+    // 3. 보강 완료 처리 (보강 -> 출석)
     if (action === 'complete_makeup') {
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
         method: 'POST', headers,
@@ -110,8 +110,6 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true });
     }
-
-    return res.status(400).json({ error: '잘못된 액션' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
