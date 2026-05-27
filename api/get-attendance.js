@@ -72,12 +72,12 @@ export default async function handler(req, res) {
     }));
 
     // 오늘 출결 기록에 있는 학생 중 정규 등원 목록에 없는 학생 추가 (보강 수동 등록 포함)
-    const studentNames = new Set(students.map(s => s.name));
+    const studentKeys = new Set(students.map(s => `${s.name}_${s.type}_${s.grade}`));
     attendance.forEach(a => {
-      if (a.name && !studentNames.has(a.name)) {
-        // 정규 목록에 없는 학생 → 보강으로 온 학생
+      const key = `${a.name}_${a.type}_${a.grade}`;
+      if (a.name && !studentKeys.has(key)) {
         students.push({ id: '', name: a.name, type: a.type, grade: a.grade, isMakeup: true });
-        studentNames.add(a.name);
+        studentKeys.add(key);
       }
     });
 
