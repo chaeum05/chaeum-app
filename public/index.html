@@ -261,6 +261,28 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .tb-중등 { background:#e8f0ff; color:#3a5fd9; }
 .tb-고등 { background:#fdecea; color:var(--burgundy); }
 
+/* ── 보고서 현황 ── */
+.rs-tab { padding:7px 16px; border:none; border-radius:7px; font-size:13px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; background:transparent; color:var(--text2); transition:0.15s; }
+.rs-tab.active { background:var(--surface); color:var(--burgundy); box-shadow:0 1px 6px rgba(0,0,0,0.08); }
+.rs-progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 18px; box-shadow:var(--shadow); }
+.rs-progress-bar-bg { height:8px; background:var(--surface2); border-radius:10px; margin:8px 0; overflow:hidden; }
+.rs-progress-bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg, var(--burgundy), var(--gold)); transition:width 0.4s; }
+.rs-section-header { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; padding:10px 6px 4px; border-bottom:1.5px solid var(--border); margin-bottom:4px; margin-top:12px; display:flex; align-items:center; gap:6px; }
+.rs-row { display:flex; align-items:center; padding:5px 8px; border-radius:7px; gap:8px; transition:background 0.12s; }
+.rs-row:hover { background:var(--surface2); }
+.rs-row.done-record { background:#fffdf0; }
+.rs-row.done-send   { background:#f0faf4; }
+.rs-row-name { font-size:13px; font-weight:600; min-width:72px; }
+.rs-row-meta { font-size:10px; color:var(--text3); min-width:40px; }
+.rs-row-btns { display:flex; gap:4px; margin-left:auto; }
+.rs-btn { padding:4px 10px; border:none; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.12s; white-space:nowrap; }
+.rs-btn.write  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.rs-btn.write:hover { background:var(--dark); color:white; }
+.rs-btn.record { background:#fef3c7; color:#92400e; }
+.rs-btn.record.done { background:#d4af37; color:white; }
+.rs-btn.send   { background:#e8f7ee; color:#2d8a4e; }
+.rs-btn.send.done   { background:#2d8a4e; color:white; }
+
 /* 미니 달력 */
 .mini-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .mini-cal-nav span { font-size:13px; font-weight:700; color:var(--text); }
@@ -288,10 +310,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="sidebar-title">관리 시스템</div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active" onclick="showPanel('record')"   id="nav-record">✏️ &nbsp;일일 기록</div>
-      <div class="nav-item"        onclick="showPanel('report')"   id="nav-report">📋 &nbsp;보고서 생성</div>
-      <div class="nav-item"        onclick="showPanel('students')"    id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
-      <div class="nav-item"        onclick="showPanel('attendance')"  id="nav-attendance">📋 &nbsp;출결 관리</div>
+      <div class="nav-item active" onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;일일 기록</div>
+      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📋 &nbsp;보고서 생성</div>
+      <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
+      <div class="nav-item"        onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리</div>
+      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">📊 &nbsp;보고서 현황</div>
     </nav>
   </aside>
 
@@ -475,6 +498,33 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
     </div>
 
+    <!-- 보고서 현황 패널 -->
+    <div class="panel" id="panel-report-status">
+      <div class="panel-title">보고서 현황</div>
+
+      <!-- 상단 컨트롤 -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <!-- 주간/월간 탭 -->
+        <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
+          <button class="rs-tab active" id="rs-tab-weekly"  onclick="switchReportTab('weekly')">📅 주간 (초·중등)</button>
+          <button class="rs-tab"        id="rs-tab-monthly" onclick="switchReportTab('monthly')">📆 월간 (고등)</button>
+        </div>
+        <!-- 기준일 -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:12px;color:var(--text2);">기준일</label>
+          <input type="date" id="rs-base-date" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+        </div>
+        <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
+        <button onclick="resetReportStatus()" style="padding:7px 14px;background:#fdecea;color:var(--burgundy);border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔁 전체 초기화</button>
+      </div>
+
+      <!-- 진척도 바 -->
+      <div id="rs-progress" style="margin-bottom:16px;"></div>
+
+      <!-- 학생 목록 -->
+      <div id="rs-grid" style="max-width:900px;"></div>
+    </div>
+
     <!-- 결석 팝업 -->
     <div id="modal-absent" class="modal-overlay">
       <div class="modal-box">
@@ -575,8 +625,9 @@ function showPanel(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'students')   loadStudents();
-  if (name === 'attendance') initAttendance();
+  if (name === 'students')       loadStudents();
+  if (name === 'attendance')     initAttendance();
+  if (name === 'report-status')  initReportStatus();
   if (name === 'report' && allStudentsCache.length) populateReportDropdown(allStudentsCache);
   if (name === 'report' && !allStudentsCache.length) loadStudentListForReport();
 }
@@ -868,7 +919,188 @@ function selectReportStudent() {
   } catch(e) {}
 }
 
-// ── 미니 달력 ──
+// ── 보고서 현황 ──
+let rsCurrentTab = 'weekly';
+let rsStatusMap  = {};
+let rsStudents   = [];
+
+function getWeekMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=일
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+function getMonthFirst(date) {
+  return date.slice(0,7) + '-01';
+}
+
+function initReportStatus() {
+  const today = new Date().toISOString().split('T')[0];
+  const baseDate = rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
+  document.getElementById('rs-base-date').value = baseDate;
+  loadReportStatus();
+}
+
+function switchReportTab(tab) {
+  rsCurrentTab = tab;
+  document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
+  document.getElementById('rs-tab-monthly').classList.toggle('active', tab==='monthly');
+  // 기준일 자동 변경
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('rs-base-date').value =
+    tab==='weekly' ? getWeekMonday(today) : getMonthFirst(today);
+  loadReportStatus();
+}
+
+async function loadReportStatus() {
+  const baseDate   = document.getElementById('rs-base-date').value;
+  const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+  const grid       = document.getElementById('rs-grid');
+  grid.innerHTML   = '<div class="loading-spinner">불러오는 중...</div>';
+
+  try {
+    // 학생 목록 (캐시 있으면 재사용)
+    if (!allStudentsCache.length) {
+      const d = await api('get-students', {});
+      allStudentsCache = d.students || [];
+    }
+    // 보고서 상태 조회
+    const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
+    rsStatusMap = d.statusMap || {};
+
+    // 필터링
+    if (rsCurrentTab === 'weekly') {
+      rsStudents = allStudentsCache.filter(s => s.type==='초등' || s.type==='중등');
+    } else {
+      rsStudents = allStudentsCache.filter(s => s.type==='고등');
+    }
+
+    renderReportStatusGrid(baseDate, reportType);
+  } catch(e) {
+    grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
+  }
+}
+
+function renderReportStatusGrid(baseDate, reportType) {
+  const grid = document.getElementById('rs-grid');
+  const prog = document.getElementById('rs-progress');
+
+  if (!rsStudents.length) {
+    grid.innerHTML = '<div class="loading-spinner">해당하는 학생이 없습니다.</div>';
+    return;
+  }
+
+  // 진척도 계산
+  const total    = rsStudents.length;
+  const recorded = rsStudents.filter(s => {
+    const k = `${s.name}_${s.type}_${s.grade}`;
+    return rsStatusMap[k]?.status === '기록완료' || rsStatusMap[k]?.status === '전송완료';
+  }).length;
+  const sent = rsStudents.filter(s => {
+    const k = `${s.name}_${s.type}_${s.grade}`;
+    return rsStatusMap[k]?.status === '전송완료';
+  }).length;
+
+  const pct = Math.round((sent/total)*100);
+  const label = rsCurrentTab==='weekly'
+    ? `주간 보고서 (${baseDate} 기준 주)`
+    : `월간 보고서 (${baseDate.slice(0,7)})`;
+
+  prog.innerHTML = `
+    <div class="rs-progress-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:700;">${label}</span>
+        <span style="font-size:12px;color:var(--text2);">전송완료 ${sent} / 전체 ${total}명</span>
+      </div>
+      <div class="rs-progress-bar-bg">
+        <div class="rs-progress-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--text2);">
+        <span>📝 기록완료: <b style="color:#92400e">${recorded}명</b></span>
+        <span>📲 전송완료: <b style="color:#2d8a4e">${sent}명</b></span>
+        <span>⬜ 미작성: <b style="color:var(--text3)">${total-recorded}명</b></span>
+      </div>
+    </div>`;
+
+  // 그룹별 렌더
+  const typeOrder = {'초등':0,'중등':1,'고등':2};
+  const sorted = [...rsStudents].sort((a,b) => {
+    const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
+    const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
+    return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
+  });
+
+  let html='', lastKey=null;
+  sorted.forEach(s => {
+    const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
+    const typeLabel  = s.type==='초등' ? '초등' : s.type==='중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+    if (sectionKey!==lastKey) {
+      lastKey=sectionKey;
+      html+=`<div class="rs-section-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
+    }
+
+    const key    = `${s.name}_${s.type}_${s.grade}`;
+    const status = rsStatusMap[key]?.status || '미작성';
+    let rowCls   = 'rs-row';
+    if (status==='기록완료') rowCls+=' done-record';
+    if (status==='전송완료') rowCls+=' done-send';
+
+    const recDone  = status==='기록완료'||status==='전송완료';
+    const sendDone = status==='전송완료';
+
+    html+=`
+      <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
+        <span class="rs-row-name">${s.name}</span>
+        <span class="rs-row-meta">${s.grade}</span>
+        <span style="font-size:10px;color:var(--text3);flex:1;">
+          ${status==='미작성'?'':'<b style="color:'+(sendDone?'#2d8a4e':recDone?'#92400e':'#999')+'">'+status+'</b>'}
+        </span>
+        <div class="rs-row-btns">
+          <button class="rs-btn write" onclick="rsGoRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+          <button class="rs-btn record ${recDone?'done':''}"
+            onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','기록완료','${baseDate}','${reportType}')">
+            ${recDone?'✅ 기록완료':'기록완료'}
+          </button>
+          <button class="rs-btn send ${sendDone?'done':''}"
+            onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','전송완료','${baseDate}','${reportType}')">
+            ${sendDone?'📲 전송완료':'전송완료'}
+          </button>
+        </div>
+      </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+async function rsUpdateStatus(name, type, grade, status, baseDate, reportType) {
+  try {
+    await api('update-report-status', { action:'update_status', name, type, grade, status, baseDate, reportType });
+    const key = `${name}_${type}_${grade}`;
+    if (!rsStatusMap[key]) rsStatusMap[key] = {};
+    rsStatusMap[key].status = status;
+    renderReportStatusGrid(baseDate, reportType);
+    toast(`${name} — ${status} ✓`);
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+function rsGoRecord(name, type, grade) {
+  document.getElementById('rep-name').value = name;
+  document.getElementById('rep-type').value = type;
+  showPanel('report');
+  toast(`${name} 보고서 탭으로 이동`);
+}
+
+async function resetReportStatus() {
+  const baseDate   = document.getElementById('rs-base-date').value;
+  const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+  if (!confirm(`${baseDate} 기준 ${reportType} 보고서를 전체 초기화할까요?`)) return;
+  try {
+    const d = await api('update-report-status', { action:'reset_all', baseDate, reportType });
+    rsStatusMap = {};
+    renderReportStatusGrid(baseDate, reportType);
+    toast(d.message || '초기화 완료');
+  } catch(e) { toast('오류: '+e.message); }
+}
 let calYear, calMonth;
 
 function initCalendar(dateStr) {
