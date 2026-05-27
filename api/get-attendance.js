@@ -100,27 +100,39 @@ export default async function handler(req, res) {
     });
     const scheduledData = await scheduledRes.json();
 
-    // 보강 날짜가 잡힌 학생+결석일 조합 Set 만들기
-    // 원래날짜(결석일) 기준으로 매칭
-    const scheduledSet = new Set(
-      (scheduledData.results || []).map(p => {
-        const name       = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
-        const absentDate = p.properties['원래날짜']?.date?.start || '';
-        return `${name}__${absentDate}`;
-      })
-    );
+    // 보강 기록 파싱
+    const scheduledRecords = (scheduledData.results || []).map(p => ({
+      name:        p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
+      absentDate:  p.properties['원래날짜']?.date?.start || '',   // 결석일 (보강 등록 시 지정)
+      makeupDate:  p.properties['날짜']?.date?.start || '',        // 실제 보강 날짜
+    }));
 
-    // 결석 중 보강 날짜가 아직 안 잡힌 것만 보강 대기로
+    // 결석 건에 대해 보강이 잡혔는지 확인하는 함수
+    // 매칭 조건: 같은 이름 + (원래날짜 = 결석일) OR (원래날짜 없고 보강날짜가 결석일 근처 ±14일)
+    const hasMakeup = (name, absentDate) => {
+      return scheduledRecords.some(r => {
+        if (r.name !== name) return false;
+        if (r.absentDate === absentDate) return true;   // 원래날짜 일치
+        if (!r.absentDate) {
+          // 원래날짜 없는 경우: 보강날짜가 결석일 ±14일 이내면 연결된 보강으로 간주
+          const diff = Math.abs(new Date(r.makeupDate) - new Date(absentDate)) / 86400000;
+          return diff <= 14;
+        }
+        return false;
+      });
+    };
+
+    // 결석 중 보강이 안 잡힌 것만 보강 대기로
     const makeupList = (makeupData.results || [])
       .map(p => ({
-        id:          p.id,
-        name:        p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
-        type:        p.properties['구분']?.select?.name || '',
-        grade:       p.properties['학년']?.select?.name || '',
-        absentDate:  p.properties['날짜']?.date?.start || '',
-        memo:        p.properties['메모']?.rich_text?.[0]?.text?.content || '',
+        id:         p.id,
+        name:       p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
+        type:       p.properties['구분']?.select?.name || '',
+        grade:      p.properties['학년']?.select?.name || '',
+        absentDate: p.properties['날짜']?.date?.start || '',
+        memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }))
-      .filter(m => m.name && !scheduledSet.has(`${m.name}__${m.absentDate}`));
+      .filter(m => m.name && !hasMakeup(m.name, m.absentDate));
 
     return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
 
