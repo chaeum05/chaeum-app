@@ -208,7 +208,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
-.att-row-memo { width:72px; font-size:10px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 5px; cursor:text; border-radius:4px; flex-shrink:0; }
+.att-row-memo { width:52px; font-size:10px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 4px; cursor:text; border-radius:4px; flex-shrink:0; }
 .att-row-memo::placeholder { color:#ccc; }
 .att-row-memo:focus { color:var(--text); background:#fff8e1; border-color:var(--gold); }
 .att-row-btns { display:flex; gap:3px; flex-shrink:0; }
@@ -868,13 +868,13 @@ async function loadAttendance() {
   }
 }
 
-function getStatus(name) {
-  const r = attRecords.find(r => r.name === name);
+function getStatus(name, type, grade) {
+  const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   return r ? r.status : null;
 }
-function getMemo(name) {
-  const r = attRecords.find(r => r.name === name);
-  return r ? (r.memo || '') : '';
+function getMemo(name, type, grade) {
+  const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
+  return r ? (r.memo||'') : '';
 }
 
 function renderAttGrid() {
@@ -904,9 +904,9 @@ function renderAttGrid() {
         lastKey = sectionKey;
         html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
       }
-      const st   = getStatus(s.name);
-      const memo = getMemo(s.name);
-      const enc  = encodeURIComponent(s.name);
+      const st   = getStatus(s.name, s.type, s.grade);
+      const memo = getMemo(s.name, s.type, s.grade);
+      const enc  = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
       html += `
         <div class="att-row s-${st||''}" id="arow-${enc}">
           <span class="att-row-name">${s.name}</span>
@@ -1007,12 +1007,13 @@ async function addStudentManually() {
 // 출석 처리
 async function doAttend(name, type, grade, status) {
   const date = document.getElementById('att-date').value;
-  const memo = document.getElementById(`memo-${encodeURIComponent(name)}`)?.value || '';
+  const enc  = encodeURIComponent(`${name}_${type}_${grade}`);
+  const memo = document.getElementById(`memo-${enc}`)?.value || '';
   try {
     await api('save-attendance', { action:'upsert', name, type, grade, date, status, memo });
-    const idx = attRecords.findIndex(r=>r.name===name);
+    const idx = attRecords.findIndex(r=>r.name===name && r.type===type && r.grade===grade);
     if (idx>=0) { attRecords[idx].status=status; attRecords[idx].memo=memo; }
-    else attRecords.push({ name, status, memo });
+    else attRecords.push({ name, type, grade, status, memo });
     renderAttGrid();
     toast(`${name} — ${status} ✓`);
   } catch(e) { toast('오류: '+e.message); }
@@ -1021,13 +1022,13 @@ async function doAttend(name, type, grade, status) {
 // 메모 저장
 async function saveMemo(name, type, grade, memo) {
   const date   = document.getElementById('att-date').value;
-  const status = getStatus(name) || '';
-  if (!status && !memo) return; // 출결 미체크 + 메모 없으면 스킵
+  const status = getStatus(name, type, grade) || '';
+  if (!status && !memo) return;
   try {
     await api('save-attendance', { action:'upsert', name, type, grade, date, status: status||'출석', memo });
-    const idx = attRecords.findIndex(r=>r.name===name);
+    const idx = attRecords.findIndex(r=>r.name===name && r.type===type && r.grade===grade);
     if (idx>=0) attRecords[idx].memo=memo;
-    else attRecords.push({ name, status:'출석', memo });
+    else attRecords.push({ name, type, grade, status:'출석', memo });
   } catch(e) {}
 }
 
@@ -1051,9 +1052,9 @@ async function confirmAbsent(withMakeup) {
   closeModal('modal-absent');
   try {
     await api('save-attendance', { action:'upsert', name, type, grade, date, status:'결석', memo:reason });
-    const idx = attRecords.findIndex(r=>r.name===name);
+    const idx = attRecords.findIndex(r=>r.name===name && r.type===type && r.grade===grade);
     if (idx>=0) { attRecords[idx].status='결석'; attRecords[idx].memo=reason; }
-    else attRecords.push({ name, status:'결석', memo:reason });
+    else attRecords.push({ name, type, grade, status:'결석', memo:reason });
     if (withMakeup && makeupDate) {
       await api('save-attendance', { action:'upsert', name, type, grade, date:makeupDate, status:'보강', absentDate:date });
       toast(`${name} — 결석 + ${makeupDate} 보강 등록 ✓`);
