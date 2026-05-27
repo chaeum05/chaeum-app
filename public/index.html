@@ -925,10 +925,16 @@ function selectReportStudent() {
 }
 
 // ── 보고서 현황 ──
-let rsCurrentTab = 'weekly';
-let rsStatusMap  = {};
-let rsStudents   = [];
-let rsInitialized = false; // 최초 1회만 초기화
+let rsCurrentTab  = 'weekly';
+let rsStatusCache = {}; // { 'weekly_2026-05-26': {...}, 'monthly_2026-05-01': {...} }
+let rsStatusMap   = {}; // 현재 탭의 상태 (캐시 참조)
+let rsStudents    = [];
+let rsInitialized = false;
+
+function getRsCacheKey() {
+  const baseDate = document.getElementById('rs-base-date')?.value || '';
+  return `${rsCurrentTab}_${baseDate}`;
+}
 
 function getWeekMonday(date) {
   const d = new Date(date + 'T00:00:00');
@@ -942,25 +948,51 @@ function getMonthFirst(date) {
 }
 
 function initReportStatus() {
-  // 최초 1회만 기준일 초기화 (탭 재진입 시 유지)
   if (!rsInitialized) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('rs-base-date').value =
       rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
     rsInitialized = true;
   }
-  loadReportStatus();
+  // 캐시가 있으면 바로 렌더, 없으면 노션에서 불러오기
+  const cacheKey = getRsCacheKey();
+  if (rsStatusCache[cacheKey]) {
+    rsStatusMap = rsStatusCache[cacheKey];
+    rsStudents  = rsCurrentTab==='weekly'
+      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      : allStudentsCache.filter(s => s.type==='고등');
+    const baseDate   = document.getElementById('rs-base-date').value;
+    const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+    renderReportStatusGrid(baseDate, reportType);
+    // 백그라운드에서 최신 상태 동기화
+    syncReportStatus();
+  } else {
+    loadReportStatus();
+  }
 }
 
 function switchReportTab(tab) {
   rsCurrentTab = tab;
   document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
   document.getElementById('rs-tab-monthly').classList.toggle('active', tab==='monthly');
-  // 기준일 자동 변경
+  // 기준일 자동 변경 (탭 전환 시에만)
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('rs-base-date').value =
     tab==='weekly' ? getWeekMonday(today) : getMonthFirst(today);
-  loadReportStatus();
+  initReportStatus();
+}
+
+async function syncReportStatus() {
+  // 백그라운드 동기화 (화면 깜빡임 없이)
+  const baseDate   = document.getElementById('rs-base-date').value;
+  const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+  try {
+    const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
+    const cacheKey = getRsCacheKey();
+    rsStatusCache[cacheKey] = d.statusMap || {};
+    rsStatusMap = rsStatusCache[cacheKey];
+    renderReportStatusGrid(baseDate, reportType);
+  } catch(e) {}
 }
 
 async function loadReportStatus() {
@@ -970,21 +1002,20 @@ async function loadReportStatus() {
   grid.innerHTML   = '<div class="loading-spinner">불러오는 중...</div>';
 
   try {
-    // 학생 목록 (캐시 있으면 재사용)
     if (!allStudentsCache.length) {
       const d = await api('get-students', {});
       allStudentsCache = d.students || [];
     }
-    // 보고서 상태 조회
     const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
-    rsStatusMap = d.statusMap || {};
 
-    // 필터링
-    if (rsCurrentTab === 'weekly') {
-      rsStudents = allStudentsCache.filter(s => s.type==='초등' || s.type==='중등');
-    } else {
-      rsStudents = allStudentsCache.filter(s => s.type==='고등');
-    }
+    // 캐시에 저장 (기존 값 덮어쓰지 않고 병합)
+    const cacheKey = getRsCacheKey();
+    rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey] || {}), ...d.statusMap };
+    rsStatusMap = rsStatusCache[cacheKey];
+
+    rsStudents = rsCurrentTab==='weekly'
+      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      : allStudentsCache.filter(s => s.type==='고등');
 
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {
@@ -1109,6 +1140,9 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
     await api('update-report-status', { action:'update_status', name, type, grade, status:nextStatus, baseDate, reportType });
     if (!rsStatusMap[key]) rsStatusMap[key] = {};
     rsStatusMap[key].status = nextStatus;
+    // 캐시에도 반영
+    const cacheKey = getRsCacheKey();
+    if (rsStatusCache[cacheKey]) rsStatusCache[cacheKey][key] = rsStatusMap[key];
     renderReportStatusGrid(baseDate, reportType);
     const emoji = nextStatus==='전송완료'?'📲':nextStatus==='보고서생성'?'📊':nextStatus==='기록완료'?'✅':'↩️';
     toast(`${name} — ${emoji} ${nextStatus}`);
@@ -1141,6 +1175,8 @@ function rsGoReport(name, type, grade, baseDate, reportType) {
       .then(() => {
         if (!rsStatusMap[key]) rsStatusMap[key] = {};
         rsStatusMap[key].status = '보고서생성';
+        const cacheKey = getRsCacheKey();
+        if (rsStatusCache[cacheKey]) rsStatusCache[cacheKey][key] = rsStatusMap[key];
       }).catch(() => {});
   }
 
