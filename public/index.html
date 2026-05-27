@@ -1,38 +1,38 @@
-// [추가] 보강 완료 처리 함수
+// [보강 완료 처리 함수]
 async function completeMakeup(name, type, grade) {
   const date = document.getElementById('att-date').value;
   try {
     await api('save-attendance', { action: 'complete_makeup', name, type, grade, date });
     toast(`${name} 보강 완료!`);
-    loadAttendance(); // 액션 후 즉시 갱신
+    loadAttendance(); // 처리 후 즉시 갱신
   } catch (e) {
     toast('오류: ' + e.message);
   }
 }
 
-// [수정] 출결 목록 렌더링 (보강 전용 버튼 구성)
+// [출결 목록 렌더링 수정]
 const renderRows = (students, isMakeup) => {
   let html = '', lastKey = null;
   sortStudents(students).forEach(s => {
-    const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
+    const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
     if (sectionKey !== lastKey) {
       lastKey = sectionKey;
-      html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${s.type==='초등'?'초등':s.type+' '+s.grade}</div>`;
+      html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${s.type === '초등' ? '초등' : s.type + ' ' + s.grade}</div>`;
     }
 
     const st = getStatus(s.name, s.type, s.grade);
     const memo = getMemo(s.name, s.type, s.grade);
     const enc = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
 
-    // 보강일 경우 '완료'와 '삭제' 버튼 표시
+    // 보강 학생이면 '완료/삭제', 정규 학생이면 '출석/결석' 버튼 표시
     const btns = isMakeup 
       ? `<button class="amini p" onclick="completeMakeup('${s.name}','${s.type}','${s.grade}')">✔️ 완료</button>
          <button class="amini a" onclick="removeMakeupFromGrid('${s.name}','${s.type}','${s.grade}')">🗑️ 삭제</button>`
-      : `<button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
-         <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>`;
+      : `<button class="amini p ${st === '출석' ? 'on' : ''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+         <button class="amini a ${st === '결석' ? 'on' : ''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>`;
 
     html += `
-      <div class="att-row s-${st||''}" id="arow-${enc}">
+      <div class="att-row s-${st || ''}" id="arow-${enc}">
         <span class="att-row-name">${s.name}</span>
         <span class="att-row-meta">${s.grade}</span>
         <div class="att-row-btns">
@@ -46,12 +46,13 @@ const renderRows = (students, isMakeup) => {
   return html;
 };
 
-// [추가] 30초마다 자동 새로고침 (선생님들 간 동기화)
+// [30초마다 자동 실시간 동기화]
 setInterval(() => {
   const isAttendanceActive = document.getElementById('panel-attendance').classList.contains('active');
   if (isAttendanceActive) {
     silentRefresh(); 
   }
-}, 30000); 
+}, 30000);
 
-// [수정] 모든 액션 함수(doAttend, confirmAbsent 등) 마지막에 loadAttendance() 호출 추가
+// [액션 시 자동 새로고침 추가]
+// doAttend, confirmAbsent, confirmAddMakeup 등 모든 서버 통신 함수 마지막에 loadAttendance();를 추가하세요.
