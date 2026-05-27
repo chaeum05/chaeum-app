@@ -285,6 +285,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rs-btn.report        { background:#e8f0ff; color:#3a5fd9; border-color:#c7d7ff; }
 .rs-btn.report:hover  { background:#3a5fd9; color:white; border-color:#3a5fd9; }
 .rs-btn.report.done   { background:#3a5fd9; color:white; border-color:#3a5fd9; box-shadow:0 0 0 2px rgba(58,95,217,0.25); }
+.rs-btn.gencheck        { background:#e8f0ff; color:#3a5fd9; border-color:#c7d7ff; }
+.rs-btn.gencheck:hover  { background:#3a5fd9; color:white; border-color:#3a5fd9; }
+.rs-btn.gencheck.done   { background:#3a5fd9; color:white; border-color:#3a5fd9; box-shadow:0 0 0 2px rgba(58,95,217,0.25); }
 .rs-btn.send:hover    { background:#16a34a; color:white; border-color:#16a34a; }
 .rs-btn.send.done     { background:#2d8a4e; color:white; border-color:#2d8a4e; box-shadow:0 0 0 2px rgba(45,138,78,0.25); }
 
@@ -1036,7 +1039,11 @@ function renderReportStatusGrid(baseDate, reportType) {
   const total    = rsStudents.length;
   const recorded = rsStudents.filter(s => {
     const k = `${s.name}_${s.type}_${s.grade}`;
-    return rsStatusMap[k]?.status === '기록완료' || rsStatusMap[k]?.status === '전송완료';
+    return ['기록완료','생성완료','전송완료'].includes(rsStatusMap[k]?.status);
+  }).length;
+  const generated = rsStudents.filter(s => {
+    const k = `${s.name}_${s.type}_${s.grade}`;
+    return ['생성완료','전송완료'].includes(rsStatusMap[k]?.status);
   }).length;
   const sent = rsStudents.filter(s => {
     const k = `${s.name}_${s.type}_${s.grade}`;
@@ -1058,7 +1065,8 @@ function renderReportStatusGrid(baseDate, reportType) {
         <div class="rs-progress-bar-fill" style="width:${pct}%"></div>
       </div>
       <div style="display:flex;gap:16px;font-size:12px;color:var(--text2);">
-        <span>📝 기록완료: <b style="color:#92400e">${recorded}명</b></span>
+        <span>✅ 기록완료: <b style="color:#92400e">${recorded}명</b></span>
+        <span>📊 생성완료: <b style="color:#3a5fd9">${generated}명</b></span>
         <span>📲 전송완료: <b style="color:#2d8a4e">${sent}명</b></span>
         <span>⬜ 미작성: <b style="color:var(--text3)">${total-recorded}명</b></span>
       </div>
@@ -1084,18 +1092,17 @@ function renderReportStatusGrid(baseDate, reportType) {
     const key    = `${s.name}_${s.type}_${s.grade}`;
     const status = rsStatusMap[key]?.status || '미작성';
 
-    // 상태별 행 배경
+    // 상태 단계: 미작성 → 기록완료 → 생성완료 → 전송완료
     let rowCls = 'rs-row';
-    if (status==='기록완료')  rowCls += ' done-record';
-    if (status==='보고서생성') rowCls += ' done-report';
-    if (status==='전송완료')  rowCls += ' done-send';
+    if (status==='기록완료') rowCls += ' done-record';
+    if (status==='생성완료') rowCls += ' done-report';
+    if (status==='전송완료') rowCls += ' done-send';
 
-    const recDone    = status==='기록완료'||status==='보고서생성'||status==='전송완료';
-    const reportDone = status==='보고서생성'||status==='전송완료';
-    const sendDone   = status==='전송완료';
+    const recDone  = ['기록완료','생성완료','전송완료'].includes(status);
+    const genDone  = ['생성완료','전송완료'].includes(status);
+    const sendDone = status==='전송완료';
 
-    // 상태 뱃지 색상
-    const statusColor = sendDone?'#2d8a4e':reportDone?'#3a5fd9':recDone?'#92400e':'#999';
+    const statusColor = sendDone?'#2d8a4e':genDone?'#3a5fd9':recDone?'#92400e':'#ccc';
 
     html+=`
       <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
@@ -1105,18 +1112,23 @@ function renderReportStatusGrid(baseDate, reportType) {
           ${status==='미작성'?'':status}
         </span>
         <div class="rs-row-btns">
-          <button class="rs-btn write" onclick="rsGoRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+          <button class="rs-btn write"
+            onclick="rsGoRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
           <button class="rs-btn record ${recDone?'done':''}"
             onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','기록완료','${baseDate}','${reportType}')">
-            ${recDone ? '✅ 기록완료' : '⬜ 기록완료'}
+            ${recDone?'✅ 기록완료':'⬜ 기록완료'}
           </button>
-          <button class="rs-btn report ${reportDone?'done':''}"
+          <button class="rs-btn report"
             onclick="rsGoReport('${s.name}','${s.type}','${s.grade}','${baseDate}','${reportType}')">
-            ${reportDone ? '📊 보고서생성✓' : '📊 보고서생성'}
+            📊 보고서생성
+          </button>
+          <button class="rs-btn gencheck ${genDone?'done':''}"
+            onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','생성완료','${baseDate}','${reportType}')">
+            ${genDone?'✅ 생성완료':'⬜ 생성완료'}
           </button>
           <button class="rs-btn send ${sendDone?'done':''}"
             onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','전송완료','${baseDate}','${reportType}')">
-            ${sendDone ? '📲 전송완료' : '📤 전송완료'}
+            ${sendDone?'📲 전송완료':'📤 전송완료'}
           </button>
         </div>
       </div>`;
@@ -1132,8 +1144,10 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
   let nextStatus;
   if (newStatus === '기록완료') {
     nextStatus = (current === '기록완료') ? '미작성' : '기록완료';
+  } else if (newStatus === '생성완료') {
+    nextStatus = (current === '생성완료') ? '기록완료' : '생성완료';
   } else if (newStatus === '전송완료') {
-    nextStatus = (current === '전송완료') ? '보고서생성' : '전송완료';
+    nextStatus = (current === '전송완료') ? '생성완료' : '전송완료';
   }
 
   try {
@@ -1165,19 +1179,6 @@ function rsGoReport(name, type, grade, baseDate, reportType) {
     const last  = new Date(first.getFullYear(), first.getMonth() + 1, 0);
     document.getElementById('rep-start').value = first.toISOString().split('T')[0];
     document.getElementById('rep-end').value   = last.toISOString().split('T')[0];
-  }
-
-  // 보고서생성 상태로 자동 저장 (미작성/기록완료인 경우만)
-  const key = `${name}_${type}_${grade}`;
-  const current = rsStatusMap[key]?.status || '미작성';
-  if (current === '미작성' || current === '기록완료') {
-    api('update-report-status', { action:'update_status', name, type, grade, status:'보고서생성', baseDate, reportType })
-      .then(() => {
-        if (!rsStatusMap[key]) rsStatusMap[key] = {};
-        rsStatusMap[key].status = '보고서생성';
-        const cacheKey = getRsCacheKey();
-        if (rsStatusCache[cacheKey]) rsStatusCache[cacheKey][key] = rsStatusMap[key];
-      }).catch(() => {});
   }
 
   showPanel('report');
