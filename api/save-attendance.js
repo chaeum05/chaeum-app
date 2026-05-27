@@ -74,6 +74,28 @@ export default async function handler(req, res) {
       }
     }
 
+    // 특정 날짜 보강 기록 삭제
+    if (action === 'delete_by_date') {
+      const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          filter: { and: [
+            { property: '학생이름', rich_text: { equals: name } },
+            { property: '날짜', date: { equals: date } },
+            { property: '출결상태', select: { equals: status || '보강' } }
+          ]}
+        })
+      });
+      const searchData = await searchRes.json();
+      for (const page of (searchData.results || [])) {
+        await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
+          method: 'PATCH', headers,
+          body: JSON.stringify({ archived: true })
+        });
+      }
+      return res.status(200).json({ ok: true, message: '삭제 완료' });
+    }
+
     // 보강 대기 삭제
     if (action === 'delete_makeup' && recordId) {
       await fetch(`https://api.notion.com/v1/pages/${recordId}`, {
