@@ -208,7 +208,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
-.att-row-memo { width:100px; font-size:10px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; flex-shrink:0; }
+.att-row-memo { width:72px; font-size:10px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 5px; cursor:text; border-radius:4px; flex-shrink:0; }
 .att-row-memo::placeholder { color:#ccc; }
 .att-row-memo:focus { color:var(--text); background:#fff8e1; border-color:var(--gold); }
 .att-row-btns { display:flex; gap:3px; flex-shrink:0; }
@@ -384,20 +384,29 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
           <!-- 수동 학생 추가 -->
           <div class="att-add-form" style="margin-top:10px;">
-            <div class="att-add-form-title">➕ 오늘 학생 추가</div>
-            <div class="att-add-row">
-              <input type="text" id="add-name" placeholder="이름" style="width:90px;">
-              <select id="add-type" onchange="updateAddGrades()" style="width:68px;">
+            <div class="att-add-form-title">➕ 학생 추가 (오늘 + 등원 요일 등록)</div>
+            <div class="att-add-row" style="flex-wrap:wrap;gap:6px;">
+              <input type="text" id="add-name" placeholder="이름" style="width:80px;">
+              <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:90px;" title="예: (형곡), (본교) 등">
+              <select id="add-type" onchange="updateAddGrades()" style="width:62px;">
                 <option value="초등">초등</option>
                 <option value="중등">중등</option>
                 <option value="고등" selected>고등</option>
               </select>
-              <select id="add-grade" style="width:68px;"></select>
-              <select id="add-section" style="width:80px;">
+              <select id="add-grade" style="width:62px;"></select>
+              <select id="add-section" style="width:70px;">
                 <option value="정규">정규</option>
                 <option value="보강">보강</option>
               </select>
-              <button class="att-action-btn primary" onclick="addStudentManually()">추가</button>
+            </div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:600;color:var(--text2);">등원 요일:</span>
+              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-mon" style="accent-color:var(--burgundy)"> 월</label>
+              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-tue" style="accent-color:var(--burgundy)"> 화</label>
+              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-wed" style="accent-color:var(--burgundy)"> 수</label>
+              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-thu" style="accent-color:var(--burgundy)"> 목</label>
+              <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="add-fri" style="accent-color:var(--burgundy)"> 금</label>
+              <button class="att-action-btn primary" style="margin-left:auto;" onclick="addStudentManually()">추가 + 등록</button>
             </div>
           </div>
 
@@ -950,18 +959,49 @@ function updateAddGrades() {
   for (let i=1; i<=max; i++) sel.innerHTML += `<option>${i}학년</option>`;
 }
 
-function addStudentManually() {
-  const name    = document.getElementById('add-name').value.trim();
-  const type    = document.getElementById('add-type').value;
-  const grade   = document.getElementById('add-grade').value;
-  const section = document.getElementById('add-section').value;
-  if (!name) { toast('이름을 입력해주세요.'); return; }
+async function addStudentManually() {
+  const baseName = document.getElementById('add-name').value.trim();
+  const suffix   = document.getElementById('add-name2').value.trim();
+  const name     = suffix ? `${baseName}(${suffix})` : baseName;
+  const type     = document.getElementById('add-type').value;
+  const grade    = document.getElementById('add-grade').value;
+  const section  = document.getElementById('add-section').value;
+  const days     = {
+    '월': document.getElementById('add-mon').checked,
+    '화': document.getElementById('add-tue').checked,
+    '수': document.getElementById('add-wed').checked,
+    '목': document.getElementById('add-thu').checked,
+    '금': document.getElementById('add-fri').checked,
+  };
+
+  if (!baseName) { toast('이름을 입력해주세요.'); return; }
+
   const exists = attStudents.find(s => s.name === name);
   if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
+
+  // 오늘 출결 목록에 추가
   attStudents.push({ name, type, grade, isMakeup: section==='보강' });
-  document.getElementById('add-name').value = '';
   renderAttGrid();
-  toast(`${name} 추가됨`);
+
+  // 등원 요일 노션에 저장
+  const hasDays = Object.values(days).some(Boolean);
+  if (hasDays) {
+    try {
+      await api('save-attendance', { action:'save_schedule', name, type, grade, days });
+      toast(`${name} 추가 + 등원 요일 등록 완료`);
+    } catch(e) {
+      toast(`${name} 추가됨 (요일 저장 실패: ${e.message})`);
+    }
+  } else {
+    toast(`${name} 오늘만 추가됨 (등원 요일 미등록)`);
+  }
+
+  // 입력 초기화
+  document.getElementById('add-name').value  = '';
+  document.getElementById('add-name2').value = '';
+  ['add-mon','add-tue','add-wed','add-thu','add-fri'].forEach(id =>
+    document.getElementById(id).checked = false
+  );
 }
 
 // 출석 처리
