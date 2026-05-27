@@ -4,9 +4,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const NOTION_TOKEN = process.env.NOTION_TOKEN;
-  const DB_STUDENTS  = process.env.NOTION_DB_STUDENTS;
-  if (!NOTION_TOKEN || !DB_STUDENTS) {
+  const NOTION_TOKEN  = process.env.NOTION_TOKEN;
+  const DB_SCHEDULE   = process.env.NOTION_DB_SCHEDULE; // 📅 등원 일정 DB
+  if (!NOTION_TOKEN || !DB_SCHEDULE) {
     return res.status(500).json({ error: '환경변수가 설정되지 않았습니다.' });
   }
 
@@ -17,22 +17,15 @@ export default async function handler(req, res) {
   };
 
   try {
-    // 페이지네이션으로 전체 학생 조회 (100명 이상도 처리)
+    // 페이지네이션으로 전체 학생 조회
     let allResults = [];
     let cursor = undefined;
 
     do {
-      const body = {
-        page_size: 100,
-        sorts: [
-          { property: '구분',     direction: 'ascending' },
-          { property: '학년',     direction: 'ascending' },
-          { property: '학생이름', direction: 'ascending' }
-        ]
-      };
+      const body = { page_size: 100 };
       if (cursor) body.start_cursor = cursor;
 
-      const queryRes = await fetch(`https://api.notion.com/v1/databases/${DB_STUDENTS}/query`, {
+      const queryRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
         method: 'POST', headers,
         body: JSON.stringify(body)
       });
