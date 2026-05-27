@@ -577,7 +577,6 @@ function showPanel(name) {
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'students')   loadStudents();
   if (name === 'attendance') initAttendance();
-  else if (window._attPollTimer) { clearInterval(window._attPollTimer); window._attPollTimer = null; }
   if (name === 'report' && allStudentsCache.length) populateReportDropdown(allStudentsCache);
   if (name === 'report' && !allStudentsCache.length) loadStudentListForReport();
 }
@@ -944,14 +943,6 @@ function initAttendance() {
   initCalendar(today);
   loadAttendance();
   loadDailyMemo(today);
-
-  // 30초마다 자동 갱신 (다른 선생님 변경사항 반영)
-  if (window._attPollTimer) clearInterval(window._attPollTimer);
-  window._attPollTimer = setInterval(() => {
-    // 모달이 열려있으면 갱신 스킵
-    const anyOpen = document.querySelector('.modal-overlay.open');
-    if (!anyOpen) silentRefresh();
-  }, 30000);
 }
 
 async function loadAttendance() {
