@@ -271,6 +271,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rs-row { display:flex; align-items:center; padding:5px 8px; border-radius:7px; gap:8px; transition:background 0.12s; }
 .rs-row:hover { background:var(--surface2); }
 .rs-row.done-record { background:#fffdf0; }
+.rs-row.done-report { background:#eef3ff; }
 .rs-row.done-send   { background:#f0faf4; }
 .rs-row-name { font-size:13px; font-weight:600; min-width:72px; }
 .rs-row-meta { font-size:10px; color:var(--text3); min-width:40px; }
@@ -281,7 +282,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rs-btn.record        { background:#fef3c7; color:#92400e; border-color:#fde68a; }
 .rs-btn.record:hover  { background:#f59e0b; color:white; border-color:#f59e0b; }
 .rs-btn.record.done   { background:#d4af37; color:white; border-color:#d4af37; box-shadow:0 0 0 2px rgba(212,175,55,0.25); }
-.rs-btn.send          { background:#e8f7ee; color:#2d8a4e; border-color:#a7f3c0; }
+.rs-btn.report        { background:#e8f0ff; color:#3a5fd9; border-color:#c7d7ff; }
+.rs-btn.report:hover  { background:#3a5fd9; color:white; border-color:#3a5fd9; }
+.rs-btn.report.done   { background:#3a5fd9; color:white; border-color:#3a5fd9; box-shadow:0 0 0 2px rgba(58,95,217,0.25); }
 .rs-btn.send:hover    { background:#16a34a; color:white; border-color:#16a34a; }
 .rs-btn.send.done     { background:#2d8a4e; color:white; border-color:#2d8a4e; box-shadow:0 0 0 2px rgba(45,138,78,0.25); }
 
@@ -925,10 +928,11 @@ function selectReportStudent() {
 let rsCurrentTab = 'weekly';
 let rsStatusMap  = {};
 let rsStudents   = [];
+let rsInitialized = false; // 최초 1회만 초기화
 
 function getWeekMonday(date) {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=일
+  const d = new Date(date + 'T00:00:00');
+  const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
@@ -938,9 +942,13 @@ function getMonthFirst(date) {
 }
 
 function initReportStatus() {
-  const today = new Date().toISOString().split('T')[0];
-  const baseDate = rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
-  document.getElementById('rs-base-date').value = baseDate;
+  // 최초 1회만 기준일 초기화 (탭 재진입 시 유지)
+  if (!rsInitialized) {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('rs-base-date').value =
+      rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
+    rsInitialized = true;
+  }
   loadReportStatus();
 }
 
@@ -1044,25 +1052,36 @@ function renderReportStatusGrid(baseDate, reportType) {
 
     const key    = `${s.name}_${s.type}_${s.grade}`;
     const status = rsStatusMap[key]?.status || '미작성';
-    let rowCls   = 'rs-row';
-    if (status==='기록완료') rowCls+=' done-record';
-    if (status==='전송완료') rowCls+=' done-send';
 
-    const recDone  = status==='기록완료'||status==='전송완료';
-    const sendDone = status==='전송완료';
+    // 상태별 행 배경
+    let rowCls = 'rs-row';
+    if (status==='기록완료')  rowCls += ' done-record';
+    if (status==='보고서생성') rowCls += ' done-report';
+    if (status==='전송완료')  rowCls += ' done-send';
+
+    const recDone    = status==='기록완료'||status==='보고서생성'||status==='전송완료';
+    const reportDone = status==='보고서생성'||status==='전송완료';
+    const sendDone   = status==='전송완료';
+
+    // 상태 뱃지 색상
+    const statusColor = sendDone?'#2d8a4e':reportDone?'#3a5fd9':recDone?'#92400e':'#999';
 
     html+=`
       <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
         <span class="rs-row-name">${s.name}</span>
         <span class="rs-row-meta">${s.grade}</span>
-        <span style="font-size:10px;color:var(--text3);flex:1;">
-          ${status==='미작성'?'':'<b style="color:'+(sendDone?'#2d8a4e':recDone?'#92400e':'#999')+'">'+status+'</b>'}
+        <span style="font-size:10px;flex:1;font-weight:600;color:${statusColor};">
+          ${status==='미작성'?'':status}
         </span>
         <div class="rs-row-btns">
           <button class="rs-btn write" onclick="rsGoRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
           <button class="rs-btn record ${recDone?'done':''}"
             onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','기록완료','${baseDate}','${reportType}')">
             ${recDone ? '✅ 기록완료' : '⬜ 기록완료'}
+          </button>
+          <button class="rs-btn report ${reportDone?'done':''}"
+            onclick="rsGoReport('${s.name}','${s.type}','${s.grade}','${baseDate}','${reportType}')">
+            ${reportDone ? '📊 보고서생성✓' : '📊 보고서생성'}
           </button>
           <button class="rs-btn send ${sendDone?'done':''}"
             onclick="rsUpdateStatus('${s.name}','${s.type}','${s.grade}','전송완료','${baseDate}','${reportType}')">
@@ -1079,13 +1098,11 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
   const current = rsStatusMap[key]?.status || '미작성';
 
   // 토글 로직
-  // 기록완료: 미작성→기록완료, 기록완료→미작성 (취소)
-  // 전송완료: 기록완료/미작성→전송완료, 전송완료→기록완료 (되돌리기)
   let nextStatus;
   if (newStatus === '기록완료') {
     nextStatus = (current === '기록완료') ? '미작성' : '기록완료';
   } else if (newStatus === '전송완료') {
-    nextStatus = (current === '전송완료') ? '기록완료' : '전송완료';
+    nextStatus = (current === '전송완료') ? '보고서생성' : '전송완료';
   }
 
   try {
@@ -1093,9 +1110,42 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
     if (!rsStatusMap[key]) rsStatusMap[key] = {};
     rsStatusMap[key].status = nextStatus;
     renderReportStatusGrid(baseDate, reportType);
-    const emoji = nextStatus==='전송완료' ? '📲' : nextStatus==='기록완료' ? '✅' : '↩️';
+    const emoji = nextStatus==='전송완료'?'📲':nextStatus==='보고서생성'?'📊':nextStatus==='기록완료'?'✅':'↩️';
     toast(`${name} — ${emoji} ${nextStatus}`);
   } catch(e) { toast('오류: '+e.message); }
+}
+
+function rsGoReport(name, type, grade, baseDate, reportType) {
+  // 보고서 생성 탭으로 이동 + 날짜 자동 설정
+  document.getElementById('rep-name').value = name;
+  document.getElementById('rep-type').value = type;
+
+  if (rsCurrentTab === 'weekly') {
+    const monday = new Date(baseDate + 'T00:00:00');
+    const sunday = new Date(baseDate + 'T00:00:00');
+    sunday.setDate(monday.getDate() + 6);
+    document.getElementById('rep-start').value = monday.toISOString().split('T')[0];
+    document.getElementById('rep-end').value   = sunday.toISOString().split('T')[0];
+  } else {
+    const first = new Date(baseDate + 'T00:00:00');
+    const last  = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+    document.getElementById('rep-start').value = first.toISOString().split('T')[0];
+    document.getElementById('rep-end').value   = last.toISOString().split('T')[0];
+  }
+
+  // 보고서생성 상태로 자동 저장 (미작성/기록완료인 경우만)
+  const key = `${name}_${type}_${grade}`;
+  const current = rsStatusMap[key]?.status || '미작성';
+  if (current === '미작성' || current === '기록완료') {
+    api('update-report-status', { action:'update_status', name, type, grade, status:'보고서생성', baseDate, reportType })
+      .then(() => {
+        if (!rsStatusMap[key]) rsStatusMap[key] = {};
+        rsStatusMap[key].status = '보고서생성';
+      }).catch(() => {});
+  }
+
+  showPanel('report');
+  toast(`${name} 보고서 생성 탭으로 이동`);
 }
 
 function rsGoRecord(name, type, grade) {
