@@ -577,6 +577,7 @@ function showPanel(name) {
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'students')   loadStudents();
   if (name === 'attendance') initAttendance();
+  else if (window._attPollTimer) { clearInterval(window._attPollTimer); window._attPollTimer = null; }
   if (name === 'report' && allStudentsCache.length) populateReportDropdown(allStudentsCache);
   if (name === 'report' && !allStudentsCache.length) loadStudentListForReport();
 }
@@ -943,6 +944,14 @@ function initAttendance() {
   initCalendar(today);
   loadAttendance();
   loadDailyMemo(today);
+
+  // 30초마다 자동 갱신 (다른 선생님 변경사항 반영)
+  if (window._attPollTimer) clearInterval(window._attPollTimer);
+  window._attPollTimer = setInterval(() => {
+    // 모달이 열려있으면 갱신 스킵
+    const anyOpen = document.querySelector('.modal-overlay.open');
+    if (!anyOpen) silentRefresh();
+  }, 30000);
 }
 
 async function loadAttendance() {
@@ -1037,6 +1046,50 @@ function renderAttGrid() {
   }
   grid.innerHTML = html;
   updateSummary();
+}
+
+// 조용한 백그라운드 갱신 (입력 중인 메모 건드리지 않음)
+async function silentRefresh() {
+  const date = document.getElementById('att-date').value;
+  try {
+    const d = await api('get-attendance', { date });
+    const focusedId  = document.activeElement?.id;
+    const focusedVal = document.activeElement?.value;
+
+    attRecords = d.attendance || [];
+    attMakeup  = d.makeupList || [];
+
+    // 각 행의 출결 상태만 조용히 업데이트 (재렌더 없이)
+    document.querySelectorAll('.att-row').forEach(row => {
+      const enc     = row.id.replace('arow-','');
+      const decoded = decodeURIComponent(enc);
+      const parts   = decoded.split('_');
+      if (parts.length < 3) return;
+      const [name, type, grade] = parts;
+      const st = getStatus(name, type, grade);
+      row.className = `att-row${st ? ' s-'+st : ''}`;
+      const pBtn = row.querySelector('.amini.p');
+      const aBtn = row.querySelector('.amini.a');
+      if (pBtn) pBtn.classList.toggle('on', st==='출석');
+      if (aBtn) aBtn.classList.toggle('on', st==='결석');
+    });
+
+    // 포커스 복원
+    if (focusedId) {
+      const el = document.getElementById(focusedId);
+      if (el && el !== document.activeElement) { el.focus(); el.value = focusedVal; }
+    }
+
+    renderMakeupList();
+    updateSummary();
+
+    // 요일 뱃지 잠깐 초록색으로 → 갱신됐음을 살짝 표시
+    const badge = document.getElementById('att-day-badge');
+    if (badge) {
+      badge.style.background = '#2d8a4e';
+      setTimeout(() => { badge.style.background = ''; }, 700);
+    }
+  } catch(e) {} // 백그라운드 갱신 실패는 무시
 }
 
 function updateSummary() {
