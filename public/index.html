@@ -187,12 +187,20 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 /* 2단 레이아웃 */
 .att-body { display:flex; gap:16px; align-items:flex-start; }
 .att-left { flex:1; min-width:0; }
-.att-right { width:240px; flex-shrink:0; position:sticky; top:20px; }
+.att-right { width:240px; flex:0 0 240px; position:sticky; top:20px; }
 
 /* 일일 메모판 */
 .daily-memo-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
 .daily-memo-title { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-.daily-memo-area { width:100%; min-height:160px; border:1.5px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px; font-family:'Pretendard',sans-serif; color:var(--text); resize:vertical; outline:none; line-height:1.6; box-sizing:border-box; }
+.daily-memo-area { width:100%; min-height:120px; border:1.5px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12px; font-family:'Pretendard',sans-serif; color:var(--text); resize:vertical; outline:none; line-height:1.5; box-sizing:border-box; }
+.daily-memo-area:focus { border-color:var(--burgundy); }
+.daily-memo-save { width:100%; margin-top:8px; padding:8px; background:var(--dark); color:white; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.daily-memo-save:hover { background:var(--burgundy); }
+
+/* 일일 메모판 */
+.daily-memo-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
+.daily-memo-title { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.daily-memo-area { width:100%; min-height:100px; border:1.5px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12px; font-family:'Pretendard',sans-serif; color:var(--text); resize:vertical; outline:none; line-height:1.5; box-sizing:border-box; }
 .daily-memo-area:focus { border-color:var(--burgundy); }
 .daily-memo-save { width:100%; margin-top:8px; padding:8px; background:var(--dark); color:white; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
 .daily-memo-save:hover { background:var(--burgundy); }
@@ -208,7 +216,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
-.att-row-memo { width:90px; flex:0 0 90px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
+.att-row-memo { width:150px; flex:0 0 150px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
 .att-row-memo::placeholder { color:#ccc; }
 .att-row-memo:focus { background:#fff8e1; border-color:#d4af37; }
 .att-row-btns { display:flex; gap:3px; flex-shrink:0; }
