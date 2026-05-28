@@ -318,18 +318,18 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="sidebar-title">관리 시스템</div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active" onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;일일 기록</div>
-      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📋 &nbsp;보고서 생성</div>
+      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리</div>
+      <div class="nav-item"        onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;일일 기록</div>
+      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📊 &nbsp;보고서 생성</div>
+      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">✅ &nbsp;보고서 현황</div>
       <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
-      <div class="nav-item"        onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리</div>
-      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">📊 &nbsp;보고서 현황</div>
     </nav>
   </aside>
 
   <main class="main-content">
 
     <!-- 일일 기록 -->
-    <div class="panel active" id="panel-record">
+    <div class="panel active" id="panel-attendance">
       <div class="panel-title">일일 수업 기록</div>
       <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
       <div class="form-card">
