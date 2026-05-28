@@ -506,9 +506,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
           <!-- 메모판 -->
           <div class="daily-memo-card">
-            <div class="daily-memo-title">📋 메모</div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;" id="daily-memo-date"></div>
-            <textarea class="daily-memo-area" id="daily-memo-area" placeholder="공지사항, 특이사항 등"></textarea>
+            <div class="daily-memo-title">📋 메모 (누적)</div>
+            <!-- 누적 메모 목록 -->
+            <div id="memo-log" style="max-height:180px;overflow-y:auto;margin-bottom:8px;font-size:11px;line-height:1.7;color:var(--text2);"></div>
+            <!-- 새 메모 입력 -->
+            <textarea class="daily-memo-area" id="daily-memo-area" placeholder="새 메모 입력 후 저장..." style="min-height:60px;"></textarea>
             <button class="daily-memo-save" onclick="saveDailyMemo()">💾 저장</button>
           </div>
 
@@ -1853,15 +1855,61 @@ async function confirmScheduleMakeup() {
 }
 
 // 일일 메모 (localStorage 사용)
+// ── 누적 메모 ──
 function loadDailyMemo(date) {
-  const saved = localStorage.getItem(`daily-memo-${date}`) || '';
-  document.getElementById('daily-memo-area').value = saved;
+  // 기존 날짜별 메모 → 새 누적 형식으로 1회 마이그레이션
+  if (!localStorage.getItem('chaeum-memos-migrated')) {
+    const allMemos = JSON.parse(localStorage.getItem('chaeum-memos') || '[]');
+    const existingDates = new Set(allMemos.map(m => m.date));
+    // localStorage에서 daily-memo-YYYY-MM-DD 키 찾아서 이전
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('daily-memo-'))
+      .sort()
+      .forEach(k => {
+        const d = k.replace('daily-memo-', '');
+        const text = localStorage.getItem(k);
+        if (text && text.trim() && !existingDates.has(d)) {
+          allMemos.push({ date: d, time: '', text: text.trim() });
+        }
+      });
+    allMemos.sort((a, b) => a.date.localeCompare(b.date));
+    localStorage.setItem('chaeum-memos', JSON.stringify(allMemos));
+    localStorage.setItem('chaeum-memos-migrated', '1');
+  }
+
+  const allMemos = JSON.parse(localStorage.getItem('chaeum-memos') || '[]');
+  renderMemoLog(allMemos);
+  document.getElementById('daily-memo-area').value = '';
+}
+
+function renderMemoLog(memos) {
+  const log = document.getElementById('memo-log');
+  if (!memos.length) {
+    log.innerHTML = '<div style="color:var(--text3);padding:4px 0;">아직 메모가 없습니다.</div>';
+    return;
+  }
+  // 최신 순으로 표시
+  log.innerHTML = [...memos].reverse().map(m => `
+    <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:10px;font-weight:700;color:var(--burgundy);">${m.date}</span>
+      ${m.time ? `<span style="font-size:10px;color:var(--text3);margin-left:4px;">${m.time}</span>` : ''}
+      <div style="margin-top:2px;white-space:pre-wrap;">${m.text}</div>
+    </div>`).join('');
 }
 
 function saveDailyMemo() {
+  const text = document.getElementById('daily-memo-area').value.trim();
+  if (!text) { toast('메모 내용을 입력해주세요.'); return; }
   const date = document.getElementById('att-date').value;
-  const memo = document.getElementById('daily-memo-area').value;
-  localStorage.setItem(`daily-memo-${date}`, memo);
+  const now  = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const allMemos = JSON.parse(localStorage.getItem('chaeum-memos') || '[]');
+  allMemos.push({ date, time, text });
+  localStorage.setItem('chaeum-memos', JSON.stringify(allMemos));
+
+  renderMemoLog(allMemos);
+  document.getElementById('daily-memo-area').value = '';
   toast('메모 저장 ✓');
 }
 
