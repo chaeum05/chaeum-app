@@ -21,27 +21,26 @@ export default async function handler(req, res) {
   const { action, name, type, grade, date, status, memo, recordId, absentDate } = req.body;
 
   try {
-    // 기존 기록 있는지 확인
     if (action === 'upsert') {
+      // 날짜 equals 대신 on_or_after + on_or_before 사용 (timezone 이슈 방지)
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
         method: 'POST', headers,
         body: JSON.stringify({
           filter: {
             and: [
               { property: '학생이름', rich_text: { equals: name } },
-              { property: '날짜',     date:      { equals: date } },
-              { property: '구분',     select:    { equals: type } },
-              { property: '학년',     select:    { equals: grade } },
+              { property: '날짜',     date: { on_or_after:  date } },
+              { property: '날짜',     date: { on_or_before: date } },
+              { property: '구분',     select: { equals: type } },
+              { property: '학년',     select: { equals: grade } },
             ]
           }
         })
       });
       const searchData = await searchRes.json();
-
       const title = `${name} — ${status} (${date})`;
 
       if (searchData.results && searchData.results.length > 0) {
-        // 기존 기록 업데이트 (첫 번째만, 중복 기록이 있으면 나머지 삭제)
         const existingId = searchData.results[0].id;
         await fetch(`https://api.notion.com/v1/pages/${existingId}`, {
           method: 'PATCH', headers,
@@ -50,6 +49,7 @@ export default async function handler(req, res) {
               '기록제목': { title: [{ text: { content: title } }] },
               '출결상태': { select: { name: status } },
               '메모':     { rich_text: [{ text: { content: memo || '' } }] },
+              ...(absentDate ? { '원래날짜': { date: { start: absentDate } } } : {})
             }
           })
         });
@@ -62,7 +62,6 @@ export default async function handler(req, res) {
         }
         return res.status(200).json({ ok: true, message: '출결 기록 업데이트 완료' });
       } else {
-        // 새 기록 생성
         await fetch('https://api.notion.com/v1/pages', {
           method: 'POST', headers,
           body: JSON.stringify({
