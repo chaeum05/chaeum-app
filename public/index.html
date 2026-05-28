@@ -641,6 +641,7 @@ window.onload = function() {
   document.getElementById('rep-end').value   = today;
   document.getElementById('rep-start').value = weekAgo;
   updateGrades();
+  initAttendance(); // 첫 화면이 출결이므로 바로 로드
 };
 
 function showPanel(name) {
