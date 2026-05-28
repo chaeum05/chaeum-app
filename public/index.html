@@ -507,6 +507,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <!-- 메모판 -->
           <div class="daily-memo-card">
             <div class="daily-memo-title">📋 메모 (누적)</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;" id="daily-memo-date"></div>
             <!-- 누적 메모 목록 -->
             <div id="memo-log" style="max-height:180px;overflow-y:auto;margin-bottom:8px;font-size:11px;line-height:1.7;color:var(--text2);"></div>
             <!-- 새 메모 입력 -->
@@ -1413,16 +1414,22 @@ let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayNam
 function initAttendance() {
   const today = localDateStr(new Date());
   document.getElementById('att-date').value = today;
-  document.getElementById('modal-add-makeup-date').value = today;
-  document.getElementById('daily-memo-date').textContent = today;
+
+  // 옵셔널 체이닝으로 없는 엘리먼트 에러 방지
+  const makeupDateEl = document.getElementById('modal-add-makeup-date');
+  if (makeupDateEl) makeupDateEl.value = today;
+  const memoDateEl = document.getElementById('daily-memo-date');
+  if (memoDateEl) memoDateEl.textContent = today;
+
   updateAddGrades();
   updateMakeupGrades();
   initCalendar(today);
   loadDailyMemo(today);
-  // 캐시 있으면 즉시 렌더, 없으면 로드
+
+  // 캐시 있으면 즉시 렌더, 없으면 노션에서 로드
   if (attCache[today]) {
     applyAttCache(attCache[today]);
-    syncAttendance(today); // 백그라운드 동기화
+    syncAttendance(today);
   } else {
     loadAttendance();
   }
@@ -1463,7 +1470,8 @@ async function loadAttendance() {
     return;
   }
   grid.innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
-  document.getElementById('daily-memo-date').textContent = date;
+  const memoDateEl = document.getElementById('daily-memo-date');
+  if (memoDateEl) memoDateEl.textContent = date;
   try {
     const d = await api('get-attendance', { date });
     attCache[date] = d; // 캐시 저장
