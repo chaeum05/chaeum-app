@@ -940,23 +940,35 @@ function getRsCacheKey() {
 }
 
 function getWeekMonday(date) {
-  const d = new Date(date + 'T00:00:00');
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
+  // 로컬 시간 기준으로 해당 주 월요일 계산
+  const d = new Date(date);
+  const day = d.getDay(); // 0=일, 1=월 ... 6=토
+  const diff = day === 0 ? -6 : 1 - day; // 일요일이면 -6, 나머지는 1-day
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  // 로컬 날짜를 YYYY-MM-DD로
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 function getWeekFriday(mondayStr) {
-  const d = new Date(mondayStr + 'T00:00:00');
-  d.setDate(d.getDate() + 4); // 월+4 = 금
-  return d.toISOString().split('T')[0];
+  const d = new Date(mondayStr);
+  d.setDate(d.getDate() + 4);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 function getMonthFirst(date) {
   return date.slice(0,7) + '-01';
 }
 function getMonthLast(date) {
-  const d = new Date(date.slice(0,7) + '-01T00:00:00');
-  return new Date(d.getFullYear(), d.getMonth()+1, 0).toISOString().split('T')[0];
+  const d = new Date(date.slice(0,7) + '-01');
+  const last = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  const y = last.getFullYear();
+  const m = String(last.getMonth()+1).padStart(2,'0');
+  const dd = String(last.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 
 function initReportStatus() {
