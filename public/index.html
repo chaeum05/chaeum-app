@@ -946,20 +946,32 @@ function getWeekMonday(date) {
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
 }
+function getWeekFriday(mondayStr) {
+  const d = new Date(mondayStr + 'T00:00:00');
+  d.setDate(d.getDate() + 4); // 월+4 = 금
+  return d.toISOString().split('T')[0];
+}
 function getMonthFirst(date) {
   return date.slice(0,7) + '-01';
 }
+function getMonthLast(date) {
+  const d = new Date(date.slice(0,7) + '-01T00:00:00');
+  return new Date(d.getFullYear(), d.getMonth()+1, 0).toISOString().split('T')[0];
+}
 
 function initReportStatus() {
+  // 최초 1회만 기준일 초기화
   if (!rsInitialized) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('rs-base-date').value =
       rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
     rsInitialized = true;
   }
-  // 캐시가 있으면 바로 렌더, 없으면 노션에서 불러오기
+
   const cacheKey = getRsCacheKey();
-  if (rsStatusCache[cacheKey]) {
+
+  // 캐시 있으면 즉시 렌더 (다른 탭 다녀와도 유지)
+  if (rsStatusCache[cacheKey] && allStudentsCache.length) {
     rsStatusMap = rsStatusCache[cacheKey];
     rsStudents  = rsCurrentTab==='weekly'
       ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
@@ -967,7 +979,7 @@ function initReportStatus() {
     const baseDate   = document.getElementById('rs-base-date').value;
     const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
     renderReportStatusGrid(baseDate, reportType);
-    // 백그라운드에서 최신 상태 동기화
+    // 백그라운드 동기화 (UI는 건드리지 않음)
     syncReportStatus();
   } else {
     loadReportStatus();
@@ -978,21 +990,32 @@ function switchReportTab(tab) {
   rsCurrentTab = tab;
   document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
   document.getElementById('rs-tab-monthly').classList.toggle('active', tab==='monthly');
-  // 기준일 자동 변경 (탭 전환 시에만)
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('rs-base-date').value =
     tab==='weekly' ? getWeekMonday(today) : getMonthFirst(today);
-  initReportStatus();
+  // 탭 전환은 항상 캐시 체크 후 렌더
+  const cacheKey = getRsCacheKey();
+  if (rsStatusCache[cacheKey] && allStudentsCache.length) {
+    rsStatusMap = rsStatusCache[cacheKey];
+    rsStudents  = tab==='weekly'
+      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      : allStudentsCache.filter(s => s.type==='고등');
+    const baseDate   = document.getElementById('rs-base-date').value;
+    const reportType = tab==='weekly' ? '주간' : '월간';
+    renderReportStatusGrid(baseDate, reportType);
+    syncReportStatus();
+  } else {
+    loadReportStatus();
+  }
 }
 
 async function syncReportStatus() {
-  // 백그라운드 동기화 (화면 깜빡임 없이)
   const baseDate   = document.getElementById('rs-base-date').value;
   const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+  const cacheKey   = getRsCacheKey();
   try {
     const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
-    const cacheKey = getRsCacheKey();
-    rsStatusCache[cacheKey] = d.statusMap || {};
+    rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey] || {}), ...(d.statusMap || {}) };
     rsStatusMap = rsStatusCache[cacheKey];
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {}
@@ -1164,21 +1187,17 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
 }
 
 function rsGoReport(name, type, grade, baseDate, reportType) {
-  // 보고서 생성 탭으로 이동 + 날짜 자동 설정
   document.getElementById('rep-name').value = name;
   document.getElementById('rep-type').value = type;
 
   if (rsCurrentTab === 'weekly') {
-    const monday = new Date(baseDate + 'T00:00:00');
-    const sunday = new Date(baseDate + 'T00:00:00');
-    sunday.setDate(monday.getDate() + 6);
-    document.getElementById('rep-start').value = monday.toISOString().split('T')[0];
-    document.getElementById('rep-end').value   = sunday.toISOString().split('T')[0];
+    // 주간: 해당 주 월요일 ~ 금요일
+    document.getElementById('rep-start').value = baseDate; // baseDate가 이미 월요일
+    document.getElementById('rep-end').value   = getWeekFriday(baseDate);
   } else {
-    const first = new Date(baseDate + 'T00:00:00');
-    const last  = new Date(first.getFullYear(), first.getMonth() + 1, 0);
-    document.getElementById('rep-start').value = first.toISOString().split('T')[0];
-    document.getElementById('rep-end').value   = last.toISOString().split('T')[0];
+    // 월간: 해당 월 1일 ~ 말일
+    document.getElementById('rep-start').value = baseDate; // baseDate가 이미 1일
+    document.getElementById('rep-end').value   = getMonthLast(baseDate);
   }
 
   showPanel('report');
