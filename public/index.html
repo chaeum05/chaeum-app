@@ -929,72 +929,75 @@ function selectReportStudent() {
 
 // ── 보고서 현황 ──
 let rsCurrentTab  = 'weekly';
-let rsStatusCache = {}; // { 'weekly_2026-05-26': {...}, 'monthly_2026-05-01': {...} }
-let rsStatusMap   = {}; // 현재 탭의 상태 (캐시 참조)
+let rsStatusCache = {}; // 탭 전환 시 캐시 (새로고침하면 초기화 → 노션에서 다시 로드)
+let rsStatusMap   = {};
 let rsStudents    = [];
 let rsInitialized = false;
+
+// ── 날짜 유틸 (로컬 시간 기준, timezone 오류 없음) ──
+function localDateStr(d) {
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function parseLocalDate(str) {
+  // "YYYY-MM-DD" → 로컬 자정 Date (UTC 변환 없음)
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function getWeekMonday(dateStr) {
+  const d   = parseLocalDate(dateStr);
+  const day = d.getDay(); // 0=일,1=월...6=토
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return localDateStr(d);
+}
+function getWeekFriday(mondayStr) {
+  const d = parseLocalDate(mondayStr);
+  d.setDate(d.getDate() + 4); // 월+4=금
+  return localDateStr(d);
+}
+function getMonthFirst(dateStr) {
+  return dateStr.slice(0,7) + '-01';
+}
+// 고등: 해당 월의 마지막 주 금요일
+function getLastFridayOfMonth(dateStr) {
+  const [y, m] = dateStr.split('-').map(Number);
+  // 해당 월의 마지막 날부터 거슬러 올라가 금요일(5) 찾기
+  const lastDay = new Date(y, m, 0); // 말일
+  while (lastDay.getDay() !== 5) {   // 금요일=5
+    lastDay.setDate(lastDay.getDate() - 1);
+  }
+  return localDateStr(lastDay);
+}
 
 function getRsCacheKey() {
   const baseDate = document.getElementById('rs-base-date')?.value || '';
   return `${rsCurrentTab}_${baseDate}`;
 }
 
-function getWeekMonday(date) {
-  // 로컬 시간 기준으로 해당 주 월요일 계산
-  const d = new Date(date);
-  const day = d.getDay(); // 0=일, 1=월 ... 6=토
-  const diff = day === 0 ? -6 : 1 - day; // 일요일이면 -6, 나머지는 1-day
-  d.setDate(d.getDate() + diff);
-  // 로컬 날짜를 YYYY-MM-DD로
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
-function getWeekFriday(mondayStr) {
-  const d = new Date(mondayStr);
-  d.setDate(d.getDate() + 4);
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
-function getMonthFirst(date) {
-  return date.slice(0,7) + '-01';
-}
-function getMonthLast(date) {
-  const d = new Date(date.slice(0,7) + '-01');
-  const last = new Date(d.getFullYear(), d.getMonth()+1, 0);
-  const y = last.getFullYear();
-  const m = String(last.getMonth()+1).padStart(2,'0');
-  const dd = String(last.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
-
 function initReportStatus() {
-  // 최초 1회만 기준일 초기화
+  // 기준일 최초 1회 설정
   if (!rsInitialized) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr(new Date());
     document.getElementById('rs-base-date').value =
       rsCurrentTab === 'weekly' ? getWeekMonday(today) : getMonthFirst(today);
     rsInitialized = true;
   }
-
+  // 탭 내 캐시가 있으면 즉시 렌더, 항상 노션에서 백그라운드 동기화
   const cacheKey = getRsCacheKey();
-
-  // 캐시 있으면 즉시 렌더 (다른 탭 다녀와도 유지)
   if (rsStatusCache[cacheKey] && allStudentsCache.length) {
     rsStatusMap = rsStatusCache[cacheKey];
     rsStudents  = rsCurrentTab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
       : allStudentsCache.filter(s => s.type==='고등');
-    const baseDate   = document.getElementById('rs-base-date').value;
-    const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
-    renderReportStatusGrid(baseDate, reportType);
-    // 백그라운드 동기화 (UI는 건드리지 않음)
-    syncReportStatus();
+    renderReportStatusGrid(
+      document.getElementById('rs-base-date').value,
+      rsCurrentTab==='weekly' ? '주간' : '월간'
+    );
+    syncReportStatus(); // 백그라운드 최신화
   } else {
-    loadReportStatus();
+    loadReportStatus(); // 새로고침 후 첫 방문: 노션에서 로드
   }
 }
 
@@ -1002,19 +1005,20 @@ function switchReportTab(tab) {
   rsCurrentTab = tab;
   document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
   document.getElementById('rs-tab-monthly').classList.toggle('active', tab==='monthly');
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr(new Date());
   document.getElementById('rs-base-date').value =
     tab==='weekly' ? getWeekMonday(today) : getMonthFirst(today);
-  // 탭 전환은 항상 캐시 체크 후 렌더
+  // 캐시 있으면 즉시, 없으면 노션 로드
   const cacheKey = getRsCacheKey();
   if (rsStatusCache[cacheKey] && allStudentsCache.length) {
     rsStatusMap = rsStatusCache[cacheKey];
     rsStudents  = tab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
       : allStudentsCache.filter(s => s.type==='고등');
-    const baseDate   = document.getElementById('rs-base-date').value;
-    const reportType = tab==='weekly' ? '주간' : '월간';
-    renderReportStatusGrid(baseDate, reportType);
+    renderReportStatusGrid(
+      document.getElementById('rs-base-date').value,
+      tab==='weekly' ? '주간' : '월간'
+    );
     syncReportStatus();
   } else {
     loadReportStatus();
@@ -1022,12 +1026,13 @@ function switchReportTab(tab) {
 }
 
 async function syncReportStatus() {
+  // 백그라운드 동기화: UI 깜빡임 없이 노션 최신 상태 반영
   const baseDate   = document.getElementById('rs-base-date').value;
   const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
   const cacheKey   = getRsCacheKey();
   try {
     const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
-    rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey] || {}), ...(d.statusMap || {}) };
+    rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey]||{}), ...(d.statusMap||{}) };
     rsStatusMap = rsStatusCache[cacheKey];
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {}
@@ -1038,23 +1043,18 @@ async function loadReportStatus() {
   const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
   const grid       = document.getElementById('rs-grid');
   grid.innerHTML   = '<div class="loading-spinner">불러오는 중...</div>';
-
   try {
     if (!allStudentsCache.length) {
       const d = await api('get-students', {});
       allStudentsCache = d.students || [];
     }
     const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
-
-    // 캐시에 저장 (기존 값 덮어쓰지 않고 병합)
     const cacheKey = getRsCacheKey();
-    rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey] || {}), ...d.statusMap };
+    rsStatusCache[cacheKey] = d.statusMap || {};
     rsStatusMap = rsStatusCache[cacheKey];
-
     rsStudents = rsCurrentTab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등' || s.type==='중등')
+      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
       : allStudentsCache.filter(s => s.type==='고등');
-
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
@@ -1203,13 +1203,17 @@ function rsGoReport(name, type, grade, baseDate, reportType) {
   document.getElementById('rep-type').value = type;
 
   if (rsCurrentTab === 'weekly') {
-    // 주간: 해당 주 월요일 ~ 금요일
-    document.getElementById('rep-start').value = baseDate; // baseDate가 이미 월요일
-    document.getElementById('rep-end').value   = getWeekFriday(baseDate);
+    // 초·중등 주간: 해당 주 월요일 ~ 금요일
+    const monday = baseDate; // baseDate 자체가 월요일
+    const friday = getWeekFriday(monday);
+    document.getElementById('rep-start').value = monday;
+    document.getElementById('rep-end').value   = friday;
   } else {
-    // 월간: 해당 월 1일 ~ 말일
-    document.getElementById('rep-start').value = baseDate; // baseDate가 이미 1일
-    document.getElementById('rep-end').value   = getMonthLast(baseDate);
+    // 고등 월간: 해당 월 1일 ~ 마지막 주 금요일
+    const first      = baseDate; // baseDate 자체가 1일
+    const lastFriday = getLastFridayOfMonth(baseDate);
+    document.getElementById('rep-start').value = first;
+    document.getElementById('rep-end').value   = lastFriday;
   }
 
   showPanel('report');
