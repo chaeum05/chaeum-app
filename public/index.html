@@ -396,7 +396,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <div class="form-row" style="margin-bottom:12px">
           <div class="form-group"><label>학생 이름</label><input type="text" id="rep-name" placeholder="예: 김민재"></div>
           <div class="form-group"><label>구분</label>
-            <select id="rep-type">
+            <select id="rep-type" onchange="autoSetReportDates()">
               <option value="초등">초등</option>
               <option value="중등">중등</option>
               <option value="고등" selected>고등</option>
@@ -653,8 +653,11 @@ function showPanel(name) {
   if (name === 'report-status')  initReportStatus();
   if (name === 'record' && allStudentsCache.length) populateRecordDropdown(allStudentsCache);
   if (name === 'record' && !allStudentsCache.length) loadStudentListForRecord();
-  if (name === 'report' && allStudentsCache.length) populateReportDropdown(allStudentsCache);
-  if (name === 'report' && !allStudentsCache.length) loadStudentListForReport();
+  if (name === 'report') {
+    autoSetReportDates(); // 탭 열릴 때 날짜 자동 설정
+    if (allStudentsCache.length) populateReportDropdown(allStudentsCache);
+    else loadStudentListForReport();
+  }
 }
 
 function updateGrades() {
@@ -937,6 +940,21 @@ async function loadStudentListForReport() {
   } catch(e) { toast('오류: ' + e.message); }
 }
 
+// 보고서 날짜 자동 설정 (구분에 따라)
+function autoSetReportDates() {
+  const type  = document.getElementById('rep-type').value;
+  const today = localDateStr(new Date());
+  if (type === '고등') {
+    // 고등: 이번 달 1일 ~ 마지막 주 금요일
+    document.getElementById('rep-start').value = getMonthFirst(today);
+    document.getElementById('rep-end').value   = getLastFridayOfMonth(today);
+  } else {
+    // 초등/중등: 이번 주 월요일 ~ 금요일
+    document.getElementById('rep-start').value = getWeekMonday(today);
+    document.getElementById('rep-end').value   = getWeekFriday(getWeekMonday(today));
+  }
+}
+
 function selectReportStudent() {
   const val = document.getElementById('rep-student-select').value;
   if (!val) return;
@@ -944,6 +962,7 @@ function selectReportStudent() {
     const { name, type } = JSON.parse(val);
     document.getElementById('rep-name').value = name;
     document.getElementById('rep-type').value = type;
+    autoSetReportDates(); // 학생 선택 시 날짜 자동 설정
   } catch(e) {}
 }
 
@@ -1386,35 +1405,66 @@ function calNextMonth() {
 }
 let attStudents = [], attRecords = [], attMakeup = [];
 let absentTarget = null;
+let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayName } }
 
 function initAttendance() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr(new Date());
   document.getElementById('att-date').value = today;
   document.getElementById('modal-add-makeup-date').value = today;
   document.getElementById('daily-memo-date').textContent = today;
   updateAddGrades();
   updateMakeupGrades();
   initCalendar(today);
-  loadAttendance();
   loadDailyMemo(today);
+  // 캐시 있으면 즉시 렌더, 없으면 로드
+  if (attCache[today]) {
+    applyAttCache(attCache[today]);
+    syncAttendance(today); // 백그라운드 동기화
+  } else {
+    loadAttendance();
+  }
+}
+
+function applyAttCache(cached) {
+  const dayLabel = {'월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말'};
+  document.getElementById('att-day-badge').textContent = dayLabel[cached.dayName] || cached.dayName;
+  if (typeof calYear !== 'undefined') renderCalendar();
+  attStudents = cached.students || [];
+  attRecords  = cached.attendance || [];
+  attMakeup   = cached.makeupList || [];
+  renderAttGrid();
+  renderMakeupList();
+}
+
+async function syncAttendance(date) {
+  // 백그라운드에서 최신 데이터 동기화 (화면 깜빡임 없음)
+  try {
+    const d = await api('get-attendance', { date });
+    attCache[date] = d;
+    attRecords  = d.attendance || [];
+    attMakeup   = d.makeupList || [];
+    attStudents = d.students  || [];
+    renderAttGrid();
+    renderMakeupList();
+  } catch(e) {}
 }
 
 async function loadAttendance() {
   const date = document.getElementById('att-date').value;
   const grid = document.getElementById('att-grid');
+  // 캐시 있으면 즉시 렌더 후 백그라운드 동기화
+  if (attCache[date]) {
+    applyAttCache(attCache[date]);
+    loadDailyMemo(date);
+    syncAttendance(date);
+    return;
+  }
   grid.innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
   document.getElementById('daily-memo-date').textContent = date;
   try {
     const d = await api('get-attendance', { date });
-    const dayLabel = {'월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','주말':'주말'};
-    document.getElementById('att-day-badge').textContent = dayLabel[d.dayName] || d.dayName;
-    // 달력 선택 표시 갱신
-    if (typeof calYear !== 'undefined') renderCalendar();
-    attStudents = d.students || [];
-    attRecords  = d.attendance || [];
-    attMakeup   = d.makeupList || [];
-    renderAttGrid();
-    renderMakeupList();
+    attCache[date] = d; // 캐시 저장
+    applyAttCache(d);
     loadDailyMemo(date);
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
@@ -1615,6 +1665,8 @@ async function doAttend(name, type, grade, status) {
     const idx = attRecords.findIndex(r=>r.name===name && r.type===type && r.grade===grade);
     if (idx>=0) { attRecords[idx].status=status; attRecords[idx].memo=memo; }
     else attRecords.push({ name, type, grade, status, memo });
+    // 캐시 업데이트
+    if (attCache[date]) attCache[date].attendance = [...attRecords];
     renderAttGrid();
     toast(`${name} — ${status} ✓`);
   } catch(e) { toast('오류: '+e.message); }
