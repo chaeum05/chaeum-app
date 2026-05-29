@@ -1668,15 +1668,30 @@ async function addStudentManually() {
 
 // 출석 처리
 async function doAttend(name, type, grade, status) {
-  const date = document.getElementById('att-date').value;
-  const enc  = encodeURIComponent(`${name}_${type}_${grade}`);
-  const memo = document.getElementById(`memo-${enc}`)?.value || '';
+  const date    = document.getElementById('att-date').value;
+  const enc     = encodeURIComponent(`${name}_${type}_${grade}`);
+  const memo    = document.getElementById(`memo-${enc}`)?.value || '';
+  const current = getStatus(name, type, grade);
+
+  // 같은 버튼 다시 누르면 → 선택 해제 (노션에서 삭제)
+  if (current === status) {
+    try {
+      await api('save-attendance', { action:'delete_by_date', name, type, grade, date, status });
+      const idx = attRecords.findIndex(r => r.name===name && r.type===type && r.grade===grade);
+      if (idx >= 0) attRecords.splice(idx, 1);
+      if (attCache[date]) attCache[date].attendance = [...attRecords];
+      renderAttGrid();
+      toast(`${name} — 선택 해제 ✓`);
+    } catch(e) { toast('오류: '+e.message); }
+    return;
+  }
+
+  // 다른 상태로 변경
   try {
     await api('save-attendance', { action:'upsert', name, type, grade, date, status, memo });
-    const idx = attRecords.findIndex(r=>r.name===name && r.type===type && r.grade===grade);
+    const idx = attRecords.findIndex(r => r.name===name && r.type===type && r.grade===grade);
     if (idx>=0) { attRecords[idx].status=status; attRecords[idx].memo=memo; }
     else attRecords.push({ name, type, grade, status, memo });
-    // 캐시 업데이트
     if (attCache[date]) attCache[date].attendance = [...attRecords];
     renderAttGrid();
     toast(`${name} — ${status} ✓`);
