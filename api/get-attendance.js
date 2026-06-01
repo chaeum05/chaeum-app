@@ -98,11 +98,16 @@ export default async function handler(req, res) {
     });
     const makeupData = await makeupRes.json();
 
-    // 4. 보강 기록 전체 조회 (출결상태 = 보강)
+    // 4. 보강 기록 전체 조회 (출결상태 = 보강 OR 보강완료)
     const scheduledRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        filter: { property: '출결상태', select: { equals: '보강' } },
+        filter: {
+          or: [
+            { property: '출결상태', select: { equals: '보강' } },
+            { property: '출결상태', select: { equals: '보강완료' } },
+          ]
+        },
         page_size: 100
       })
     });
