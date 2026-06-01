@@ -129,14 +129,16 @@ export default async function handler(req, res) {
       const records = scheduledByName[name];
       if (!records || records.length === 0) return false;
       return records.some(r => {
-        // 1순위: 원래날짜(결석일)가 정확히 일치
+        // 1순위: 원래날짜(결석일)가 정확히 일치 → 가장 확실한 매칭
         if (r.absentDate && r.absentDate === absentDate) return true;
-        // 2순위: 원래날짜 없는 보강 → ±14일 이내면 해당 결석의 보강으로 간주
+        // 2순위: 원래날짜 없는 보강 → 보강날짜가 결석일 이후 14일 이내
+        // (보강날짜 < 결석일이면 사전보강이므로 제외 - 다른 결석의 보강일 수 있음)
         if (!r.absentDate && r.makeupDate) {
-          const diff = Math.abs(
-            new Date(r.makeupDate).getTime() - new Date(absentDate).getTime()
-          ) / (1000 * 60 * 60 * 24);
-          return diff <= 14;
+          const makeupTime  = new Date(r.makeupDate).getTime();
+          const absentTime  = new Date(absentDate).getTime();
+          const diffDays    = (makeupTime - absentTime) / (1000 * 60 * 60 * 24);
+          // 결석일 이후 ~ 14일 이내만 해당 결석의 보강으로 인정
+          return diffDays >= 0 && diffDays <= 14;
         }
         return false;
       });
