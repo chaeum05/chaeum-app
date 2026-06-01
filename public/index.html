@@ -1524,12 +1524,17 @@ function renderAttGrid() {
       const delBtn = isMakeup
         ? `<button class="amini" style="background:#fdecea;color:var(--burgundy);padding:3px 6px;" onclick="removeMakeupFromGrid('${s.name}','${s.type}','${s.grade}')" title="보강 목록에서 제거">🗑️</button>`
         : '';
+      // 보강 섹션 출석 버튼은 '보강완료'로 저장
+      const attendAction = isMakeup
+        ? `doAttend('${s.name}','${s.type}','${s.grade}','보강완료')`
+        : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
+      const isPresent = isMakeup ? (st==='보강완료') : (st==='출석');
       html += `
         <div class="att-row s-${st||''}" id="arow-${enc}">
           <span class="att-row-name">${s.name}</span>
           <span class="att-row-meta">${s.grade}</span>
           <div class="att-row-btns">
-            <button class="amini p ${st==='출석'?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ 출석</button>
+            <button class="amini p ${isPresent?'on':''}" onclick="${attendAction}">✅ ${isMakeup?'보강완료':'출석'}</button>
             <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
             <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
             ${delBtn}
