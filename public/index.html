@@ -291,6 +291,52 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rs-btn.send:hover    { background:#16a34a; color:white; border-color:#16a34a; }
 .rs-btn.send.done     { background:#2d8a4e; color:white; border-color:#2d8a4e; box-shadow:0 0 0 2px rgba(45,138,78,0.25); }
 
+/* ── 시험 관리 ── */
+.exam-tabs { display:flex; gap:4px; background:var(--surface2); padding:4px; border-radius:10px; margin-bottom:18px; width:fit-content; }
+.exam-tab { padding:7px 20px; border:none; border-radius:7px; font-size:13px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; background:transparent; color:var(--text2); transition:0.15s; }
+.exam-tab.active { background:var(--surface); color:var(--burgundy); box-shadow:0 1px 6px rgba(0,0,0,0.08); }
+
+.exam-school-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:10px; box-shadow:var(--shadow); }
+.exam-school-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer; }
+.exam-school-name { font-size:15px; font-weight:700; }
+.exam-school-meta { font-size:11px; color:var(--text3); }
+.exam-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.eb-1차 { background:#fef3c7; color:#92400e; }
+.eb-2차 { background:#fed7aa; color:#9a3412; }
+.eb-모의 { background:#ede9fe; color:#5b21b6; }
+.eb-기타 { background:#f1f5f9; color:#475569; }
+
+.exam-range-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+.exam-range-item { background:var(--surface2); border-radius:8px; padding:8px 12px; }
+.exam-range-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.exam-range-value { font-size:12px; color:var(--text); }
+
+.exam-action-row { display:flex; gap:6px; margin-top:10px; }
+.exam-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.15s; border:none; }
+.exam-btn.edit { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.exam-btn.edit:hover { background:var(--dark); color:white; }
+.exam-btn.del { background:#fdecea; color:var(--burgundy); }
+.exam-btn.del:hover { background:var(--burgundy); color:white; }
+
+.student-exam-row { display:flex; align-items:center; padding:6px 10px; border-radius:8px; gap:8px; background:var(--surface); border:1px solid var(--border); margin-bottom:6px; }
+.student-exam-row:hover { border-color:var(--burgundy); }
+.student-exam-row.has-makeup { border-left:3px solid var(--gold); }
+.se-name { font-size:13px; font-weight:700; min-width:80px; }
+.se-school { font-size:11px; color:var(--text3); min-width:90px; }
+.se-makeup { font-size:11px; color:var(--burgundy); font-weight:600; min-width:100px; }
+.se-checks { display:flex; gap:6px; margin-left:auto; align-items:center; }
+.se-check { font-size:10px; padding:3px 8px; border-radius:5px; font-weight:700; cursor:pointer; border:none; font-family:'Pretendard',sans-serif; }
+.se-check.special { background:#fdecea; color:var(--burgundy); }
+.se-check.special.on { background:var(--burgundy); color:white; }
+.se-check.final { background:#e8f0ff; color:#3a5fd9; }
+.se-check.final.on { background:#3a5fd9; color:white; }
+.se-check.extra { background:#e8f7ee; color:#2d8a4e; }
+.se-check.extra.on { background:#2d8a4e; color:white; }
+.se-edit { padding:4px 10px; background:var(--surface2); color:var(--text2); border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.se-edit:hover { background:var(--dark); color:white; }
+
+/* 모달 공통은 기존 것 사용 */
+
 /* 미니 달력 */
 .mini-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .mini-cal-nav span { font-size:13px; font-weight:700; color:var(--text); }
@@ -322,6 +368,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="nav-item"        onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;일일 기록</div>
       <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📊 &nbsp;보고서 생성</div>
       <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">✅ &nbsp;보고서 현황</div>
+      <div class="nav-item"        onclick="showPanel('exam')"          id="nav-exam">📝 &nbsp;시험 관리</div>
       <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
     </nav>
   </aside>
@@ -427,7 +474,192 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <!-- 학생 목록 -->
-    <div class="panel" id="panel-students">
+    <!-- 시험 관리 패널 -->
+    <div class="panel" id="panel-exam">
+      <div class="panel-title">시험 관리</div>
+
+      <!-- 탭 -->
+      <div class="exam-tabs">
+        <button class="exam-tab active" id="exam-tab-school" onclick="switchExamTab('school')">🏫 학교별 시험 등록</button>
+        <button class="exam-tab" id="exam-tab-student" onclick="switchExamTab('student')">👨‍🎓 학생별 관리</button>
+      </div>
+
+      <!-- 학교별 시험 등록 탭 -->
+      <div id="exam-school-section">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="att-action-btn primary" onclick="openExamForm()">+ 시험 정보 등록</button>
+          <select id="exam-type-filter" onchange="loadExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+            <option value="">전체 시험종류</option>
+            <option value="1차 지필">1차 지필</option>
+            <option value="2차 지필">2차 지필</option>
+            <option value="모의고사">모의고사</option>
+            <option value="기타">기타</option>
+          </select>
+          <select id="exam-grade-filter" onchange="renderExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+            <option value="">전체 학년</option>
+            <option value="1학년">1학년</option>
+            <option value="2학년">2학년</option>
+            <option value="3학년">3학년</option>
+          </select>
+        </div>
+        <div id="exam-list"><div class="loading-spinner">불러오는 중...</div></div>
+      </div>
+
+      <!-- 학생별 관리 탭 -->
+      <div id="exam-student-section" style="display:none;">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="att-action-btn primary" onclick="openStudentExamForm()">+ 학생 시험 등록</button>
+          <select id="se-type-filter" onchange="loadStudentExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+            <option value="">전체 시험종류</option>
+            <option value="1차 지필">1차 지필</option>
+            <option value="2차 지필">2차 지필</option>
+            <option value="모의고사">모의고사</option>
+          </select>
+        </div>
+        <!-- 직전 보강 임박 알림 -->
+        <div id="exam-makeup-alert" style="margin-bottom:12px;"></div>
+        <!-- 학생 목록 -->
+        <div id="student-exam-list"><div class="loading-spinner">불러오는 중...</div></div>
+      </div>
+    </div>
+
+    <!-- 시험정보 등록/수정 모달 -->
+    <div id="modal-exam-form" class="modal-overlay">
+      <div class="modal-box" style="width:500px;max-height:90vh;overflow-y:auto;">
+        <div class="modal-title" id="exam-form-title">📝 시험 정보 등록</div>
+        <input type="hidden" id="exam-form-id">
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:2;">
+            <label>학교명</label>
+            <input type="text" id="ef-school" placeholder="예: 형곡고등학교">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>학년</label>
+            <select id="ef-grade">
+              <option value="">선택</option>
+              <option value="1학년">1학년</option>
+              <option value="2학년">2학년</option>
+              <option value="3학년">3학년</option>
+            </select>
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>시험종류</label>
+            <select id="ef-type">
+              <option value="">선택</option>
+              <option value="1차 지필">1차 지필</option>
+              <option value="2차 지필">2차 지필</option>
+              <option value="모의고사">모의고사</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:1;">
+            <label>시험기간 시작</label>
+            <input type="date" id="ef-period-start">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>시험기간 종료</label>
+            <input type="date" id="ef-period-end">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>시험일</label>
+            <input type="date" id="ef-exam-date">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>등원일</label>
+          <input type="text" id="ef-attend-day" placeholder="예: 수, 금">
+        </div>
+        <div class="modal-field">
+          <label>교과서 범위</label>
+          <input type="text" id="ef-textbook" placeholder="예: 공통영어1 능률(민) 3,4 SL2">
+        </div>
+        <div class="modal-field">
+          <label>부교재 범위</label>
+          <input type="text" id="ef-subtext" placeholder="예: 리딩파워 유형편 완성">
+        </div>
+        <div class="modal-field">
+          <label>모의고사 범위</label>
+          <input type="text" id="ef-mock" placeholder="예: 26년 6월 모의고사">
+        </div>
+        <div class="modal-field">
+          <label>메모</label>
+          <input type="text" id="ef-memo" placeholder="기타 참고사항">
+        </div>
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="saveExam()">저장</button>
+          <button class="modal-btn" onclick="closeModal('modal-exam-form')">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 학생 시험관리 등록/수정 모달 -->
+    <div id="modal-student-exam-form" class="modal-overlay">
+      <div class="modal-box" style="width:440px;">
+        <div class="modal-title" id="se-form-title">👨‍🎓 학생 시험 등록</div>
+        <input type="hidden" id="se-form-id">
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:1;">
+            <label>학생 이름</label>
+            <select id="se-name-select" onchange="fillStudentExamInfo()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+              <option value="">학생 선택</option>
+            </select>
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>시험종류</label>
+            <select id="se-exam-type">
+              <option value="1차 지필">1차 지필</option>
+              <option value="2차 지필">2차 지필</option>
+              <option value="모의고사">모의고사</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>학교명</label>
+          <input type="text" id="se-school" placeholder="예: 형곡고등학교">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:1;">
+            <label>직전 보강 날짜</label>
+            <input type="date" id="se-makeup-date">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>직전 보강 시간</label>
+            <input type="text" id="se-makeup-time" placeholder="예: 14:00">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px;">
+          <label style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">체크리스트</label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="se-special" style="accent-color:var(--burgundy)"> 특별관리
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="se-final" style="accent-color:#3a5fd9"> Final
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="se-extra" style="accent-color:#2d8a4e"> 추가문제
+          </label>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <label style="font-size:13px;">부교재</label>
+            <input type="number" id="se-subtext-cnt" min="0" style="width:60px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>메모</label>
+          <input type="text" id="se-memo" placeholder="기타 메모">
+        </div>
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="saveStudentExam()">저장</button>
+          <button class="modal-btn" onclick="closeModal('modal-student-exam-form')">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 학생 목록 패널 -->
       <div class="panel-title">학생 목록</div>
       <div class="panel-sub">클릭하면 바로 해당 학생 보고서 화면으로 이동합니다</div>
       <div id="student-list-container"><div class="loading-spinner">불러오는 중...</div></div>
@@ -655,6 +887,7 @@ function showPanel(name) {
   if (name === 'students')       loadStudents();
   if (name === 'attendance')     initAttendance();
   if (name === 'report-status')  initReportStatus();
+  if (name === 'exam')           initExam();
   if (name === 'record' && allStudentsCache.length) populateRecordDropdown(allStudentsCache);
   if (name === 'record' && !allStudentsCache.length) loadStudentListForRecord();
   if (name === 'report') {
@@ -1941,7 +2174,335 @@ function saveDailyMemo() {
   toast('메모 저장 ✓');
 }
 
-function closeModal(id) {
+// ── 시험 관리 ──
+let examCurrentTab = 'school';
+let examsCache = [];
+let studentExamsCache = [];
+
+function initExam() {
+  loadExams();
+  // 학생 선택 드롭다운 채우기 (모달용)
+  if (allStudentsCache.length) populateStudentExamSelect();
+  else api('get-students', {}).then(d => {
+    allStudentsCache = d.students || [];
+    populateStudentExamSelect();
+  }).catch(() => {});
+}
+
+function switchExamTab(tab) {
+  examCurrentTab = tab;
+  document.getElementById('exam-tab-school').classList.toggle('active', tab === 'school');
+  document.getElementById('exam-tab-student').classList.toggle('active', tab === 'student');
+  document.getElementById('exam-school-section').style.display  = tab === 'school'  ? '' : 'none';
+  document.getElementById('exam-student-section').style.display = tab === 'student' ? '' : 'none';
+  if (tab === 'student') loadStudentExams();
+}
+
+// ── 학교 시험정보 ──
+async function loadExams() {
+  const examType = document.getElementById('exam-type-filter').value;
+  document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
+  try {
+    const d = await api('exam', { action:'get_exams' });
+    examsCache = d.exams || [];
+    renderExams();
+  } catch(e) {
+    document.getElementById('exam-list').innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
+  }
+}
+
+function renderExams() {
+  const gradeFilter = document.getElementById('exam-grade-filter').value;
+  const typeFilter  = document.getElementById('exam-type-filter').value;
+  let filtered = examsCache;
+  if (gradeFilter) filtered = filtered.filter(e => e.grade === gradeFilter);
+  if (typeFilter)  filtered = filtered.filter(e => e.examType === typeFilter);
+
+  if (!filtered.length) {
+    document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">등록된 시험 정보가 없습니다.</div>';
+    return;
+  }
+
+  // 학년 → 학교 순 정렬
+  filtered.sort((a,b) => (a.grade||'').localeCompare(b.grade) || a.school.localeCompare(b.school,'ko'));
+
+  const typeBadge = t => {
+    const cls = t==='1차 지필'?'eb-1차':t==='2차 지필'?'eb-2차':t==='모의고사'?'eb-모의':'eb-기타';
+    return `<span class="exam-badge ${cls}">${t}</span>`;
+  };
+
+  document.getElementById('exam-list').innerHTML = filtered.map(e => `
+    <div class="exam-school-card">
+      <div class="exam-school-header">
+        <span class="exam-school-name">${e.school}</span>
+        <span class="exam-school-meta">${e.grade}</span>
+        ${typeBadge(e.examType)}
+        ${e.examDate ? `<span style="font-size:11px;color:var(--burgundy);font-weight:700;">시험일: ${e.examDate}</span>` : ''}
+        ${e.periodStart ? `<span style="font-size:11px;color:var(--text3);">시험기간: ${e.periodStart}~${e.periodEnd||''}</span>` : ''}
+      </div>
+      <div class="exam-range-grid">
+        <div class="exam-range-item">
+          <div class="exam-range-label">📚 교과서</div>
+          <div class="exam-range-value">${e.textbookRange || '-'}</div>
+        </div>
+        <div class="exam-range-item">
+          <div class="exam-range-label">📖 부교재</div>
+          <div class="exam-range-value">${e.subTextRange || '-'}</div>
+        </div>
+        <div class="exam-range-item">
+          <div class="exam-range-label">📝 모의고사</div>
+          <div class="exam-range-value">${e.mockRange || '-'}</div>
+        </div>
+      </div>
+      ${e.attendDay ? `<div style="margin-top:8px;font-size:11px;color:var(--text2);">등원일: <b>${e.attendDay}</b></div>` : ''}
+      ${e.memo ? `<div style="margin-top:4px;font-size:11px;color:var(--text3);">${e.memo}</div>` : ''}
+      <div class="exam-action-row">
+        <button class="exam-btn edit" onclick="openExamForm('${e.id}')">✏️ 수정</button>
+        <button class="exam-btn del"  onclick="deleteExam('${e.id}','${e.school}')">🗑️ 삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+function openExamForm(id) {
+  const isEdit = !!id;
+  document.getElementById('exam-form-title').textContent = isEdit ? '✏️ 시험 정보 수정' : '📝 시험 정보 등록';
+  document.getElementById('exam-form-id').value = id || '';
+  if (isEdit) {
+    const e = examsCache.find(x => x.id === id);
+    if (!e) return;
+    document.getElementById('ef-school').value       = e.school;
+    document.getElementById('ef-grade').value        = e.grade;
+    document.getElementById('ef-type').value         = e.examType;
+    document.getElementById('ef-period-start').value = e.periodStart;
+    document.getElementById('ef-period-end').value   = e.periodEnd;
+    document.getElementById('ef-exam-date').value    = e.examDate;
+    document.getElementById('ef-attend-day').value   = e.attendDay;
+    document.getElementById('ef-textbook').value     = e.textbookRange;
+    document.getElementById('ef-subtext').value      = e.subTextRange;
+    document.getElementById('ef-mock').value         = e.mockRange;
+    document.getElementById('ef-memo').value         = e.memo;
+  } else {
+    ['ef-school','ef-grade','ef-type','ef-period-start','ef-period-end',
+     'ef-exam-date','ef-attend-day','ef-textbook','ef-subtext','ef-mock','ef-memo']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  }
+  document.getElementById('modal-exam-form').classList.add('open');
+}
+
+async function saveExam() {
+  const id = document.getElementById('exam-form-id').value;
+  const school = document.getElementById('ef-school').value.trim();
+  if (!school) { toast('학교명을 입력해주세요.'); return; }
+  try {
+    const d = await api('exam', {
+      action: 'save_exam', id: id || undefined,
+      school, grade:         document.getElementById('ef-grade').value,
+      examType:              document.getElementById('ef-type').value,
+      periodStart:           document.getElementById('ef-period-start').value,
+      periodEnd:             document.getElementById('ef-period-end').value,
+      examDate:              document.getElementById('ef-exam-date').value,
+      attendDay:             document.getElementById('ef-attend-day').value,
+      textbookRange:         document.getElementById('ef-textbook').value,
+      subTextRange:          document.getElementById('ef-subtext').value,
+      mockRange:             document.getElementById('ef-mock').value,
+      memo:                  document.getElementById('ef-memo').value,
+    });
+    closeModal('modal-exam-form');
+    toast(d.message);
+    loadExams();
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+async function deleteExam(id, school) {
+  if (!confirm(`"${school}" 시험 정보를 삭제할까요?`)) return;
+  try {
+    await api('exam', { action:'delete_exam', id });
+    toast('삭제 완료');
+    loadExams();
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+// ── 학생별 시험 관리 ──
+async function loadStudentExams() {
+  const examType = document.getElementById('se-type-filter').value;
+  document.getElementById('student-exam-list').innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
+  try {
+    const d = await api('exam', { action:'get_student_exams', examType });
+    studentExamsCache = d.students || [];
+    renderStudentExams();
+  } catch(e) {
+    document.getElementById('student-exam-list').innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
+  }
+}
+
+function renderStudentExams() {
+  const list = document.getElementById('student-exam-list');
+  const alert = document.getElementById('exam-makeup-alert');
+  if (!studentExamsCache.length) {
+    list.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.</div>';
+    alert.innerHTML = '';
+    return;
+  }
+
+  // 직전보강 임박 알림 (3일 이내)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const soon = studentExamsCache.filter(s => {
+    if (!s.makeupDate) return false;
+    const d = new Date(s.makeupDate); d.setHours(0,0,0,0);
+    const diff = (d-today)/(1000*60*60*24);
+    return diff >= 0 && diff <= 3;
+  });
+  alert.innerHTML = soon.length ? `
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;color:#856404;">
+      ⚠️ 직전 보강 임박 (3일 이내): ${soon.map(s=>`<b>${s.name}</b>(${s.makeupDate} ${s.makeupTime||''})`).join(', ')}
+    </div>` : '';
+
+  // 학년 → 이름 순 정렬
+  const sorted = [...studentExamsCache].sort((a,b) =>
+    (a.grade||'').localeCompare(b.grade) || a.name.localeCompare(b.name,'ko'));
+
+  list.innerHTML = sorted.map(s => {
+    const makeupStr = s.makeupDate ? `📅 ${s.makeupDate}${s.makeupTime?' '+s.makeupTime:''}` : '직전보강 미정';
+    const hasMakeup = !!s.makeupDate;
+    return `
+    <div class="student-exam-row ${hasMakeup?'has-makeup':''}">
+      <span class="se-name">${s.name}</span>
+      <span class="se-school">${s.school||'-'} ${s.grade||''}</span>
+      <span class="se-makeup">${makeupStr}</span>
+      <div class="se-checks">
+        <button class="se-check special ${s.special?'on':''}"
+          onclick="toggleStudentExamCheck('${s.id}','special',${!s.special})">특별관리</button>
+        <button class="se-check final ${s.final?'on':''}"
+          onclick="toggleStudentExamCheck('${s.id}','final',${!s.final})">Final</button>
+        <button class="se-check extra ${s.extra?'on':''}"
+          onclick="toggleStudentExamCheck('${s.id}','extra',${!s.extra})">추가문제</button>
+        ${s.subText ? `<span style="font-size:10px;background:#f1f5f9;padding:3px 7px;border-radius:5px;font-weight:700;">부교재 ${s.subText}</span>` : ''}
+      </div>
+      <button class="se-edit" onclick="openStudentExamForm('${s.id}')">✏️</button>
+    </div>`;
+  }).join('');
+}
+
+async function toggleStudentExamCheck(id, field, value) {
+  const s = studentExamsCache.find(x => x.id === id);
+  if (!s) return;
+  s[field] = value;
+  try {
+    await api('exam', {
+      action:'save_student_exam', id,
+      name:s.name, type:s.type, grade:s.grade, school:s.school,
+      examType:s.examType, makeupDate:s.makeupDate, makeupTime:s.makeupTime,
+      special:s.special, subText:s.subText, final:s.final, extra:s.extra, memo:s.memo
+    });
+    renderStudentExams();
+    toast(`${s.name} — ${field} ${value?'ON':'OFF'}`);
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+function populateStudentExamSelect() {
+  const sel = document.getElementById('se-name-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">학생 선택</option>';
+  // 고등만 표시 (시험관리 대상)
+  const typeOrder = {'초등':0,'중등':1,'고등':2};
+  const sorted = [...allStudentsCache].sort((a,b) => {
+    const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
+    const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
+    return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
+  });
+  let lastGroup='', og=null;
+  sorted.forEach(s => {
+    const group = s.type==='초등'?'초등':`${s.type} ${s.grade}`;
+    if (group!==lastGroup) { og=document.createElement('optgroup'); og.label=group; sel.appendChild(og); lastGroup=group; }
+    const opt=document.createElement('option');
+    opt.value=JSON.stringify({name:s.name,type:s.type,grade:s.grade});
+    opt.textContent=s.name;
+    og.appendChild(opt);
+  });
+}
+
+function fillStudentExamInfo() {
+  const val = document.getElementById('se-name-select').value;
+  if (!val) return;
+  try {
+    const { name, type, grade } = JSON.parse(val);
+    document.getElementById('se-school').value = ''; // 학교는 직접 입력
+    // 기존 등록 정보 있으면 채우기
+    const existing = studentExamsCache.find(s => s.name===name);
+    if (existing) {
+      document.getElementById('se-school').value       = existing.school;
+      document.getElementById('se-exam-type').value    = existing.examType;
+      document.getElementById('se-makeup-date').value  = existing.makeupDate;
+      document.getElementById('se-makeup-time').value  = existing.makeupTime;
+      document.getElementById('se-special').checked    = existing.special;
+      document.getElementById('se-final').checked      = existing.final;
+      document.getElementById('se-extra').checked      = existing.extra;
+      document.getElementById('se-subtext-cnt').value  = existing.subText;
+      document.getElementById('se-memo').value         = existing.memo;
+    }
+  } catch(e) {}
+}
+
+function openStudentExamForm(id) {
+  document.getElementById('se-form-title').textContent = id ? '✏️ 학생 시험 수정' : '👨‍🎓 학생 시험 등록';
+  document.getElementById('se-form-id').value = id || '';
+  populateStudentExamSelect();
+  if (id) {
+    const s = studentExamsCache.find(x => x.id === id);
+    if (!s) return;
+    // 드롭다운에서 해당 학생 선택
+    const sel = document.getElementById('se-name-select');
+    for (let i=0; i<sel.options.length; i++) {
+      try { if (JSON.parse(sel.options[i].value).name === s.name) { sel.selectedIndex=i; break; } } catch(e) {}
+    }
+    document.getElementById('se-school').value       = s.school;
+    document.getElementById('se-exam-type').value    = s.examType;
+    document.getElementById('se-makeup-date').value  = s.makeupDate;
+    document.getElementById('se-makeup-time').value  = s.makeupTime;
+    document.getElementById('se-special').checked    = s.special;
+    document.getElementById('se-final').checked      = s.final;
+    document.getElementById('se-extra').checked      = s.extra;
+    document.getElementById('se-subtext-cnt').value  = s.subText;
+    document.getElementById('se-memo').value         = s.memo;
+  } else {
+    ['se-school','se-makeup-date','se-makeup-time','se-subtext-cnt','se-memo'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value='';
+    });
+    ['se-special','se-final','se-extra'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.checked=false;
+    });
+  }
+  document.getElementById('modal-student-exam-form').classList.add('open');
+}
+
+function openStudentExamFormNew() {
+  openStudentExamForm(null);
+}
+
+async function saveStudentExam() {
+  const id  = document.getElementById('se-form-id').value;
+  const val = document.getElementById('se-name-select').value;
+  if (!val) { toast('학생을 선택해주세요.'); return; }
+  const { name, type, grade } = JSON.parse(val);
+  try {
+    const d = await api('exam', {
+      action:'save_student_exam', id: id||undefined,
+      name, type, grade,
+      school:    document.getElementById('se-school').value,
+      examType:  document.getElementById('se-exam-type').value,
+      makeupDate:document.getElementById('se-makeup-date').value,
+      makeupTime:document.getElementById('se-makeup-time').value,
+      special:   document.getElementById('se-special').checked,
+      final:     document.getElementById('se-final').checked,
+      extra:     document.getElementById('se-extra').checked,
+      subText:   document.getElementById('se-subtext-cnt').value,
+      memo:      document.getElementById('se-memo').value,
+    });
+    closeModal('modal-student-exam-form');
+    toast(d.message);
+    loadStudentExams();
+  } catch(e) { toast('오류: '+e.message); }
+}
   document.getElementById(id).classList.remove('open');
 }
 
