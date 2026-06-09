@@ -337,6 +337,27 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 /* 모달 공통은 기존 것 사용 */
 
+/* 시험 캘린더 */
+.exam-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.exam-cal-head { font-size:11px; font-weight:700; color:var(--text3); text-align:center; padding:4px 0; }
+.exam-cal-cell { min-height:72px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 5px; position:relative; cursor:pointer; transition:0.12s; }
+.exam-cal-cell:hover { border-color:var(--burgundy); }
+.exam-cal-cell.today { border-color:var(--burgundy); background:#fff5f5; }
+.exam-cal-cell.selected { border-color:var(--burgundy); box-shadow:0 0 0 2px rgba(157,27,46,0.2); }
+.exam-cal-cell.other-month { background:var(--surface2); opacity:0.5; }
+.exam-cal-date { font-size:11px; font-weight:700; color:var(--text); }
+.exam-cal-date.weekend { color:#e57373; }
+.exam-cal-tag { font-size:9px; padding:1px 4px; border-radius:3px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4; }
+.exam-cal-tag.period { background:#fee2e2; color:#b91c1c; }
+.exam-cal-tag.examday { background:var(--burgundy); color:white; font-weight:700; }
+.exam-cal-tag.mid { background:#dbeafe; color:#1d4ed8; }
+.exam-cal-detail-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:8px; }
+
+/* 시험 카드 기타범위 */
+.exam-extra-item { background:#f0fdf4; border-radius:8px; padding:8px 12px; }
+.exam-extra-label { font-size:10px; font-weight:700; color:#2d8a4e; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.exam-extra-value { font-size:12px; color:var(--text); }
+
 /* 미니 달력 */
 .mini-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .mini-cal-nav span { font-size:13px; font-weight:700; color:var(--text); }
@@ -480,20 +501,25 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
       <!-- 탭 -->
       <div class="exam-tabs">
-        <button class="exam-tab active" id="exam-tab-school" onclick="switchExamTab('school')">🏫 학교별 시험 등록</button>
-        <button class="exam-tab" id="exam-tab-student" onclick="switchExamTab('student')">👨‍🎓 학생별 관리</button>
+        <button class="exam-tab active" id="exam-tab-school"   onclick="switchExamTab('school')">🏫 학교별 시험 등록</button>
+        <button class="exam-tab"        id="exam-tab-calendar" onclick="switchExamTab('calendar')">📅 시험 일정 캘린더</button>
+        <button class="exam-tab"        id="exam-tab-student"  onclick="switchExamTab('student')">👨‍🎓 학생별 관리</button>
       </div>
 
       <!-- 학교별 시험 등록 탭 -->
       <div id="exam-school-section">
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <button class="att-action-btn primary" onclick="openExamForm()">+ 시험 정보 등록</button>
-          <select id="exam-type-filter" onchange="loadExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+          <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
+            <button class="exam-tab active" id="exam-school-tab-all"   onclick="filterExamSchool('all')">전체</button>
+            <button class="exam-tab"        id="exam-school-tab-high"  onclick="filterExamSchool('high')">고등</button>
+            <button class="exam-tab"        id="exam-school-tab-mid"   onclick="filterExamSchool('mid')">중등</button>
+          </div>
+          <select id="exam-type-filter" onchange="renderExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
             <option value="">전체 시험종류</option>
             <option value="1차 지필">1차 지필</option>
             <option value="2차 지필">2차 지필</option>
             <option value="모의고사">모의고사</option>
-            <option value="기타">기타</option>
           </select>
           <select id="exam-grade-filter" onchange="renderExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
             <option value="">전체 학년</option>
@@ -505,7 +531,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <div id="exam-list"><div class="loading-spinner">불러오는 중...</div></div>
       </div>
 
-      <!-- 학생별 관리 탭 -->
+      <!-- 시험 일정 캘린더 -->
+      <div id="exam-calendar-section" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <button class="att-action-btn" onclick="examCalPrev()">‹ 이전달</button>
+          <span id="exam-cal-title" style="font-size:15px;font-weight:700;min-width:120px;text-align:center;"></span>
+          <button class="att-action-btn" onclick="examCalNext()">다음달 ›</button>
+          <div style="display:flex;gap:8px;margin-left:12px;font-size:11px;">
+            <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:#fee2e2;display:inline-block;"></span>시험기간</span>
+            <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--burgundy);display:inline-block;"></span>시험일</span>
+          </div>
+        </div>
+        <div id="exam-calendar-grid"></div>
+        <!-- 선택 날짜 시험 목록 -->
+        <div id="exam-cal-detail" style="margin-top:16px;"></div>
+      </div>
       <div id="exam-student-section" style="display:none;">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <button class="att-action-btn primary" onclick="openStudentExamForm()">+ 학생 시험 등록</button>
@@ -582,6 +622,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <div class="modal-field">
           <label>모의고사 범위</label>
           <input type="text" id="ef-mock" placeholder="예: 26년 6월 모의고사">
+        </div>
+        <div class="modal-field">
+          <label>기타 범위 (추가 시험범위)</label>
+          <input type="text" id="ef-extra" placeholder="예: 단어장 Day1-30, 추가 프린트 등">
         </div>
         <div class="modal-field">
           <label>메모</label>
@@ -2181,10 +2225,10 @@ function saveDailyMemo() {
 let examCurrentTab = 'school';
 let examsCache = [];
 let studentExamsCache = [];
+let examSchoolFilter = 'all'; // all / high / mid
 
 function initExam() {
   loadExams();
-  // 학생 선택 드롭다운 채우기 (모달용)
   if (allStudentsCache.length) populateStudentExamSelect();
   else api('get-students', {}).then(d => {
     allStudentsCache = d.students || [];
@@ -2192,16 +2236,149 @@ function initExam() {
   }).catch(() => {});
 }
 
-function switchExamTab(tab) {
-  examCurrentTab = tab;
-  document.getElementById('exam-tab-school').classList.toggle('active', tab === 'school');
-  document.getElementById('exam-tab-student').classList.toggle('active', tab === 'student');
-  document.getElementById('exam-school-section').style.display  = tab === 'school'  ? '' : 'none';
-  document.getElementById('exam-student-section').style.display = tab === 'student' ? '' : 'none';
-  if (tab === 'student') loadStudentExams();
+function filterExamSchool(filter) {
+  examSchoolFilter = filter;
+  ['all','high','mid'].forEach(f => {
+    document.getElementById(`exam-school-tab-${f}`)?.classList.toggle('active', f === filter);
+  });
+  renderExams();
 }
 
-// ── 학교 시험정보 ──
+function switchExamTab(tab) {
+  examCurrentTab = tab;
+  document.getElementById('exam-tab-school').classList.toggle('active',    tab === 'school');
+  document.getElementById('exam-tab-calendar').classList.toggle('active',  tab === 'calendar');
+  document.getElementById('exam-tab-student').classList.toggle('active',   tab === 'student');
+  document.getElementById('exam-school-section').style.display    = tab === 'school'   ? '' : 'none';
+  document.getElementById('exam-calendar-section').style.display  = tab === 'calendar' ? '' : 'none';
+  document.getElementById('exam-student-section').style.display   = tab === 'student'  ? '' : 'none';
+  if (tab === 'student')  loadStudentExams();
+  if (tab === 'calendar') initExamCalendar();
+}
+
+// ── 시험 일정 캘린더 ──
+let examCalYear, examCalMonth, examCalSelected = null;
+
+function initExamCalendar() {
+  if (!examsCache.length) {
+    loadExams().then(() => renderExamCalendar());
+    return;
+  }
+  if (!examCalYear) {
+    const now = new Date();
+    examCalYear  = now.getFullYear();
+    examCalMonth = now.getMonth();
+  }
+  renderExamCalendar();
+}
+
+function examCalPrev() { examCalMonth--; if (examCalMonth < 0) { examCalMonth=11; examCalYear--; } renderExamCalendar(); }
+function examCalNext() { examCalMonth++; if (examCalMonth > 11) { examCalMonth=0;  examCalYear++; } renderExamCalendar(); }
+
+function renderExamCalendar() {
+  const y = examCalYear, m = examCalMonth;
+  const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('exam-cal-title').textContent = `${y}년 ${monthNames[m]}`;
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const todayStr = localDateStr(new Date());
+
+  // 날짜별 시험 인덱스 구성
+  const byDate = {}; // { 'YYYY-MM-DD': [exam, ...] }
+  const periodDates = new Set();
+
+  examsCache.forEach(e => {
+    // 시험일 표시
+    if (e.examDate) {
+      if (!byDate[e.examDate]) byDate[e.examDate] = [];
+      byDate[e.examDate].push({ ...e, mark: 'examday' });
+    }
+    // 시험기간 표시
+    if (e.periodStart && e.periodEnd) {
+      const s = new Date(e.periodStart), end = new Date(e.periodEnd);
+      for (let d = new Date(s); d <= end; d.setDate(d.getDate()+1)) {
+        const ds = localDateStr(new Date(d));
+        periodDates.add(ds);
+        if (!byDate[ds]) byDate[ds] = [];
+        // 기간 중 시험일이 아닌 날만 period 표시
+        if (ds !== e.examDate) byDate[ds].push({ ...e, mark: 'period' });
+      }
+    }
+  });
+
+  const grid = document.getElementById('exam-calendar-grid');
+  const days = ['일','월','화','수','목','금','토'];
+  let html = '<div class="exam-cal-grid">';
+  // 요일 헤더
+  days.forEach((d,i) => html += `<div class="exam-cal-head" style="${i===0?'color:#e57373':i===6?'color:#60a5fa':''}">${d}</div>`);
+  // 빈칸
+  for (let i=0; i<firstDay; i++) html += `<div class="exam-cal-cell other-month"></div>`;
+  // 날짜
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(y,m,d).getDay();
+    const isToday    = dateStr === todayStr;
+    const isSelected = dateStr === examCalSelected;
+    const events     = byDate[dateStr] || [];
+    // 중복 제거: 같은 학교 같은 mark는 하나만
+    const uniq = events.filter((e,i,arr) => arr.findIndex(x=>x.school===e.school&&x.mark===e.mark)===i);
+    let cls = 'exam-cal-cell';
+    if (isToday) cls += ' today';
+    if (isSelected) cls += ' selected';
+    const isHigh = uniq.some(e => e.school.includes('고') || e.school.includes('외고'));
+    const isMid  = uniq.some(e => e.school.includes('중'));
+    html += `<div class="${cls}" onclick="selectExamCalDate('${dateStr}')">
+      <div class="exam-cal-date${dow===0||dow===6?' weekend':''}">${d}</div>`;
+    // 최대 3개 태그 표시
+    const examdays = uniq.filter(e=>e.mark==='examday').slice(0,2);
+    const periods  = uniq.filter(e=>e.mark==='period');
+    examdays.forEach(e => {
+      const isMidSchool = e.school.includes('중');
+      html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교|고|중)$/,'')}</div>`;
+    });
+    if (periods.length > 0) {
+      const schools = [...new Set(periods.map(e=>e.school.replace(/(고등학교|중학교|고|중)$/,'')))];
+      html += `<div class="exam-cal-tag period" title="${schools.join(', ')}">${schools.slice(0,2).join(' ')}${schools.length>2?'..':''}</div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+
+  // 선택 날짜 상세
+  if (examCalSelected) renderExamCalDetail(examCalSelected, byDate[examCalSelected]||[]);
+}
+
+function selectExamCalDate(dateStr) {
+  examCalSelected = examCalSelected === dateStr ? null : dateStr;
+  renderExamCalendar();
+}
+
+function renderExamCalDetail(dateStr, events) {
+  const detail = document.getElementById('exam-cal-detail');
+  if (!events.length) { detail.innerHTML = `<div style="font-size:13px;color:var(--text3);padding:8px 0;">${dateStr} — 시험 일정 없음</div>`; return; }
+
+  const uniq = events.filter((e,i,arr) => arr.findIndex(x=>x.id===e.id&&x.mark===e.mark)===i);
+  detail.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">${dateStr} 시험 일정</div>
+    ${uniq.map(e => `
+    <div class="exam-cal-detail-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:700;">${e.school}</span>
+        <span style="font-size:10px;padding:2px 6px;border-radius:8px;background:${e.mark==='examday'?'var(--burgundy)':'#fee2e2'};color:${e.mark==='examday'?'white':'#b91c1c'};">
+          ${e.mark==='examday'?'시험일':'시험기간'}
+        </span>
+        ${e.examType?`<span style="font-size:10px;color:var(--text3);">${e.examType}</span>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;">
+        ${e.textbookRange?`📚 교과서: ${e.textbookRange}<br>`:''}
+        ${e.subTextRange&&e.subTextRange!=='-'?`📖 부교재: ${e.subTextRange}<br>`:''}
+        ${e.mockRange?`📝 모의고사: ${e.mockRange}<br>`:''}
+        ${e.extraRange?`➕ 기타: ${e.extraRange}<br>`:''}
+      </div>
+    </div>`).join('')}`;
+}
 async function loadExams() {
   const examType = document.getElementById('exam-type-filter').value;
   document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
@@ -2218,6 +2395,10 @@ function renderExams() {
   const gradeFilter = document.getElementById('exam-grade-filter').value;
   const typeFilter  = document.getElementById('exam-type-filter').value;
   let filtered = examsCache;
+
+  // 고등/중등 필터 (학교명에 '고' 포함 → 고등, '중' 포함 → 중등)
+  if (examSchoolFilter === 'high') filtered = filtered.filter(e => e.school.includes('고') || e.school.includes('외고'));
+  if (examSchoolFilter === 'mid')  filtered = filtered.filter(e => e.school.includes('중'));
   if (gradeFilter) filtered = filtered.filter(e => e.grade === gradeFilter);
   if (typeFilter)  filtered = filtered.filter(e => e.examType === typeFilter);
 
@@ -2256,6 +2437,10 @@ function renderExams() {
           <div class="exam-range-label">📝 모의고사</div>
           <div class="exam-range-value">${e.mockRange || '-'}</div>
         </div>
+        ${e.extraRange ? `<div class="exam-range-item" style="grid-column:1/-1;background:#f0fdf4;">
+          <div class="exam-range-label" style="color:#2d8a4e;">➕ 기타 범위</div>
+          <div class="exam-range-value">${e.extraRange}</div>
+        </div>` : ''}
       </div>
       ${e.attendDay ? `<div style="margin-top:8px;font-size:11px;color:var(--text2);">등원일: <b>${e.attendDay}</b></div>` : ''}
       ${e.memo ? `<div style="margin-top:4px;font-size:11px;color:var(--text3);">${e.memo}</div>` : ''}
@@ -2283,6 +2468,7 @@ function openExamForm(id) {
     document.getElementById('ef-textbook').value     = e.textbookRange;
     document.getElementById('ef-subtext').value      = e.subTextRange;
     document.getElementById('ef-mock').value         = e.mockRange;
+    document.getElementById('ef-extra').value        = e.extraRange || '';
     document.getElementById('ef-memo').value         = e.memo;
   } else {
     ['ef-school','ef-grade','ef-type','ef-period-start','ef-period-end',
@@ -2308,6 +2494,7 @@ async function saveExam() {
       textbookRange:         document.getElementById('ef-textbook').value,
       subTextRange:          document.getElementById('ef-subtext').value,
       mockRange:             document.getElementById('ef-mock').value,
+      extraRange:            document.getElementById('ef-extra').value,
       memo:                  document.getElementById('ef-memo').value,
     });
     closeModal('modal-exam-form');
