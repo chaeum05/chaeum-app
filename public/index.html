@@ -2506,6 +2506,8 @@ async function saveStudentExam() {
     loadStudentExams();
   } catch(e) { toast('오류: '+e.message); }
 }
+
+function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
