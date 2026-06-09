@@ -292,31 +292,35 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rs-btn.send.done     { background:#2d8a4e; color:white; border-color:#2d8a4e; box-shadow:0 0 0 2px rgba(45,138,78,0.25); }
 
 /* ── 시험 관리 ── */
-.exam-tabs { display:flex; gap:4px; background:var(--surface2); padding:4px; border-radius:10px; margin-bottom:18px; width:fit-content; }
-.exam-tab { padding:7px 20px; border:none; border-radius:7px; font-size:13px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; background:transparent; color:var(--text2); transition:0.15s; }
+.exam-tabs { display:flex; gap:4px; background:var(--surface2); padding:3px; border-radius:10px; width:fit-content; }
+.exam-tab { padding:6px 16px; border:none; border-radius:7px; font-size:12px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; background:transparent; color:var(--text2); transition:0.15s; }
 .exam-tab.active { background:var(--surface); color:var(--burgundy); box-shadow:0 1px 6px rgba(0,0,0,0.08); }
 
-.exam-school-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:10px; box-shadow:var(--shadow); }
-.exam-school-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer; }
-.exam-school-name { font-size:15px; font-weight:700; }
-.exam-school-meta { font-size:11px; color:var(--text3); }
-.exam-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
-.eb-1차 { background:#fef3c7; color:#92400e; }
-.eb-2차 { background:#fed7aa; color:#9a3412; }
-.eb-모의 { background:#ede9fe; color:#5b21b6; }
-.eb-기타 { background:#f1f5f9; color:#475569; }
-
-.exam-range-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
-.exam-range-item { background:var(--surface2); border-radius:8px; padding:8px 12px; }
-.exam-range-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
-.exam-range-value { font-size:12px; color:var(--text); }
-
-.exam-action-row { display:flex; gap:6px; margin-top:10px; }
-.exam-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; transition:0.15s; border:none; }
-.exam-btn.edit { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
-.exam-btn.edit:hover { background:var(--dark); color:white; }
-.exam-btn.del { background:#fdecea; color:var(--burgundy); }
-.exam-btn.del:hover { background:var(--burgundy); color:white; }
+/* 학년별 테이블 */
+.exam-grade-section { margin-bottom:16px; }
+.exam-grade-header { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px 8px 0 0; font-size:13px; font-weight:700; color:white; }
+.egh-1 { background:#9b1c1c; }
+.egh-2 { background:#1e3a5f; }
+.egh-3 { background:#14532d; }
+.egh-mid { background:#4c1d95; }
+.exam-table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:var(--shadow); border-radius:0 0 8px 8px; overflow:hidden; display:block; overflow-x:auto; }
+.exam-table th { background:#f5f0ea; font-size:10px; font-weight:700; color:var(--text2); padding:6px 8px; text-align:left; border-bottom:1.5px solid var(--border); white-space:nowrap; letter-spacing:0.3px; text-transform:uppercase; }
+.exam-table td { font-size:11px; color:var(--text); padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+.exam-table tr:last-child td { border-bottom:none; }
+.exam-table tr:hover td { background:#fdf8f4; }
+.exam-school-name-cell { font-size:12px; font-weight:700; white-space:nowrap; min-width:80px; }
+.exam-date-pill { display:inline-block; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin:1px 0; }
+.edp-exam   { background:var(--burgundy); color:white; }
+.edp-period { background:#fee2e2; color:#b91c1c; }
+.edp-makeup { background:#fef3c7; color:#92400e; }
+.exam-range-col { min-width:120px; max-width:200px; line-height:1.5; }
+.exam-range-col .rl { font-size:9px; font-weight:700; color:var(--text3); }
+.exam-actions { white-space:nowrap; }
+.exam-act-btn { padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; border:none; transition:0.12s; }
+.exam-act-edit { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.exam-act-edit:hover { background:var(--dark); color:white; }
+.exam-act-del  { background:#fdecea; color:var(--burgundy); margin-left:3px; }
+.exam-act-del:hover  { background:var(--burgundy); color:white; }
 
 .student-exam-row { display:flex; align-items:center; padding:6px 10px; border-radius:8px; gap:8px; background:var(--surface); border:1px solid var(--border); margin-bottom:6px; }
 .student-exam-row:hover { border-color:var(--burgundy); }
@@ -508,27 +512,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
       <!-- 학교별 시험 등록 탭 -->
       <div id="exam-school-section">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
           <button class="att-action-btn primary" onclick="openExamForm()">+ 시험 정보 등록</button>
-          <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
-            <button class="exam-tab active" id="exam-school-tab-all"   onclick="filterExamSchool('all')">전체</button>
-            <button class="exam-tab"        id="exam-school-tab-high"  onclick="filterExamSchool('high')">고등</button>
-            <button class="exam-tab"        id="exam-school-tab-mid"   onclick="filterExamSchool('mid')">중등</button>
+          <div style="display:flex;gap:4px;background:var(--surface2);padding:3px;border-radius:10px;">
+            <button class="exam-tab active" id="exam-school-tab-all"  onclick="filterExamSchool('all')">전체</button>
+            <button class="exam-tab"        id="exam-school-tab-high" onclick="filterExamSchool('high')">고등</button>
+            <button class="exam-tab"        id="exam-school-tab-mid"  onclick="filterExamSchool('mid')">중등</button>
           </div>
-          <select id="exam-type-filter" onchange="renderExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+          <select id="exam-type-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none;">
             <option value="">전체 시험종류</option>
             <option value="1차 지필">1차 지필</option>
             <option value="2차 지필">2차 지필</option>
             <option value="모의고사">모의고사</option>
           </select>
-          <select id="exam-grade-filter" onchange="renderExams()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
-            <option value="">전체 학년</option>
-            <option value="1학년">1학년</option>
-            <option value="2학년">2학년</option>
-            <option value="3학년">3학년</option>
-          </select>
         </div>
-        <div id="exam-list"><div class="loading-spinner">불러오는 중...</div></div>
+        <div id="exam-list"></div>
       </div>
 
       <!-- 시험 일정 캘린더 -->
@@ -537,9 +535,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <button class="att-action-btn" onclick="examCalPrev()">‹ 이전달</button>
           <span id="exam-cal-title" style="font-size:15px;font-weight:700;min-width:120px;text-align:center;"></span>
           <button class="att-action-btn" onclick="examCalNext()">다음달 ›</button>
-          <div style="display:flex;gap:8px;margin-left:12px;font-size:11px;">
+          <div style="display:flex;gap:10px;margin-left:12px;font-size:11px;flex-wrap:wrap;">
             <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:#fee2e2;display:inline-block;"></span>시험기간</span>
             <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--burgundy);display:inline-block;"></span>시험일</span>
+            <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:#fef3c7;display:inline-block;"></span>직전보강</span>
           </div>
         </div>
         <div id="exam-calendar-grid"></div>
@@ -2293,6 +2292,12 @@ function renderExamCalendar() {
     if (e.examDate) {
       if (!byDate[e.examDate]) byDate[e.examDate] = [];
       byDate[e.examDate].push({ ...e, mark: 'examday' });
+      // 직전보강일 = 시험일 전날
+      const makeupD = new Date(e.examDate);
+      makeupD.setDate(makeupD.getDate() - 1);
+      const makeupStr = localDateStr(makeupD);
+      if (!byDate[makeupStr]) byDate[makeupStr] = [];
+      byDate[makeupStr].push({ ...e, mark: 'premakeup' });
     }
     // 시험기간 표시
     if (e.periodStart && e.periodEnd) {
@@ -2331,12 +2336,16 @@ function renderExamCalendar() {
     html += `<div class="${cls}" onclick="selectExamCalDate('${dateStr}')">
       <div class="exam-cal-date${dow===0||dow===6?' weekend':''}">${d}</div>`;
     // 최대 3개 태그 표시
-    const examdays = uniq.filter(e=>e.mark==='examday').slice(0,2);
-    const periods  = uniq.filter(e=>e.mark==='period');
+    const examdays  = uniq.filter(e=>e.mark==='examday').slice(0,2);
+    const periods   = uniq.filter(e=>e.mark==='period');
+    const premakeup = uniq.filter(e=>e.mark==='premakeup').slice(0,1);
     examdays.forEach(e => {
       const isMidSchool = e.school.includes('중');
       html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교|고|중)$/,'')}</div>`;
     });
+    if (premakeup.length > 0) {
+      html += `<div class="exam-cal-tag" style="background:#fef3c7;color:#92400e;" title="직전보강">📅 보강</div>`;
+    }
     if (periods.length > 0) {
       const schools = [...new Set(periods.map(e=>e.school.replace(/(고등학교|중학교|고|중)$/,'')))];
       html += `<div class="exam-cal-tag period" title="${schools.join(', ')}">${schools.slice(0,2).join(' ')}${schools.length>2?'..':''}</div>`;
@@ -2392,63 +2401,86 @@ async function loadExams() {
 }
 
 function renderExams() {
-  const gradeFilter = document.getElementById('exam-grade-filter').value;
-  const typeFilter  = document.getElementById('exam-type-filter').value;
+  const typeFilter = document.getElementById('exam-type-filter').value;
   let filtered = examsCache;
 
-  // 고등/중등 필터 (학교명에 '고' 포함 → 고등, '중' 포함 → 중등)
-  if (examSchoolFilter === 'high') filtered = filtered.filter(e => e.school.includes('고') || e.school.includes('외고'));
+  if (examSchoolFilter === 'high') filtered = filtered.filter(e => e.school.includes('고'));
   if (examSchoolFilter === 'mid')  filtered = filtered.filter(e => e.school.includes('중'));
-  if (gradeFilter) filtered = filtered.filter(e => e.grade === gradeFilter);
-  if (typeFilter)  filtered = filtered.filter(e => e.examType === typeFilter);
+  if (typeFilter) filtered = filtered.filter(e => e.examType === typeFilter);
 
   if (!filtered.length) {
     document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">등록된 시험 정보가 없습니다.</div>';
     return;
   }
 
-  // 학년 → 학교 순 정렬
+  // 학년별 그룹핑 후 정렬
   filtered.sort((a,b) => (a.grade||'').localeCompare(b.grade) || a.school.localeCompare(b.school,'ko'));
+  const byGrade = {};
+  filtered.forEach(e => {
+    const key = e.grade || '미지정';
+    if (!byGrade[key]) byGrade[key] = [];
+    byGrade[key].push(e);
+  });
 
-  const typeBadge = t => {
-    const cls = t==='1차 지필'?'eb-1차':t==='2차 지필'?'eb-2차':t==='모의고사'?'eb-모의':'eb-기타';
-    return `<span class="exam-badge ${cls}">${t}</span>`;
+  // 직전보강일 계산 (시험일 전날)
+  const prevDay = dateStr => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() - 1);
+    return localDateStr(d);
   };
 
-  document.getElementById('exam-list').innerHTML = filtered.map(e => `
-    <div class="exam-school-card">
-      <div class="exam-school-header">
-        <span class="exam-school-name">${e.school}</span>
-        <span class="exam-school-meta">${e.grade}</span>
-        ${typeBadge(e.examType)}
-        ${e.examDate ? `<span style="font-size:11px;color:var(--burgundy);font-weight:700;">시험일: ${e.examDate}</span>` : ''}
-        ${e.periodStart ? `<span style="font-size:11px;color:var(--text3);">시험기간: ${e.periodStart}~${e.periodEnd||''}</span>` : ''}
+  const gradeColors = { '1학년':'egh-1', '2학년':'egh-2', '3학년':'egh-3' };
+  const isMid = e => e.school.includes('중');
+
+  let html = '';
+  Object.entries(byGrade).forEach(([grade, list]) => {
+    const cls = isMid(list[0]) ? 'egh-mid' : (gradeColors[grade]||'egh-1');
+    html += `
+    <div class="exam-grade-section">
+      <div class="exam-grade-header ${cls}">
+        ${isMid(list[0])?'🏫 중등':'🏫 고등'} ${grade} <span style="font-size:11px;font-weight:400;opacity:0.8;">(${list.length}개교)</span>
       </div>
-      <div class="exam-range-grid">
-        <div class="exam-range-item">
-          <div class="exam-range-label">📚 교과서</div>
-          <div class="exam-range-value">${e.textbookRange || '-'}</div>
-        </div>
-        <div class="exam-range-item">
-          <div class="exam-range-label">📖 부교재</div>
-          <div class="exam-range-value">${e.subTextRange || '-'}</div>
-        </div>
-        <div class="exam-range-item">
-          <div class="exam-range-label">📝 모의고사</div>
-          <div class="exam-range-value">${e.mockRange || '-'}</div>
-        </div>
-        ${e.extraRange ? `<div class="exam-range-item" style="grid-column:1/-1;background:#f0fdf4;">
-          <div class="exam-range-label" style="color:#2d8a4e;">➕ 기타 범위</div>
-          <div class="exam-range-value">${e.extraRange}</div>
-        </div>` : ''}
-      </div>
-      ${e.attendDay ? `<div style="margin-top:8px;font-size:11px;color:var(--text2);">등원일: <b>${e.attendDay}</b></div>` : ''}
-      ${e.memo ? `<div style="margin-top:4px;font-size:11px;color:var(--text3);">${e.memo}</div>` : ''}
-      <div class="exam-action-row">
-        <button class="exam-btn edit" onclick="openExamForm('${e.id}')">✏️ 수정</button>
-        <button class="exam-btn del"  onclick="deleteExam('${e.id}','${e.school}')">🗑️ 삭제</button>
-      </div>
-    </div>`).join('');
+      <table class="exam-table">
+        <thead>
+          <tr>
+            <th>학교</th>
+            <th>시험일</th>
+            <th>시험기간</th>
+            <th>직전보강</th>
+            <th>등원일</th>
+            <th>📚 교과서</th>
+            <th>📖 부교재</th>
+            <th>📝 모의고사</th>
+            ${list.some(e=>e.extraRange) ? '<th>➕ 기타</th>' : ''}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map(e => {
+            const makeup = prevDay(e.examDate);
+            const hasExtra = list.some(x=>x.extraRange);
+            return `<tr>
+              <td class="exam-school-name-cell">${e.school.replace(/(고등학교|중학교)/g, m => `<span style="font-size:9px;color:var(--text3)">${m}</span>`)}</td>
+              <td>${e.examDate ? `<span class="exam-date-pill edp-exam">${e.examDate}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+              <td>${e.periodStart ? `<span class="exam-date-pill edp-period">${e.periodStart.slice(5)}~${(e.periodEnd||'').slice(5)}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+              <td>${makeup ? `<span class="exam-date-pill edp-makeup">📅 ${makeup}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+              <td>${e.attendDay || '-'}</td>
+              <td class="exam-range-col">${e.textbookRange || '<span style="color:var(--text3)">-</span>'}</td>
+              <td class="exam-range-col">${e.subTextRange && e.subTextRange!=='-' ? e.subTextRange : '<span style="color:var(--text3)">-</span>'}</td>
+              <td class="exam-range-col">${e.mockRange || '<span style="color:var(--text3)">-</span>'}</td>
+              ${hasExtra ? `<td class="exam-range-col" style="color:#2d8a4e;">${e.extraRange || ''}</td>` : ''}
+              <td class="exam-actions">
+                <button class="exam-act-btn exam-act-edit" onclick="openExamForm('${e.id}')">✏️</button>
+                <button class="exam-act-btn exam-act-del"  onclick="deleteExam('${e.id}','${e.school}')">🗑️</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  document.getElementById('exam-list').innerHTML = html;
 }
 
 function openExamForm(id) {
