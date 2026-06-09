@@ -1157,37 +1157,16 @@ async function loadStudents() {
   try {
     const d = await api('get-students', {});
     allStudentsCache = d.students || [];
-    if(!allStudentsCache.length) {
+    if (!allStudentsCache.length) {
       container.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.</div>';
       return;
     }
-
-    // ✨ [수정된 부분] 고등부 -> 중등부 -> 초등부 순서로 정렬 (동일 부서 내에서는 학년, 이름 순 정렬)
-    const typeOrder = { '고등': 1, '중등': 2, '초등': 3 };
-    const sortedStudents = [...allStudentsCache].sort((a, b) => {
-      const orderA = typeOrder[a.type] || 99;
-      const orderB = typeOrder[b.type] || 99;
-      if (orderA !== orderB) return orderA - orderB;
-      
-      const gradeA = parseInt(a.grade) || 0;
-      const gradeB = parseInt(b.grade) || 0;
-      if (gradeA !== gradeB) return gradeA - gradeB;
-      
-      return a.name.localeCompare(b.name, 'ko');
-    });
-
     const grid = document.createElement('div');
     grid.className = 'student-grid';
-    
-    // ✨ [수정된 부분] 무작위 배열 대신 정렬된 sortedStudents를 바탕으로 카드 생성
-    sortedStudents.forEach(s => {
+    allStudentsCache.forEach(s => {
       const card = document.createElement('div');
       card.className = 'student-card';
-      card.innerHTML = `
-        <span class="student-badge badge-${s.type}">${s.type}</span>
-        <div class="student-name">${s.name}</div>
-        <div class="student-meta">${s.grade}</div>
-      `;
+      card.innerHTML = `<span class="student-badge badge-${s.type}">${s.type}</span><div class="student-name">${s.name}</div><div class="student-meta">${s.grade}</div>`;
       card.onclick = () => {
         document.getElementById('rep-name').value = s.name;
         document.getElementById('rep-type').value = s.type;
@@ -1197,9 +1176,7 @@ async function loadStudents() {
     });
     container.innerHTML = '';
     container.appendChild(grid);
-    
-    // 드롭다운 메뉴도 정렬된 상태로 보여주기 위해 sortedStudents 전달
-    populateReportDropdown(sortedStudents);
+    populateReportDropdown(allStudentsCache);
   } catch(e) {
     container.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
@@ -2298,58 +2275,42 @@ function examCalPrev() { examCalMonth--; if (examCalMonth < 0) { examCalMonth=11
 function examCalNext() { examCalMonth++; if (examCalMonth > 11) { examCalMonth=0;  examCalYear++; } renderExamCalendar(); }
 
 function renderExamCalendar() {
-  const grid = document.getElementById('exam-calendar-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  
-  const firstDay = new Date(currentCalYear, currentCalMonth, 1).getDay();
-  const lastDate = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
-  
-  // 공백 세기
-  for(let i=0; i<firstDay; i++){
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell empty';
-    grid.appendChild(cell);
-  }
-  
-  // 날짜 채우기
-  for(let d=1; d<=lastDate; d++){
-    const dateStr = `${currentCalYear}-${String(currentCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell';
-    
-    const num = document.createElement('div');
-    num.className = 'cal-num';
-    num.innerText = d;
-    cell.appendChild(num);
-    
-    const dayExams = allExamCache.filter(x => x.makeupDate === dateStr);
-    dayExams.forEach(x => {
-      const item = document.createElement('div');
-      item.className = 'cal-item';
-      if(x.special) item.classList.add('special');
-      if(x.final) item.classList.add('final');
-      if(x.extra) item.classList.add('extra');
-      
-      let lbl = '보강';
-      if(x.final) lbl = '직전';
-      if(x.extra) lbl = '추가';
-      
-      // ✨ [수정된 부분] 학교 정보가 기입되어 있다면 프리픽스로 결합하여 출력합니다.
-      // 예: [형곡고] 직전 (홍길동) 혹은 [구미중] 보강 (이영희)
-      const schoolPrefix = x.school ? `[${x.school}] ` : '';
-      item.innerText = `${schoolPrefix}${lbl} (${x.name})`;
-      
-      item.onclick = (e) => {
-        e.stopPropagation();
-        openStudentExamForm(x.id);
-      };
-      cell.appendChild(item);
-    });
-    
-    grid.appendChild(cell);
-  }
-}
+  const y = examCalYear, m = examCalMonth;
+  const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('exam-cal-title').textContent = `${y}년 ${monthNames[m]}`;
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const todayStr = localDateStr(new Date());
+
+  // 날짜별 시험 인덱스 구성
+  const byDate = {}; // { 'YYYY-MM-DD': [exam, ...] }
+  const periodDates = new Set();
+
+  examsCache.forEach(e => {
+    // 시험일 표시
+    if (e.examDate) {
+      if (!byDate[e.examDate]) byDate[e.examDate] = [];
+      byDate[e.examDate].push({ ...e, mark: 'examday' });
+      // 직전보강일 = 시험일 전날
+      const makeupD = new Date(e.examDate);
+      makeupD.setDate(makeupD.getDate() - 1);
+      const makeupStr = localDateStr(makeupD);
+      if (!byDate[makeupStr]) byDate[makeupStr] = [];
+      byDate[makeupStr].push({ ...e, mark: 'premakeup' });
+    }
+    // 시험기간 표시
+    if (e.periodStart && e.periodEnd) {
+      const s = new Date(e.periodStart), end = new Date(e.periodEnd);
+      for (let d = new Date(s); d <= end; d.setDate(d.getDate()+1)) {
+        const ds = localDateStr(new Date(d));
+        periodDates.add(ds);
+        if (!byDate[ds]) byDate[ds] = [];
+        // 기간 중 시험일이 아닌 날만 period 표시
+        if (ds !== e.examDate) byDate[ds].push({ ...e, mark: 'period' });
+      }
+    }
+  });
 
   const grid = document.getElementById('exam-calendar-grid');
   const days = ['일','월','화','수','목','금','토'];
