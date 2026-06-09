@@ -1646,10 +1646,12 @@ let absentTarget = null;
 let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayName } }
 
 function initAttendance() {
-  const today = localDateStr(new Date());
+  // localDateStr 대신 안전한 날짜 계산 (timezone 안전)
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
   document.getElementById('att-date').value = today;
 
-  // 옵셔널 체이닝으로 없는 엘리먼트 에러 방지
   const makeupDateEl = document.getElementById('modal-add-makeup-date');
   if (makeupDateEl) makeupDateEl.value = today;
   const memoDateEl = document.getElementById('daily-memo-date');
@@ -1660,7 +1662,6 @@ function initAttendance() {
   initCalendar(today);
   loadDailyMemo(today);
 
-  // 캐시 있으면 즉시 렌더, 없으면 노션에서 로드
   if (attCache[today]) {
     applyAttCache(attCache[today]);
     syncAttendance(today);
@@ -1695,8 +1696,9 @@ async function syncAttendance(date) {
 
 async function loadAttendance() {
   const date = document.getElementById('att-date').value;
+  if (!date) return; // 날짜 없으면 스킵
   const grid = document.getElementById('att-grid');
-  // 캐시 있으면 즉시 렌더 후 백그라운드 동기화
+
   if (attCache[date]) {
     applyAttCache(attCache[date]);
     loadDailyMemo(date);
@@ -1708,7 +1710,7 @@ async function loadAttendance() {
   if (memoDateEl) memoDateEl.textContent = date;
   try {
     const d = await api('get-attendance', { date });
-    attCache[date] = d; // 캐시 저장
+    attCache[date] = d;
     applyAttCache(d);
     loadDailyMemo(date);
   } catch(e) {
