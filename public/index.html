@@ -2396,16 +2396,18 @@ async function toggleExamCheck(id, field, value) {
   try {
     await api('exam', {
       action: 'save_exam', id,
-      school: e.school, grade: e.examType ? undefined : e.grade,
-      examType: e.examType, periodStart: e.periodStart, periodEnd: e.periodEnd,
+      school: e.school, grade: e.grade, examType: e.examType,
+      periodStart: e.periodStart, periodEnd: e.periodEnd,
       examDate: e.examDate, attendDay: e.attendDay,
       textbookRange: e.textbookRange, subTextRange: e.subTextRange,
       mockRange: e.mockRange, extraRange: e.extraRange, memo: e.memo,
       rangeConfirmed: e.rangeConfirmed,
       finalReady: e.finalReady,
+      comprehensiveReady: e.comprehensiveReady,
     });
+    const labels = { rangeConfirmed:'범위확정', finalReady:'파이널준비', comprehensiveReady:'종합문제' };
     renderExams();
-    toast(`${e.school} — ${field === 'rangeConfirmed' ? '범위확정' : '파이널준비'} ${value ? 'ON ✅' : 'OFF'}`);
+    toast(`${e.school} — ${labels[field]} ${value ? 'ON ✅' : 'OFF'}`);
   } catch(err) { toast('오류: ' + err.message); }
 }
 
@@ -2494,6 +2496,7 @@ function renderExams() {
               ${gradeList.some(e=>e.extraRange) ? '<th>➕ 기타</th>' : ''}
               <th style="text-align:center;">✅ 범위확정</th>
               <th style="text-align:center;">📋 파이널준비</th>
+              <th style="text-align:center;">📝 종합문제</th>
               <th></th>
             </tr>
           </thead>
@@ -2518,6 +2521,10 @@ function renderExams() {
                 <td style="text-align:center;">
                   <button onclick="toggleExamCheck('${e.id}','finalReady',${!e.finalReady})"
                     style="font-size:18px;background:none;border:none;cursor:pointer;opacity:${e.finalReady?1:0.25};" title="파이널 준비완료">📋</button>
+                </td>
+                <td style="text-align:center;">
+                  <button onclick="toggleExamCheck('${e.id}','comprehensiveReady',${!e.comprehensiveReady})"
+                    style="font-size:18px;background:none;border:none;cursor:pointer;opacity:${e.comprehensiveReady?1:0.25};" title="종합문제 완성">📝</button>
                 </td>
                 <td class="exam-actions">
                   <button class="exam-act-btn exam-act-edit" onclick="openExamForm('${e.id}')">✏️</button>
