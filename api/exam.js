@@ -51,6 +51,8 @@ export default async function handler(req, res) {
         subTextRange:  p.properties['부교재_범위']?.rich_text?.[0]?.text?.content || '',
         mockRange:     p.properties['모의고사_범위']?.rich_text?.[0]?.text?.content || '',
         extraRange:    p.properties['기타범위']?.rich_text?.[0]?.text?.content || '',
+        rangeConfirmed:p.properties['범위확정']?.checkbox || false,
+        finalReady:    p.properties['파이널준비']?.checkbox || false,
         memo:          p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }));
       return res.status(200).json({ ok: true, exams });
@@ -69,6 +71,8 @@ export default async function handler(req, res) {
         '부교재_범위': { rich_text: [{ text: { content: subTextRange  || '' } }] },
         '모의고사_범위':{ rich_text: [{ text: { content: mockRange     || '' } }] },
         '기타범위':    { rich_text: [{ text: { content: req.body.extraRange || '' } }] },
+        '범위확정':    { checkbox: !!req.body.rangeConfirmed },
+        '파이널준비':  { checkbox: !!req.body.finalReady },
         '메모':        { rich_text: [{ text: { content: memo          || '' } }] },
         '시험기간_시작': periodStart ? { date: { start: periodStart } } : { date: null },
         '시험기간_종료': periodEnd   ? { date: { start: periodEnd   } } : { date: null },
