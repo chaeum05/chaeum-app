@@ -2336,20 +2336,28 @@ function renderExamCalendar() {
     html += `<div class="${cls}" onclick="selectExamCalDate('${dateStr}')">
       <div class="exam-cal-date${dow===0||dow===6?' weekend':''}">${d}</div>`;
     // 최대 3개 태그 표시
-    const examdays  = uniq.filter(e=>e.mark==='examday').slice(0,2);
-    const periods   = uniq.filter(e=>e.mark==='period');
-    const premakeup = uniq.filter(e=>e.mark==='premakeup').slice(0,1);
+    const premakeup = uniq.filter(e=>e.mark==='premakeup');
     examdays.forEach(e => {
       const isMidSchool = e.school.includes('중');
-      html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교|고|중)$/,'')}</div>`;
+      html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교)/g,'')}</div>`;
     });
     if (premakeup.length > 0) {
-      const names = [...new Set(premakeup.map(e => e.school.replace(/(고등학교|중학교)/g, '')))];
-      html += `<div class="exam-cal-tag" style="background:#fef3c7;color:#92400e;" title="직전보강: ${names.join(',')}">📅 ${names.slice(0,1).join('')}</div>`;
+      // 같은 학교는 학년 묶기: 금오고 1학년 + 금오고 2학년 → 금오고 1·2
+      const schoolMap = {};
+      premakeup.forEach(e => {
+        const base = e.school.replace(/(고등학교|중학교)/g,'');
+        if (!schoolMap[base]) schoolMap[base] = [];
+        const g = e.grade?.replace('학년','') || '';
+        if (g && !schoolMap[base].includes(g)) schoolMap[base].push(g);
+      });
+      Object.entries(schoolMap).forEach(([base, grades]) => {
+        const gradeStr = grades.length > 1 ? ` ${grades.join('·')}` : '';
+        html += `<div class="exam-cal-tag" style="background:#fef3c7;color:#92400e;font-weight:700;" title="직전보강: ${base}${gradeStr}학년">📅 ${base}${gradeStr}</div>`;
+      });
     }
     if (periods.length > 0) {
-      const schools = [...new Set(periods.map(e=>e.school.replace(/(고등학교|중학교|고|중)$/,'')))];
-      html += `<div class="exam-cal-tag period" title="${schools.join(', ')}">${schools.slice(0,2).join(' ')}${schools.length>2?'..':''}</div>`;
+      const schools = [...new Set(periods.map(e=>e.school.replace(/(고등학교|중학교)/g,'')))];
+      html += `<div class="exam-cal-tag period" title="${schools.join(', ')}">${schools.slice(0,2).join(' ')}${schools.length>2?` +${schools.length-2}`:''}</div>`;
     }
     html += '</div>';
   }
