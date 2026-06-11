@@ -2259,14 +2259,18 @@ function switchExamTab(tab) {
 let examCalYear, examCalMonth, examCalSelected = null;
 
 function initExamCalendar() {
-  if (!examsCache.length) {
-    loadExams().then(() => renderExamCalendar());
-    return;
-  }
+  // 년월 먼저 설정 (캐시 유무 관계없이)
   if (!examCalYear) {
     const now = new Date();
     examCalYear  = now.getFullYear();
     examCalMonth = now.getMonth();
+  }
+  if (!examsCache.length) {
+    loadExams().then(() => renderExamCalendar()).catch(e => {
+      document.getElementById('exam-calendar-grid').innerHTML =
+        `<div class="loading-spinner">오류: ${e.message}</div>`;
+    });
+    return;
   }
   renderExamCalendar();
 }
@@ -2420,12 +2424,14 @@ async function toggleExamCheck(id, field, value) {
 }
 
 async function loadExams() {
-  const examType = document.getElementById('exam-type-filter').value;
+  const examType = document.getElementById('exam-type-filter')?.value || '';
   document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
   try {
     const d = await api('exam', { action:'get_exams' });
     examsCache = d.exams || [];
     renderExams();
+    // 캘린더 탭이 활성화되어 있으면 캘린더도 갱신
+    if (examCurrentTab === 'calendar') renderExamCalendar();
   } catch(e) {
     document.getElementById('exam-list').innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
