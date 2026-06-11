@@ -2331,16 +2331,15 @@ function renderExamCalendar() {
     const isSelected = dateStr === examCalSelected;
     const events     = byDate[dateStr] || [];
     // 중복 제거: 같은 학교 같은 mark는 하나만
-    const uniq = events.filter((e,i,arr) => arr.findIndex(x=>x.school===e.school&&x.mark===e.mark)===i);
+    const uniq     = events.filter((e,i,arr) => arr.findIndex(x=>x.school===e.school&&x.mark===e.mark)===i);
+    const examdays = uniq.filter(e=>e.mark==='examday');
+    const periods  = uniq.filter(e=>e.mark==='period');
+    const premakeup = uniq.filter(e=>e.mark==='premakeup');
     let cls = 'exam-cal-cell';
     if (isToday) cls += ' today';
     if (isSelected) cls += ' selected';
-    const isHigh = uniq.some(e => e.school.includes('고') || e.school.includes('외고'));
-    const isMid  = uniq.some(e => e.school.includes('중'));
     html += `<div class="${cls}" onclick="selectExamCalDate('${dateStr}')">
       <div class="exam-cal-date${dow===0||dow===6?' weekend':''}">${d}</div>`;
-    // 최대 3개 태그 표시
-    const premakeup = uniq.filter(e=>e.mark==='premakeup');
     examdays.forEach(e => {
       const isMidSchool = e.school.includes('중');
       html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교)/g,'')}</div>`;
