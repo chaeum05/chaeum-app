@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 600,
         messages: [{
           role: 'user',
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 ${notes.join('\n')}${attendanceText}
 
 [작성 규칙]
-- 5~7문장으로 작성 (너무 길지 않게, 핵심만 간결하게)
+- 3~5문장으로 작성 (너무 길지 않게, 핵심만 간결하게)
 - 이번 주 수업에서 배운 구체적인 내용(교재명, 문법 항목 등)을 반드시 언급
 - 잘한 점과 보완이 필요한 점을 균형 있게 서술
 - 출결 정보가 있는 경우: 결석일, 보강 예정일을 자연스럽게 문장에 녹여서 마지막에 안내 (예: "X월 X일(X요일)에 결석하여 X월 X일(X요일)에 보강 수업을 진행할 예정입니다.")
