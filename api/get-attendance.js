@@ -163,7 +163,8 @@ export default async function handler(req, res) {
         absentDate: p.properties['날짜']?.date?.start || '',
         memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }))
-      .filter(m => m.name && !hasMakeup(m.name, m.absentDate));
+      .filter(m => m.name && !hasMakeup(m.name, m.absentDate))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
     return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
 
