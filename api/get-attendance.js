@@ -87,18 +87,27 @@ export default async function handler(req, res) {
       }
     });
 
-    // 3. 결석 전체 조회
+    // 3. 결석 조회 (최근 4주 이내만)
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+    const limitDate = fourWeeksAgo.toISOString().split('T')[0];
+
     const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        filter: { property: '출결상태', select: { equals: '결석' } },
+        filter: {
+          and: [
+            { property: '출결상태', select: { equals: '결석' } },
+            { property: '날짜', date: { on_or_after: limitDate } },
+          ]
+        },
         sorts:  [{ property: '날짜', direction: 'ascending' }],
         page_size: 100
       })
     });
     const makeupData = await makeupRes.json();
 
-    // 4. 보강 기록 전체 조회 (출결상태 = 보강 OR 보강완료)
+    // 4. 보강/보강완료 기록 전체 조회
     const scheduledRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -113,32 +122,32 @@ export default async function handler(req, res) {
     });
     const scheduledData = await scheduledRes.json();
 
-    // 보강 기록: 학생 이름 기준 Set 만들기 (absentDate 있으면 정확 매칭, 없으면 이름만)
-    const scheduledByName = {}; // { name: [{ absentDate, makeupDate }] }
+    // 보강 기록 인덱싱
+    const scheduledByName = {};
     (scheduledData.results || []).forEach(p => {
-      const n  = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
-      const ad = p.properties['원래날짜']?.date?.start || '';
-      const md = p.properties['날짜']?.date?.start || '';
+      const n      = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+      const ad     = p.properties['원래날짜']?.date?.start || '';
+      const md     = p.properties['날짜']?.date?.start || '';
+      const status = p.properties['출결상태']?.select?.name || '';
       if (!n) return;
       if (!scheduledByName[n]) scheduledByName[n] = [];
-      scheduledByName[n].push({ absentDate: ad, makeupDate: md });
+      scheduledByName[n].push({ absentDate: ad, makeupDate: md, status });
     });
 
-    // 결석 건에 보강이 잡혔는지 확인
+    // 결석 건에 보강이 잡혔거나 완료됐는지 확인
     const hasMakeup = (name, absentDate) => {
       const records = scheduledByName[name];
       if (!records || records.length === 0) return false;
       return records.some(r => {
-        // 1순위: 원래날짜(결석일)가 정확히 일치 → 가장 확실한 매칭
+        // 1순위: 원래날짜가 정확히 일치
         if (r.absentDate && r.absentDate === absentDate) return true;
-        // 2순위: 원래날짜 없는 보강 → 보강날짜가 결석일 이후 14일 이내
-        // (보강날짜 < 결석일이면 사전보강이므로 제외 - 다른 결석의 보강일 수 있음)
+
+        // 2순위: 원래날짜 없는 보강 → 결석일 이후 30일 이내 보강/보강완료
         if (!r.absentDate && r.makeupDate) {
-          const makeupTime  = new Date(r.makeupDate).getTime();
-          const absentTime  = new Date(absentDate).getTime();
-          const diffDays    = (makeupTime - absentTime) / (1000 * 60 * 60 * 24);
-          // 결석일 이후 ~ 14일 이내만 해당 결석의 보강으로 인정
-          return diffDays >= 0 && diffDays <= 14;
+          const makeupTime = new Date(r.makeupDate).getTime();
+          const absentTime = new Date(absentDate).getTime();
+          const diffDays   = (makeupTime - absentTime) / (1000 * 60 * 60 * 24);
+          return diffDays >= -7 && diffDays <= 30; // 사전보강(-7일)~이후 30일
         }
         return false;
       });
