@@ -576,15 +576,37 @@ async function saveScore() {
   btn.disabled=true; btn.textContent='저장 중...';
   const results = currentQs.map(q=>({...q, result:getOX(q.num)}));
   try {
-    const d = await call('save_student_results', {
+    await call('save_student_results', {
       studentName:name, examId:currentExam,
       results, feedback:memo, extraScore:extra
     });
-    toast(d.message||'저장 완료!');
-    resetScoreForm();
     loadStudentList();
+    // 저장 완료 → 리포트 바로 열기 안내
+    showSaveSuccess(name);
+    resetScoreForm();
   } catch(e) { toast('저장 실패: '+e.message); }
   finally { btn.disabled=false; btn.textContent='💾 성적 저장'; }
+}
+
+function showSaveSuccess(name) {
+  // 기존 배너 제거
+  document.getElementById('save-banner')?.remove();
+  const banner = document.createElement('div');
+  banner.id = 'save-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;background:var(--dark);color:white;
+    padding:16px 28px;display:flex;align-items:center;justify-content:space-between;
+    z-index:500;box-shadow:0 -4px 20px rgba(0,0,0,0.2);animation:slideUp .3s ease;`;
+  banner.innerHTML = `
+    <style>@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
+    <span style="font-size:14px;">✅ <b>${name}</b> 성적 저장 완료!</span>
+    <div style="display:flex;gap:8px;">
+      <button onclick="openReport('${name}')" style="padding:8px 18px;background:var(--blue);color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">📊 리포트 보기</button>
+      <button onclick="document.getElementById('save-banner').remove()" style="padding:8px 14px;background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer;">✕</button>
+    </div>`;
+  document.body.appendChild(banner);
+  // 5초 후 자동 닫힘
+  setTimeout(()=>banner.remove(), 6000);
 }
 
 // ── 학생 목록 ──
