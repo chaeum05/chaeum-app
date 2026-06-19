@@ -120,7 +120,16 @@ textarea.fi{resize:vertical;min-height:72px;}
 .score-row{display:flex;align-items:baseline;justify-content:flex-end;gap:5px;white-space:nowrap;}
 .score-val{font-family:'Poppins',sans-serif;font-size:52px;font-weight:700;color:var(--blue);line-height:1;}
 .score-max{font-size:16px;color:var(--text3);}
-.chart-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;margin-bottom:20px;}
+.exam-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.exam-summary-box{border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;background:#fafafa;}
+.esb-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.esb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
+.esb-row:last-child{border-bottom:none;}
+.esb-label{color:var(--text2);}
+.esb-val{font-weight:700;color:var(--text);}
+.esb-bar-wrap{display:flex;align-items:center;gap:6px;flex:1;margin-left:8px;}
+.esb-bar{height:6px;border-radius:3px;background:var(--blue);min-width:2px;}
+.esb-pct{font-size:10px;color:var(--text3);white-space:nowrap;}
 .chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:260px;display:flex;flex-direction:column;}
 .chart-tag{font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;color:var(--text);}
 .chart-wrap{flex:1;position:relative;}
@@ -294,6 +303,26 @@ textarea.fi{resize:vertical;min-height:72px;}
       </div>
     </header>
 
+    <!-- 시험 구성 분석 요약 -->
+    <div id="r-exam-summary" style="margin-bottom:20px;">
+      <div class="sec-title">시험 구성 분석</div>
+      <div class="exam-summary-grid">
+        <div class="exam-summary-box">
+          <div class="esb-title">📚 출제 단원별 분포</div>
+          <div id="r-unit-summary"></div>
+        </div>
+        <div class="exam-summary-box">
+          <div class="esb-title">📝 출제 영역별 분포</div>
+          <div id="r-area-summary"></div>
+        </div>
+      </div>
+      <!-- 총평 -->
+      <div class="memo-box box-blue" style="margin-top:0;">
+        <strong>📌 시험 총평</strong>
+        <div id="r-common" contenteditable="true" style="margin-top:5px;white-space:pre-line;"></div>
+      </div>
+    </div>
+
     <div class="chart-grid">
       <div class="chart-card">
         <div class="chart-tag">출제 단원별 문항 수</div>
@@ -312,10 +341,6 @@ textarea.fi{resize:vertical;min-height:72px;}
     </table>
 
     <div class="memo-wrap">
-      <div class="memo-box box-blue">
-        <strong>📌 시험 총평</strong>
-        <div id="r-common" contenteditable="true" style="margin-top:5px;"></div>
-      </div>
       <div class="memo-box box-gold">
         <strong>✍️ 선생님 피드백</strong>
         <div id="r-teacher" contenteditable="true" style="margin-top:5px;"></div>
@@ -617,6 +642,37 @@ function renderReport(d) {
   document.getElementById('r-common').textContent  = d.commonComment||'';
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
+
+  // 단원별 분포 요약 테이블
+  const totalQ = (d.unitValues||[]).reduce((a,b)=>a+b,0)||1;
+  document.getElementById('r-unit-summary').innerHTML =
+    (d.unitLabels||[]).map((l,i)=>{
+      const v = d.unitValues[i];
+      const pct = Math.round(v/totalQ*100);
+      return `<div class="esb-row">
+        <span class="esb-label">${l}</span>
+        <div class="esb-bar-wrap">
+          <div class="esb-bar" style="width:${pct*1.2}px;"></div>
+          <span class="esb-pct">${v}문항 (${pct}%)</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  // 영역별 분포 요약 테이블
+  const totalA = (d.areaValues||[]).reduce((a,b)=>a+b,0)||1;
+  const aColors = ['#4285F4','#EA4335','#FBBC05','#34A853','#9C27B0','#00BCD4','#FF6D00'];
+  document.getElementById('r-area-summary').innerHTML =
+    (d.areaLabels||[]).map((l,i)=>{
+      const v = d.areaValues[i];
+      const pct = Math.round(v/totalA*100);
+      return `<div class="esb-row">
+        <span class="esb-label">${l}</span>
+        <div class="esb-bar-wrap">
+          <div class="esb-bar" style="width:${pct*1.2}px;background:${aColors[i%aColors.length]};"></div>
+          <span class="esb-pct">${v}문항 (${pct}%)</span>
+        </div>
+      </div>`;
+    }).join('');
 
   // 오답 테이블
   const tbody = document.getElementById('r-errors');
