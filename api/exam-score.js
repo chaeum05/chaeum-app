@@ -256,41 +256,43 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── AI 피드백 ──
     if (action === 'generate_ai_feedback') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
-      const { studentName, examId, totalScore, incorrectList, teacherMemo } = req.body;
+      const { studentName, examId, totalScore, incorrectList, teacherMemo, hasTeacherMemo } = req.body;
       const incorrectSummary = !incorrectList?.length
         ? '모든 문항 정답'
         : incorrectList.map(i => `${i.num}번(${i.area}/${i.type})`).join(', ');
 
-      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: `채움영어학원 선생님입니다. 아래 학생의 시험 결과를 바탕으로 학부모 전달용 피드백을 3~4문장으로 작성해 주세요.
+      const prompt = hasTeacherMemo
+        ? `채움영어학원 선생님이 작성한 피드백을 아래 학생 성적 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 기존 피드백의 핵심 내용과 톤을 유지하면서 오답 분석 내용을 자연스럽게 녹여주세요.
 
 학생: ${studentName}
 시험명: ${examId}
 점수: ${totalScore}점 / 100점
 오답 문항: ${incorrectSummary}
-선생님 메모: ${teacherMemo || '없음'}
+기존 선생님 피드백: ${teacherMemo}
+
+[작성 규칙]
+- 학부모에게 전달하는 따뜻하고 전문적인 어투
+- 기존 피드백 내용을 바탕으로 오답 영역/유형을 자연스럽게 포함
+- 마크다운 기호 없이 본문만`
+        : `채움영어학원 선생님입니다. 아래 학생의 시험 결과를 바탕으로 학부모 전달용 피드백을 3~4문장으로 작성해 주세요.
+
+학생: ${studentName}
+시험명: ${examId}
+점수: ${totalScore}점 / 100점
+오답 문항: ${incorrectSummary}
 
 [작성 규칙]
 - 학부모에게 전달하는 따뜻하고 전문적인 어투
 - 오답 문항의 영역/유형을 구체적으로 언급
 - 잘한 점과 보완점 균형있게 서술
-- 마크다운 기호 없이 본문만`
-          }]
-        })
+- 마크다운 기호 없이 본문만`;
+
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:500, messages:[{role:'user',content:prompt}] })
       });
       const claudeData = await claudeRes.json();
       const feedback = claudeData.content?.[0]?.text?.trim();
