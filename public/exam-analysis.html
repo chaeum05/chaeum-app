@@ -133,7 +133,8 @@ textarea.fi{resize:vertical;min-height:72px;}
 .esb-bar-wrap{display:flex;align-items:center;gap:6px;flex:1;margin-left:8px;}
 .esb-bar{height:6px;border-radius:3px;background:var(--blue);min-width:2px;}
 .esb-pct{font-size:10px;color:var(--text3);white-space:nowrap;}
-.chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:260px;display:flex;flex-direction:column;}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:220px;display:flex;flex-direction:column;}
 .chart-tag{font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;color:var(--text);}
 .chart-wrap{flex:1;position:relative;}
 .sec-title{font-size:15px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;}
@@ -662,9 +663,12 @@ function renderReport(d) {
   document.getElementById('r-name2').textContent   = d.studentName;
   document.getElementById('r-score').textContent   = d.totalScore;
   document.getElementById('r-max').textContent     = d.maxScore;
-  document.getElementById('r-common').textContent  = d.commonComment||'';
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
+
+  // 총평 자동 생성 (비어있으면)
+  const autoComment = d.commonComment || autoGenComment(d);
+  document.getElementById('r-common').textContent = autoComment;
 
   // 단원별 분포 요약 테이블
   const totalQ = (d.unitValues||[]).reduce((a,b)=>a+b,0)||1;
@@ -728,21 +732,33 @@ function closeReport(){
   document.getElementById('main-wrap').style.display='block';
 }
 
-// ── AI 피드백 ──
+// ── 총평 자동 생성 (등록된 총평 없을 때) ──
+function autoGenComment(d) {
+  if (!d.unitLabels?.length) return '';
+  const total = d.unitValues.reduce((a,b)=>a+b,0);
+  const unitSummary = d.unitLabels.map((l,i)=>`${l}(${d.unitValues[i]}문항)`).join(', ');
+  const areaSummary = d.areaLabels?.map((l,i)=>`${l} ${d.areaValues[i]}문항`).join(', ') || '';
+  const topArea = d.areaLabels?.[d.areaValues?.indexOf(Math.max(...(d.areaValues||[0])))] || '';
+  const topAreaPct = Math.round((Math.max(...(d.areaValues||[0]))/total)*100);
+  return `전체 ${total}문항 중 단원별 배분은 ${unitSummary}입니다. 출제 영역은 ${areaSummary}으로 구성되었으며, ${topArea} 영역이 ${topAreaPct}%로 가장 높은 비중을 차지합니다.`;
+}
+
+// ── AI 피드백 (선생님 피드백 칸에 통합) ──
 async function genAI() {
   if(!reportData) return;
   const btn = document.getElementById('aiBtn');
   btn.disabled=true; btn.textContent='✨ 생성 중...';
+  const existingFeedback = document.getElementById('r-teacher').textContent.trim();
   try {
     const d = await call('generate_ai_feedback', {
-      studentName: reportData.studentName,
-      examId:      reportData.examId,
-      totalScore:  reportData.totalScore,
-      incorrectList: reportData.incorrectList,
-      teacherMemo: document.getElementById('r-teacher').textContent,
+      studentName:     reportData.studentName,
+      examId:          reportData.examId,
+      totalScore:      reportData.totalScore,
+      incorrectList:   reportData.incorrectList,
+      teacherMemo:     existingFeedback,
+      hasTeacherMemo:  existingFeedback.length > 0,
     });
-    document.getElementById('r-ai').textContent = d.feedback;
-    document.getElementById('r-ai-box').style.display='block';
+    document.getElementById('r-teacher').textContent = d.feedback;
     toast('AI 피드백 생성 완료!');
   } catch(e){toast('AI 오류: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✨ AI 피드백';}
