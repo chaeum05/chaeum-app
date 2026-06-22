@@ -327,17 +327,6 @@ textarea.fi{resize:vertical;min-height:72px;}
       </div>
     </div>
 
-    <div class="chart-grid">
-      <div class="chart-card">
-        <div class="chart-tag">출제 단원별 문항 수</div>
-        <div class="chart-wrap"><canvas id="unitChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-tag">출제 영역별 비중</div>
-        <div class="chart-wrap"><canvas id="areaChart"></canvas></div>
-      </div>
-    </div>
-
     <div class="sec-title"><span id="r-name2"></span> 학생 오답 상세 분석</div>
     <table class="err-table">
       <thead><tr><th style="width:18%">문항</th><th style="width:18%">단원</th><th style="width:26%">영역</th><th>문제 유형</th><th style="width:14%">배점</th></tr></thead>
@@ -711,20 +700,6 @@ function renderReport(d) {
     ).join('');
   }
 
-  // 차트 재생성
-  if(chartU){chartU.destroy();chartU=null;}
-  if(chartA){chartA.destroy();chartA=null;}
-  const base={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}}};
-  chartU = new Chart(document.getElementById('unitChart'),{
-    type:'bar',
-    data:{labels:d.unitLabels||[], datasets:[{data:d.unitValues||[],backgroundColor:'#1a73e8',borderRadius:4}]},
-    options:{...base,scales:{y:{ticks:{stepSize:1}}}}
-  });
-  chartA = new Chart(document.getElementById('areaChart'),{
-    type:'doughnut',
-    data:{labels:d.areaLabels||[], datasets:[{data:d.areaValues||[], backgroundColor:['#4285F4','#EA4335','#FBBC05','#34A853','#9C27B0','#00BCD4','#FF6D00']}]},
-    options:{...base,plugins:{legend:{display:true,position:'right',labels:{boxWidth:9,font:{size:10}}}},cutout:'58%'}
-  });
 }
 
 function closeReport(){
