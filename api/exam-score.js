@@ -74,6 +74,20 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, questions: qs });
     }
 
+    // ── 시험지 삭제 ──
+    if (action === 'delete_exam') {
+      const { examId } = req.body;
+      const existing = await queryDB(DB_QUESTIONS,
+        { property: '시험명', title: { equals: examId } }
+      );
+      await Promise.all(existing.map(p =>
+        nFetch(`https://api.notion.com/v1/pages/${p.id}`, {
+          method: 'PATCH', body: JSON.stringify({ archived: true })
+        })
+      ));
+      return res.status(200).json({ ok: true, message: `"${examId}" 삭제 완료 (${existing.length}문항)` });
+    }
+
     // ── 시험지 일괄 저장 ──
     if (action === 'bulk_save_exam') {
       const { examId, questions } = req.body;
