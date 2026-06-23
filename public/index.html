@@ -1884,11 +1884,17 @@ async function silentRefresh() {
 }
 
 function updateSummary() {
-  const total   = attStudents.length;
-  const present = attRecords.filter(r=>r.status==='출석').length;
-  const absent  = attRecords.filter(r=>r.status==='결석').length;
-  const makeup  = attRecords.filter(r=>r.status==='보강').length;
-  const unchecked = total - attRecords.filter(r=>['출석','결석','보강'].includes(r.status)).length;
+  const total = attStudents.length;
+
+  // 학생별 최신 상태 추출 (이름 기준 중복 제거)
+  const statusMap = {};
+  attRecords.forEach(r => { if(r.name) statusMap[r.name] = r.status; });
+
+  const present   = Object.values(statusMap).filter(s=>s==='출석').length;
+  const absent    = Object.values(statusMap).filter(s=>s==='결석').length;
+  const makeup    = Object.values(statusMap).filter(s=>['보강','보강완료'].includes(s)).length;
+  const unchecked = total - Object.keys(statusMap).length;
+
   document.getElementById('att-summary').innerHTML =
     `<div>전체: <b>${total}명</b></div>
      <div style="color:#2d8a4e">✅ 출석: <b>${present}명</b></div>
