@@ -2357,8 +2357,8 @@ function renderExamCalendar() {
     const isToday    = dateStr === todayStr;
     const isSelected = dateStr === examCalSelected;
     const events     = byDate[dateStr] || [];
-    // 중복 제거: 같은 학교 같은 mark는 하나만
-    const uniq     = events.filter((e,i,arr) => arr.findIndex(x=>x.school===e.school&&x.mark===e.mark)===i);
+    // 중복 제거: 같은 학교+학년 같은 mark는 하나만
+    const uniq     = events.filter((e,i,arr) => arr.findIndex(x=>x.school===e.school&&x.grade===e.grade&&x.mark===e.mark)===i);
     const examdays = uniq.filter(e=>e.mark==='examday');
     const periods  = uniq.filter(e=>e.mark==='period');
     const premakeup = uniq.filter(e=>e.mark==='premakeup');
@@ -2369,7 +2369,10 @@ function renderExamCalendar() {
       <div class="exam-cal-date${dow===0||dow===6?' weekend':''}">${d}</div>`;
     examdays.forEach(e => {
       const isMidSchool = e.school.includes('중');
-      html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school}">${e.school.replace(/(고등학교|중학교)/g,'')}</div>`;
+      const schoolShort = e.school.replace(/(고등학교|중학교)/g,'');
+      const gradeShort  = (e.grade||'').replace('학년','');
+      const label = gradeShort ? `${schoolShort} ${gradeShort}` : schoolShort;
+      html += `<div class="exam-cal-tag examday${isMidSchool?' mid':''}" title="${e.school} ${e.grade||''}">${label}</div>`;
     });
     if (premakeup.length > 0) {
       // 같은 학교는 학년 묶기: 금오고 1학년 + 금오고 2학년 → 금오고 1·2
