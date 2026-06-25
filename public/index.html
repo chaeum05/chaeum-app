@@ -2565,15 +2565,13 @@ function renderPeriodAtt(dateStr) {
     const uniq = [...new Set(schools)];
     if (!uniq.length) return '';
     return `<div style="margin-bottom:20px;">
-      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:8px;">
-        ${title}
-      </div>
+      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:8px;">${title}</div>
       ${uniq.map(school => {
-        const isMid = school.includes('중');
-        // 학교 기준 학생 필터 (type 기반)
-        const sType = isMid ? '중등' : '고등';
-        const studs = studentList.filter(s => s.type === sType);
-        if (!studs.length) return `<div style="font-size:11px;color:var(--text3);">🏫 ${school} — 등록된 학생 없음</div>`;
+        // 학교 이름으로 정확 매칭, 없으면 type 기반 대략 매칭
+        const exact = studentList.filter(s => s.school === school);
+        const studs = exact.length > 0 ? exact
+          : studentList.filter(s => school.includes('중') ? s.type==='중등' : s.type==='고등');
+        if (!studs.length) return `<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🏫 ${school} — 매칭된 학생 없음</div>`;
         return `<div style="margin-bottom:10px;">
           <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;margin-bottom:6px;display:inline-block;">🏫 ${school}</div>
           <div style="display:flex;flex-wrap:wrap;gap:5px;">
@@ -2584,8 +2582,7 @@ function renderPeriodAtt(dateStr) {
                 border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
                 background:${on?'#e8f7ee':'var(--surface)'};
                 color:${on?'#2d8a4e':'var(--text2)'};font-family:'Pretendard',sans-serif;transition:.12s;">
-                ${on?'✅ ':''}${s.name}
-              </button>`;
+                ${on?'✅ ':''}${s.name}</button>`;
             }).join('')}
           </div>
         </div>`;
