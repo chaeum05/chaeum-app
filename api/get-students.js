@@ -41,9 +41,10 @@ export default async function handler(req, res) {
 
     const students = allResults
       .map(p => ({
-        name:  p.properties['학생이름']?.title?.[0]?.text?.content || '',
-        type:  p.properties['구분']?.select?.name || '',
-        grade: p.properties['학년']?.select?.name || ''
+        name:   p.properties['학생이름']?.title?.[0]?.text?.content || '',
+        type:   p.properties['구분']?.select?.name || '',
+        grade:  p.properties['학년']?.select?.name || '',
+        school: p.properties['학교']?.rich_text?.[0]?.text?.content || '',
       }))
       .filter(s => s.name)
       .sort((a, b) => {
