@@ -508,6 +508,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="exam-tabs">
         <button class="exam-tab active" id="exam-tab-school"   onclick="switchExamTab('school')">🏫 학교별 시험 등록</button>
         <button class="exam-tab"        id="exam-tab-calendar" onclick="switchExamTab('calendar')">📅 시험 일정 캘린더</button>
+        <button class="exam-tab"        id="exam-tab-period"   onclick="switchExamTab('period')">📋 시험 기간 출결</button>
         <button class="exam-tab"        id="exam-tab-student"  onclick="switchExamTab('student')">👨‍🎓 학생별 관리</button>
       </div>
 
@@ -546,6 +547,22 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <!-- 선택 날짜 시험 목록 -->
         <div id="exam-cal-detail" style="margin-top:16px;"></div>
       </div>
+      <!-- 시험 기간 출결 -->
+      <div id="exam-period-section" style="display:none;">
+
+        <!-- 날짜 탭 -->
+        <div id="period-date-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+        <!-- 출결 목록 -->
+        <div id="period-att-list"><div class="loading-spinner">날짜를 선택하세요</div></div>
+
+        <!-- 범례 -->
+        <div style="display:flex;gap:12px;margin-top:12px;font-size:11px;color:var(--text3);">
+          <span>🟢 시험기간보강 출석</span>
+          <span>⬜ 미확인</span>
+        </div>
+      </div>
+
       <div id="exam-student-section" style="display:none;">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <button class="att-action-btn primary" onclick="openStudentExamForm()">+ 학생 시험 등록</button>
@@ -2254,12 +2271,15 @@ function switchExamTab(tab) {
   examCurrentTab = tab;
   document.getElementById('exam-tab-school').classList.toggle('active',    tab === 'school');
   document.getElementById('exam-tab-calendar').classList.toggle('active',  tab === 'calendar');
+  document.getElementById('exam-tab-period').classList.toggle('active',    tab === 'period');
   document.getElementById('exam-tab-student').classList.toggle('active',   tab === 'student');
   document.getElementById('exam-school-section').style.display    = tab === 'school'   ? '' : 'none';
   document.getElementById('exam-calendar-section').style.display  = tab === 'calendar' ? '' : 'none';
+  document.getElementById('exam-period-section').style.display    = tab === 'period'   ? '' : 'none';
   document.getElementById('exam-student-section').style.display   = tab === 'student'  ? '' : 'none';
   if (tab === 'student')  loadStudentExams();
   if (tab === 'calendar') initExamCalendar();
+  if (tab === 'period')   initPeriodAtt();
 }
 
 // ── 시험 일정 캘린더 ──
@@ -2427,6 +2447,176 @@ async function toggleExamCheck(id, field, value) {
     renderExams();
     toast(`${e.school} — ${labels[field]} ${value ? 'ON ✅' : 'OFF'}`);
   } catch(err) { toast('오류: ' + err.message); }
+}
+
+// ── 시험 기간 출결 ──
+let periodSelectedDate = '';
+let periodAttCache = {};
+
+function initPeriodAtt() {
+  if (!examsCache.length) {
+    loadExams().then(() => buildPeriodDateTabs());
+    return;
+  }
+  buildPeriodDateTabs();
+}
+
+function buildPeriodDateTabs() {
+  const dateSet = new Set();
+  examsCache.forEach(e => {
+    if (e.examDate) {
+      dateSet.add(e.examDate);
+      const d = new Date(e.examDate + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      dateSet.add(localDateStr(d));
+    }
+    if (e.periodStart && e.periodEnd) {
+      const s = new Date(e.periodStart + 'T00:00:00');
+      const en = new Date(e.periodEnd + 'T00:00:00');
+      for (let dd = new Date(s); dd <= en; dd.setDate(dd.getDate() + 1))
+        dateSet.add(localDateStr(new Date(dd)));
+    }
+  });
+
+  const sorted = [...dateSet].sort();
+  if (!sorted.length) {
+    document.getElementById('period-date-tabs').innerHTML =
+      '<span style="font-size:12px;color:var(--text3);">시험 일정 없음 — 학교별 시험을 먼저 등록해주세요.</span>';
+    return;
+  }
+
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const today = localDateStr(new Date());
+  periodSelectedDate = sorted.find(d => d >= today) || sorted[sorted.length - 1];
+
+  document.getElementById('period-date-tabs').innerHTML = sorted.map(d => {
+    const dt = new Date(d + 'T00:00:00');
+    const label = `${dt.getMonth()+1}/${dt.getDate()}(${dayNames[dt.getDay()]})${d===today?' 오늘':''}`;
+    const isSel = d === periodSelectedDate;
+    return `<button onclick="selectPeriodDate('${d}')" id="pdt-${d}"
+      style="padding:6px 12px;border:1.5px solid ${isSel?'var(--burgundy)':'var(--border)'};
+      border-radius:8px;font-size:12px;font-weight:${isSel?700:500};
+      background:${isSel?'var(--burgundy)':'var(--surface)'};
+      color:${isSel?'white':'var(--text)'};cursor:pointer;font-family:'Pretendard',sans-serif;">
+      ${label}</button>`;
+  }).join('');
+
+  loadPeriodAtt(periodSelectedDate);
+}
+
+function selectPeriodDate(dateStr) {
+  periodSelectedDate = dateStr;
+  document.querySelectorAll('[id^="pdt-"]').forEach(btn => {
+    const on = btn.id === `pdt-${dateStr}`;
+    btn.style.borderColor = on ? 'var(--burgundy)' : 'var(--border)';
+    btn.style.background  = on ? 'var(--burgundy)' : 'var(--surface)';
+    btn.style.color       = on ? 'white' : 'var(--text)';
+    btn.style.fontWeight  = on ? '700' : '500';
+  });
+  loadPeriodAtt(dateStr);
+}
+
+async function loadPeriodAtt(dateStr) {
+  const wrap = document.getElementById('period-att-list');
+  wrap.innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
+  try {
+    if (!periodAttCache[dateStr]) {
+      const d = await api('get-attendance', { date: dateStr });
+      const recs = (d.attendance || []).filter(r => r.status === '시험기간보강');
+      periodAttCache[dateStr] = {};
+      recs.forEach(r => { periodAttCache[dateStr][r.name] = '시험기간보강'; });
+    }
+    renderPeriodAtt(dateStr);
+  } catch(e) {
+    wrap.innerHTML = `<div style="color:var(--burgundy);font-size:13px;">오류: ${e.message}</div>`;
+  }
+}
+
+function renderPeriodAtt(dateStr) {
+  const wrap = document.getElementById('period-att-list');
+  const attended = periodAttCache[dateStr] || {};
+
+  // 해당 날짜 기준으로 섹션 분류
+  const preDay = [], examDay = [], periodDay = [];
+  examsCache.forEach(e => {
+    if (e.examDate) {
+      const pre = new Date(e.examDate + 'T00:00:00');
+      pre.setDate(pre.getDate() - 1);
+      if (localDateStr(pre) === dateStr) preDay.push(e.school);
+      if (e.examDate === dateStr) examDay.push(e.school);
+    }
+    if (e.periodStart && e.periodEnd && e.examDate !== dateStr) {
+      const s = new Date(e.periodStart + 'T00:00:00');
+      const en = new Date(e.periodEnd + 'T00:00:00');
+      const sel = new Date(dateStr + 'T00:00:00');
+      if (sel >= s && sel <= en) periodDay.push(e.school);
+    }
+  });
+
+  const allSchools = [...new Set([...preDay, ...examDay, ...periodDay])];
+  if (!allSchools.length) {
+    wrap.innerHTML = '<div class="empty-msg" style="padding:24px 0;">이 날은 시험 관련 일정이 없습니다.</div>';
+    return;
+  }
+
+  const studentList = allStudentsCache.length ? allStudentsCache : [];
+
+  const renderSection = (title, color, schools) => {
+    const uniq = [...new Set(schools)];
+    if (!uniq.length) return '';
+    return `<div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:8px;">
+        ${title}
+      </div>
+      ${uniq.map(school => {
+        const isMid = school.includes('중');
+        // 학교 기준 학생 필터 (type 기반)
+        const sType = isMid ? '중등' : '고등';
+        const studs = studentList.filter(s => s.type === sType);
+        if (!studs.length) return `<div style="font-size:11px;color:var(--text3);">🏫 ${school} — 등록된 학생 없음</div>`;
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;margin-bottom:6px;display:inline-block;">🏫 ${school}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;">
+            ${studs.map(s => {
+              const on = attended[s.name] === '시험기간보강';
+              return `<button onclick="togglePeriodAtt('${s.name}','${dateStr}')" id="pa-${s.name}"
+                style="padding:5px 11px;border:1.5px solid ${on?'var(--green)':'var(--border)'};
+                border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
+                background:${on?'#e8f7ee':'var(--surface)'};
+                color:${on?'#2d8a4e':'var(--text2)'};font-family:'Pretendard',sans-serif;transition:.12s;">
+                ${on?'✅ ':''}${s.name}
+              </button>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  };
+
+  wrap.innerHTML =
+    renderSection('📅 직전보강 대상 (내일 시험)', 'var(--burgundy)', preDay) +
+    renderSection('📝 시험 당일', '#b45309', examDay) +
+    renderSection('📖 시험 기간 중', '#1d4ed8', periodDay);
+}
+
+async function togglePeriodAtt(name, dateStr) {
+  const cache = periodAttCache[dateStr] || {};
+  const isOn  = cache[name] === '시험기간보강';
+  const btn   = document.getElementById(`pa-${name}`);
+
+  if (isOn) {
+    delete cache[name];
+    periodAttCache[dateStr] = cache;
+    if (btn) { btn.style.cssText += ';border-color:var(--border);background:var(--surface);color:var(--text2);'; btn.textContent = name; }
+    try { await api('save-attendance', { name, date: dateStr, status: '', action: 'delete' }); } catch {}
+    toast(`${name} 출석 취소`);
+  } else {
+    cache[name] = '시험기간보강';
+    periodAttCache[dateStr] = cache;
+    if (btn) { btn.style.cssText += ';border-color:var(--green);background:#e8f7ee;color:#2d8a4e;'; btn.textContent = `✅ ${name}`; }
+    try { await api('save-attendance', { name, date: dateStr, status: '시험기간보강' }); } catch {}
+    toast(`${name} 시험기간보강 ✅`);
+  }
 }
 
 async function loadExams() {
