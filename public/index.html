@@ -2536,48 +2536,57 @@ function renderPeriodAtt(dateStr) {
   const wrap = document.getElementById('period-att-list');
   const attended = periodAttCache[dateStr] || {};
 
-  // 해당 날짜 기준으로 섹션 분류
+  const studentList = allStudentsCache.length ? allStudentsCache : [];
+
+  // 해당 날짜 기준으로 섹션 분류 (학교 + 학년 조합)
   const preDay = [], examDay = [], periodDay = [];
   examsCache.forEach(e => {
+    const key = { school: e.school, grade: e.grade || '' };
     if (e.examDate) {
       const pre = new Date(e.examDate + 'T00:00:00');
       pre.setDate(pre.getDate() - 1);
-      if (localDateStr(pre) === dateStr) preDay.push(e.school);
-      if (e.examDate === dateStr) examDay.push(e.school);
+      if (localDateStr(pre) === dateStr) preDay.push(key);
+      if (e.examDate === dateStr) examDay.push(key);
     }
     if (e.periodStart && e.periodEnd && e.examDate !== dateStr) {
       const s = new Date(e.periodStart + 'T00:00:00');
       const en = new Date(e.periodEnd + 'T00:00:00');
       const sel = new Date(dateStr + 'T00:00:00');
-      if (sel >= s && sel <= en) periodDay.push(e.school);
+      if (sel >= s && sel <= en) periodDay.push(key);
     }
   });
 
-  const allSchools = [...new Set([...preDay, ...examDay, ...periodDay])];
-  if (!allSchools.length) {
+  const allGroups = [...preDay, ...examDay, ...periodDay];
+  if (!allGroups.length) {
     wrap.innerHTML = '<div class="empty-msg" style="padding:24px 0;">이 날은 시험 관련 일정이 없습니다.</div>';
     return;
   }
 
-  const studentList = allStudentsCache.length ? allStudentsCache : [];
-
-  const renderSection = (title, color, schools) => {
-    const uniq = [...new Set(schools)];
-    if (!uniq.length) return '';
+  const renderSection = (title, color, groups) => {
+    if (!groups.length) return '';
+    // 학교+학년 중복 제거
+    const seen = new Set();
+    const uniq = groups.filter(g => {
+      const k = `${g.school}_${g.grade}`;
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
     return `<div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:8px;">${title}</div>
-      ${uniq.map(school => {
+      ${uniq.map(({school, grade}) => {
         const studs = studentList.filter(s => {
           if (!s.school) return false;
-          // 부분 매칭: "형곡고" ↔ "형곡고등학교" 양방향 포함 여부 확인
-          return school.includes(s.school) || s.school.includes(school);
+          const schoolMatch = school.includes(s.school) || s.school.includes(school);
+          const gradeMatch  = !grade || !s.grade || s.grade === grade;
+          return schoolMatch && gradeMatch;
         });
+        const label = `${school}${grade ? ' · ' + grade : ''}`;
         if (!studs.length) return `<div style="margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;display:inline-block;margin-bottom:4px;">🏫 ${school}</div>
-          <div style="font-size:11px;color:var(--text3);padding:4px 0;">노션 학생 목록 DB에서 학교 정보를 입력해주세요.</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;display:inline-block;margin-bottom:3px;">🏫 ${label}</div>
+          <div style="font-size:11px;color:var(--text3);">노션 학생 목록 DB에서 학교/학년 정보를 확인해주세요.</div>
         </div>`;
         return `<div style="margin-bottom:10px;">
-          <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;margin-bottom:6px;display:inline-block;">🏫 ${school}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;margin-bottom:6px;display:inline-block;">🏫 ${label}</div>
           <div style="display:flex;flex-wrap:wrap;gap:5px;">
             ${studs.map(s => {
               const on = attended[s.name] === '시험기간보강';
