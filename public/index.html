@@ -2567,7 +2567,11 @@ function renderPeriodAtt(dateStr) {
     return `<div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:8px;">${title}</div>
       ${uniq.map(school => {
-        const studs = studentList.filter(s => s.school === school);
+        const studs = studentList.filter(s => {
+          if (!s.school) return false;
+          // 부분 매칭: "형곡고" ↔ "형곡고등학교" 양방향 포함 여부 확인
+          return school.includes(s.school) || s.school.includes(school);
+        });
         if (!studs.length) return `<div style="margin-bottom:8px;">
           <div style="font-size:11px;font-weight:700;color:var(--text2);padding:3px 8px;background:var(--surface2);border-radius:5px;display:inline-block;margin-bottom:4px;">🏫 ${school}</div>
           <div style="font-size:11px;color:var(--text3);padding:4px 0;">노션 학생 목록 DB에서 학교 정보를 입력해주세요.</div>
