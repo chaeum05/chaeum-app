@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         parent: { database_id: DB_LOGS },
         properties: {
-          '기록제목': { title: [{ text: { content: title } }] },
+          '':         { title: [{ text: { content: title } }] },
           '날짜':     { date: { start: data.date } },
           '구분':     { select: { name: data.type } },
           '학년':     { select: { name: data.grade } },
