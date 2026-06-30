@@ -228,7 +228,7 @@ textarea.fi{resize:vertical;min-height:72px;}
                 <th style="width:24px"></th>
                 <th style="width:64px">번호</th>
                 <th style="width:100px">출제단원</th>
-                <th style="width:82px">출제영역</th>
+                <th style="width:104px">출제영역</th>
                 <th style="width:240px;">문제유형</th>
                 <th style="width:58px">배점</th>
                 <th style="width:30px"></th>
@@ -445,7 +445,7 @@ function addExamRow(num='', unit='', area='', type='', score=3.5) {
     <td class="drag-handle" style="cursor:grab;text-align:center;color:var(--text3);font-size:14px;user-select:none;">⠿</td>
     <td><input class="et-input" value="${num}" placeholder="번호" style="width:56px;"></td>
     <td><input class="et-input" value="${unit}" placeholder="1과, 교과서…" list="unitList" style="width:92px;"></td>
-    <td><input class="et-input" value="${area}" placeholder="문법, 어휘…" list="areaList" style="width:74px;"></td>
+    <td><input class="et-input" value="${area}" placeholder="문법, 어휘…" list="areaList" style="width:96px;"></td>
     <td><input class="et-input" value="${type}" placeholder="문제 유형 입력" style="width:230px;"></td>
     <td><input class="et-input" type="number" value="${score}" step="0.1" min="0" style="width:50px;"></td>
     <td><button class="et-del" onclick="this.closest('tr').remove()" title="삭제">✕</button></td>`;
