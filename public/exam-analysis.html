@@ -124,18 +124,16 @@ textarea.fi{resize:vertical;min-height:72px;}
 .score-val{font-family:'Poppins',sans-serif;font-size:52px;font-weight:700;color:var(--blue);line-height:1;}
 .score-max{font-size:16px;color:var(--text3);}
 .exam-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.exam-summary-grid .exam-summary-box:nth-child(3){grid-column:1 / -1;}
-.top-type-card{border-radius:12px;padding:16px 14px;text-align:center;position:relative;overflow:hidden;}
-.top-type-card.rank-1{background:linear-gradient(135deg,#fef2f2,#fecaca);border:1.5px solid #ef4444;}
-.top-type-card.rank-2{background:linear-gradient(135deg,#fff7ed,#fed7aa);border:1.5px solid #f97316;}
-.top-type-card.rank-3{background:linear-gradient(135deg,#fffbeb,#fef08a);border:1.5px solid #eab308;}
-.top-type-rank{display:inline-block;font-size:11px;font-weight:800;color:white;padding:2px 9px;border-radius:20px;margin-bottom:8px;letter-spacing:.3px;}
-.rank-1 .top-type-rank{background:#ef4444;}
-.rank-2 .top-type-rank{background:#f97316;}
-.rank-3 .top-type-rank{background:#eab308;}
-.top-type-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3;min-height:34px;display:flex;align-items:center;justify-content:center;}
-.top-type-count{font-size:20px;font-weight:800;color:var(--burgundy);}
-.top-type-count span{font-size:11px;font-weight:600;color:var(--text2);}
+.weak-area-card{border-radius:10px;padding:12px 13px;position:relative;overflow:hidden;}
+.weak-area-card.sev-1{background:linear-gradient(135deg,#fef2f2,#fecaca);border:1.5px solid #ef4444;}
+.weak-area-card.sev-2{background:linear-gradient(135deg,#fff7ed,#fed7aa);border:1.5px solid #f97316;}
+.weak-area-card.sev-3{background:linear-gradient(135deg,#fffbeb,#fef08a);border:1.5px solid #eab308;}
+.weak-area-card.sev-default{background:#f8f9fa;border:1.5px solid var(--border);}
+.weak-area-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.weak-area-name{font-size:13px;font-weight:800;color:var(--text);}
+.weak-area-count{font-size:11px;font-weight:700;color:var(--text2);background:rgba(255,255,255,.6);padding:2px 8px;border-radius:20px;}
+.weak-area-type{font-size:11px;color:var(--text2);}
+.weak-area-type b{color:var(--text);font-weight:700;}
 .exam-summary-box{border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;background:#fafafa;}
 .esb-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
 .esb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
@@ -336,9 +334,9 @@ textarea.fi{resize:vertical;min-height:72px;}
           <div class="esb-title">📝 출제 영역별 분포</div>
           <div id="r-area-summary"></div>
         </div>
-        <div class="exam-summary-box">
-          <div class="esb-title">❌ 오답 영역별 분포</div>
-          <div id="r-wrong-summary"></div>
+        <div class="exam-summary-box" style="grid-column:1/-1;">
+          <div class="esb-title">❌ 취약 영역 분석</div>
+          <div id="r-wrong-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:6px;"></div>
         </div>
       </div>
       <!-- 총평 -->
@@ -346,12 +344,6 @@ textarea.fi{resize:vertical;min-height:72px;}
         <strong>📌 시험 총평</strong>
         <div id="r-common" contenteditable="true" style="margin-top:5px;white-space:pre-line;"></div>
       </div>
-    </div>
-
-    <!-- 오답 유형 TOP3 -->
-    <div id="r-top-types-section" style="margin-bottom:24px;">
-      <div class="sec-title">가장 많이 틀린 유형</div>
-      <div id="r-top-types" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
     </div>
 
     <div class="sec-title"><span id="r-name2"></span> 학생 오답 상세 분석</div>
@@ -786,48 +778,34 @@ function renderReport(d) {
   if(!(d.incorrectList||[]).length){
     tbody.innerHTML='<tr><td colspan="5" style="color:var(--blue);font-weight:700;padding:16px;text-align:center;">🎉 Perfect! 모든 문항 정답!</td></tr>';
     document.getElementById('r-wrong-summary').innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">오답 없음 🎉</div>';
-    document.getElementById('r-top-types-section').style.display = 'none';
   } else {
     tbody.innerHTML = d.incorrectList.map(i=>
       `<tr><td>${i.num}</td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td>${i.type||'-'}</td><td>${i.score}점</td></tr>`
     ).join('');
 
-    // 오답 영역별 집계
-    const wrongCount = {};
+    // 영역별 오답 집계 + 영역별 대표 유형 계산
+    const areaStat = {};
     d.incorrectList.forEach(i => {
       const area = i.area || '기타';
-      wrongCount[area] = (wrongCount[area] || 0) + 1;
+      const type = i.type || '미분류';
+      if (!areaStat[area]) areaStat[area] = { count: 0, types: {} };
+      areaStat[area].count++;
+      areaStat[area].types[type] = (areaStat[area].types[type] || 0) + 1;
     });
-    const wrongEntries = Object.entries(wrongCount).sort((a,b)=>b[1]-a[1]);
-    const totalWrong = d.incorrectList.length;
-    document.getElementById('r-wrong-summary').innerHTML = wrongEntries.map(([area,cnt],i)=>{
-      const pct = Math.round(cnt/totalWrong*100);
-      return `<div class="esb-row">
-        <span class="esb-label">${area}</span>
-        <div class="esb-bar-wrap">
-          <div class="esb-bar" style="width:${pct*1.2}px;background:#e11d48;"></div>
-          <span class="esb-pct">${cnt}문항 (${pct}%)</span>
+
+    const sortedAreas = Object.entries(areaStat).sort((a,b)=>b[1].count-a[1].count);
+
+    document.getElementById('r-wrong-summary').innerHTML = sortedAreas.map(([area, stat], i) => {
+      const sevClass = i===0?'sev-1':i===1?'sev-2':i===2?'sev-3':'sev-default';
+      const topType = Object.entries(stat.types).sort((a,b)=>b[1]-a[1])[0];
+      return `<div class="weak-area-card ${sevClass}">
+        <div class="weak-area-top">
+          <span class="weak-area-name">${area}</span>
+          <span class="weak-area-count">${stat.count}문항</span>
         </div>
+        <div class="weak-area-type">주요 유형: <b>${topType[0]}</b> (${topType[1]}문항)</div>
       </div>`;
     }).join('');
-
-    // 오답 유형 TOP3
-    document.getElementById('r-top-types-section').style.display = '';
-    const typeCount = {};
-    d.incorrectList.forEach(i => {
-      const t = i.type || '미분류';
-      typeCount[t] = (typeCount[t] || 0) + 1;
-    });
-    const topTypes = Object.entries(typeCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    const rankLabels = ['가장 취약','두 번째','세 번째'];
-    document.getElementById('r-top-types').innerHTML = topTypes.length
-      ? topTypes.map(([type,cnt],i)=>`
-        <div class="top-type-card rank-${i+1}">
-          <div class="top-type-rank">${rankLabels[i]}</div>
-          <div class="top-type-name">${type}</div>
-          <div class="top-type-count">${cnt}<span>문항</span></div>
-        </div>`).join('')
-      : '';
   }
 
 }
