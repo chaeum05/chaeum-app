@@ -215,6 +215,7 @@ textarea.fi{resize:vertical;min-height:72px;}
           <table class="exam-table">
             <thead>
               <tr>
+                <th style="width:24px"></th>
                 <th style="width:64px">번호</th>
                 <th style="width:100px">출제단원</th>
                 <th style="width:82px">출제영역</th>
@@ -225,7 +226,10 @@ textarea.fi{resize:vertical;min-height:72px;}
             </thead>
             <tbody id="examTbody"></tbody>
           </table>
-          <button class="add-row-btn" onclick="addExamRow()">＋ 문항 추가</button>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="add-row-btn" onclick="addExamRow()">＋ 문항 추가</button>
+            <button class="add-row-btn" style="background:#eef2ff;color:#3730a3;" onclick="sortExamRows()">↕️ 번호순 정렬</button>
+          </div>
         </div>
 
         <div style="margin-top:14px;">
@@ -422,8 +426,9 @@ async function onExamChange() {
 // ── 시험지 등록 ──
 function addExamRow(num='', unit='', area='', type='', score=3.5) {
   const tr = document.createElement('tr');
-  const n  = num || (document.getElementById('examTbody').rows.length + 1);
+  tr.draggable = true;
   tr.innerHTML = `
+    <td class="drag-handle" style="cursor:grab;text-align:center;color:var(--text3);font-size:14px;user-select:none;">⠿</td>
     <td><input class="et-input" value="${num}" placeholder="번호" style="width:56px;"></td>
     <td><input class="et-input" value="${unit}" placeholder="1과, 교과서…" list="unitList" style="width:92px;"></td>
     <td><input class="et-input" value="${area}" placeholder="문법, 어휘…" list="areaList" style="width:74px;"></td>
@@ -431,6 +436,50 @@ function addExamRow(num='', unit='', area='', type='', score=3.5) {
     <td><input class="et-input" type="number" value="${score}" step="0.1" min="0" style="width:50px;"></td>
     <td><button class="et-del" onclick="this.closest('tr').remove()" title="삭제">✕</button></td>`;
   document.getElementById('examTbody').appendChild(tr);
+  attachDragEvents(tr);
+}
+
+let dragSrcRow = null;
+function attachDragEvents(tr) {
+  tr.addEventListener('dragstart', (e) => {
+    dragSrcRow = tr;
+    tr.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  tr.addEventListener('dragend', () => {
+    tr.style.opacity = '1';
+    dragSrcRow = null;
+  });
+  tr.addEventListener('dragover', (e) => { e.preventDefault(); });
+  tr.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!dragSrcRow || dragSrcRow === tr) return;
+    const tbody = document.getElementById('examTbody');
+    const rows  = [...tbody.rows];
+    const srcIdx  = rows.indexOf(dragSrcRow);
+    const destIdx = rows.indexOf(tr);
+    if (srcIdx < destIdx) tbody.insertBefore(dragSrcRow, tr.nextSibling);
+    else tbody.insertBefore(dragSrcRow, tr);
+  });
+}
+
+// 번호순 정렬 (숫자 우선, 서술형/서답형 등 텍스트는 뒤로)
+function sortExamRows() {
+  const tbody = document.getElementById('examTbody');
+  const rows  = [...tbody.rows];
+  rows.sort((a, b) => {
+    const na = a.querySelector('input').value.trim();
+    const nb = b.querySelector('input').value.trim();
+    const fa = parseFloat(na), fb = parseFloat(nb);
+    const isNumA = !isNaN(fa) && /^\d+$/.test(na);
+    const isNumB = !isNaN(fb) && /^\d+$/.test(nb);
+    if (isNumA && isNumB) return fa - fb;
+    if (isNumA) return -1;
+    if (isNumB) return 1;
+    return na.localeCompare(nb, 'ko');
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  toast('번호순으로 정렬했어요!');
 }
 
 // 자동완성 데이터리스트
@@ -459,6 +508,7 @@ function getExamRows() {
 }
 
 async function saveExamSetup() {
+  sortExamRows(); // 저장 전 자동 정렬
   const examId = document.getElementById('examName').value.trim();
   const common = document.getElementById('examCommon').value.trim();
   if (!examId) { toast('시험명을 입력해주세요.'); return; }
