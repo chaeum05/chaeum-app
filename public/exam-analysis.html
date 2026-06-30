@@ -135,7 +135,7 @@ textarea.fi{resize:vertical;min-height:72px;}
 .weak-area-type{font-size:11px;color:var(--text2);}
 .weak-area-type b{color:var(--text);font-weight:700;}
 .exam-summary-box{border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;background:#fafafa;}
-.esb-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.esb-title{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px;margin-bottom:10px;padding-bottom:7px;border-bottom:2px solid var(--border);}
 .esb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
 .esb-row:last-child{border-bottom:none;}
 .esb-label{color:var(--text2);}
@@ -147,8 +147,8 @@ textarea.fi{resize:vertical;min-height:72px;}
 .chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:220px;display:flex;flex-direction:column;}
 .chart-tag{font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;color:var(--text);}
 .chart-wrap{flex:1;position:relative;}
-.sec-title{font-size:15px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;}
-.sec-title::before{content:'';width:4px;height:14px;background:var(--gold);margin-right:8px;}
+.sec-title{font-size:17px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;color:var(--text);}
+.sec-title::before{content:'';width:5px;height:18px;background:var(--gold);margin-right:9px;border-radius:2px;}
 .err-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;}
 .err-table th{background:#f8f9fa;padding:8px;color:var(--text2);border-bottom:2px solid #eee;font-size:11px;}
 .err-table td{padding:8px;border-bottom:1px solid #f1f1f1;text-align:center;}
@@ -801,9 +801,9 @@ function renderReport(d) {
       return `<div class="weak-area-card ${sevClass}">
         <div class="weak-area-top">
           <span class="weak-area-name">${area}</span>
-          <span class="weak-area-count">${stat.count}문항</span>
+          <span class="weak-area-count">오답 ${stat.count}문항</span>
         </div>
-        <div class="weak-area-type">주요 유형: <b>${topType[0]}</b> (${topType[1]}문항)</div>
+        <div class="weak-area-type">그 중 <b>${topType[0]}</b> 유형 ${topType[1]}문항으로 가장 많음</div>
       </div>`;
     }).join('');
   }
