@@ -316,6 +316,50 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── 누적 성적표 ──
+    if (action === 'get_score_matrix') {
+      const [rRows, qRows] = await Promise.all([
+        queryDB(DB_RESULTS),
+        queryDB(DB_QUESTIONS)
+      ]);
+
+      // 시험별 문항 정보 맵
+      const examQMap = {};
+      qRows.forEach(p => {
+        const exam  = p.properties['시험명']?.title?.[0]?.text?.content || '';
+        const num   = p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || '');
+        const score = p.properties['배점']?.number || 0;
+        if (!examQMap[exam]) examQMap[exam] = [];
+        examQMap[exam].push({ num, score });
+      });
+
+      // 시험명 목록 (생성일 순)
+      const exams = [...new Set(
+        qRows
+          .sort((a,b) => new Date(a.created_time||0) - new Date(b.created_time||0))
+          .map(p => p.properties['시험명']?.title?.[0]?.text?.content || '')
+      )].filter(Boolean);
+
+      // 학생별 시험 점수 계산
+      const studentMap = {};
+      rRows.forEach(p => {
+        const name  = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+        const exam  = p.properties['시험명']?.rich_text?.[0]?.text?.content || '';
+        const extra = p.properties['추가점수']?.number || 0;
+        const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+        if (!name || !exam) return;
+        let answers = {};
+        try { answers = JSON.parse(answersJson); } catch {}
+        let score = extra;
+        (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
+        if (!studentMap[name]) studentMap[name] = { name, scores: {} };
+        studentMap[name].scores[exam] = Number(score.toFixed(1));
+      });
+
+      const rows = Object.values(studentMap).sort((a,b) => a.name.localeCompare(b.name,'ko'));
+      return res.status(200).json({ ok: true, exams, rows });
+    }
+
     // ── 시험 총평 AI 생성 (생성만, 저장은 시험지 저장 버튼으로) ──
     if (action === 'generate_common_comment') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
