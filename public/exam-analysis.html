@@ -606,22 +606,26 @@ function renderQList() {
     <div class="q-head">
       <span>번호</span><span>유형</span><span>배점</span><span>정오답</span>
     </div>
-    ${currentQs.map(q=>`
-    <div class="q-row" id="qr-${q.num}">
-      <span class="q-num">${q.num}</span>
-      <span class="q-type" title="${q.type||''}">${q.type||'-'}</span>
-      <span class="q-score">${q.score}점</span>
-      <div class="ox-btns">
-        <button class="ox-btn o-on" id="o-${q.num}" onclick="setOX('${q.num}','O')">O</button>
-        <button class="ox-btn" id="x-${q.num}" onclick="setOX('${q.num}','X')">X</button>
-      </div>
-    </div>`).join('')}`;
+    ${currentQs.map(q=>{
+      const key = q.numStr || String(q.num ?? '');
+      const safeKey = encodeURIComponent(key);
+      return `
+      <div class="q-row" id="qr-${safeKey}">
+        <span class="q-num">${key}</span>
+        <span class="q-type" title="${q.type||''}">${q.type||'-'}</span>
+        <span class="q-score">${q.score}점</span>
+        <div class="ox-btns">
+          <button class="ox-btn o-on" id="o-${safeKey}" onclick="setOX('${safeKey}','O')">O</button>
+          <button class="ox-btn"     id="x-${safeKey}" onclick="setOX('${safeKey}','X')">X</button>
+        </div>
+      </div>`;
+    }).join('')}`;
   updateScorePreview();
 }
 
-function setOX(num, val) {
-  const ob = document.getElementById('o-'+num);
-  const xb = document.getElementById('x-'+num);
+function setOX(safeKey, val) {
+  const ob = document.getElementById('o-'+safeKey);
+  const xb = document.getElementById('x-'+safeKey);
   if(!ob||!xb) return;
   ob.className = 'ox-btn' + (val==='O'?' o-on':'');
   xb.className = 'ox-btn' + (val==='X'?' x-on':'');
@@ -629,11 +633,11 @@ function setOX(num, val) {
 }
 
 function setAllO() {
-  currentQs.forEach(q => setOX(q.num,'O'));
+  currentQs.forEach(q => setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
 }
 
-function getOX(num) {
-  const ob = document.getElementById('o-'+num);
+function getOX(safeKey) {
+  const ob = document.getElementById('o-'+safeKey);
   if(!ob) return 'O';
   return ob.classList.contains('o-on') ? 'O' : 'X';
 }
@@ -641,7 +645,10 @@ function getOX(num) {
 function updateScorePreview() {
   const extra = parseFloat(document.getElementById('extraScore')?.value)||0;
   let total = extra;
-  currentQs.forEach(q => { if(getOX(q.num)==='O') total += (parseFloat(q.score)||0); });
+  currentQs.forEach(q => {
+    const key = encodeURIComponent(q.numStr||String(q.num??''));
+    if(getOX(key)==='O') total += (parseFloat(q.score)||0);
+  });
   const el = document.getElementById('scorePreview');
   if(el) el.textContent = total.toFixed(1)+'점';
 }
@@ -653,7 +660,7 @@ function resetScoreForm() {
   document.getElementById('studentName').value='';
   document.getElementById('extraScore').value='0';
   document.getElementById('teacherMemo').value='';
-  currentQs.forEach(q=>setOX(q.num,'O'));
+  currentQs.forEach(q=>setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
   updateScorePreview();
 }
 
@@ -665,7 +672,11 @@ async function saveScore() {
   if(!currentQs.length) { toast('시험 문항이 없습니다.'); return; }
   const btn = document.getElementById('saveBtn');
   btn.disabled=true; btn.textContent='저장 중...';
-  const results = currentQs.map(q=>({...q, result:getOX(q.num)}));
+  const results = currentQs.map(q=>({
+    ...q,
+    num: q.numStr || String(q.num ?? ''),   // 저장 키를 numStr 기준으로
+    result: getOX(encodeURIComponent(q.numStr||String(q.num??'')))
+  }));
   try {
     await call('save_student_results', {
       studentName:name, examId:currentExam,
@@ -727,7 +738,9 @@ async function editStudent(name) {
     document.getElementById('studentName').value=name;
     document.getElementById('extraScore').value=d.extraScore||0;
     document.getElementById('teacherMemo').value=d.feedback||'';
-    for(const [num, result] of Object.entries(d.results||{})) setOX(num, result);
+    for(const [num, result] of Object.entries(d.results||{})) {
+      setOX(encodeURIComponent(num), result);
+    }
     updateScorePreview();
     switchPage('score');
     toast(`${name} 데이터 불러오기 완료`);
