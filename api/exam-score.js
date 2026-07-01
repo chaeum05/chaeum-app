@@ -49,10 +49,10 @@ export default async function handler(req, res) {
     if (action === 'get_exam_list') {
       let all = [], cursor;
       do {
-        const body = { page_size: 100, filter_properties: ['title'] };
-        if (cursor) body.start_cursor = cursor;
+        const b = { page_size: 100 };
+        if (cursor) b.start_cursor = cursor;
         const d = await nFetch(`https://api.notion.com/v1/databases/${DB_QUESTIONS}/query`, {
-          method: 'POST', body: JSON.stringify(body)
+          method: 'POST', body: JSON.stringify(b)
         });
         if (d.object === 'error') throw new Error(d.message);
         all = all.concat(d.results || []);
