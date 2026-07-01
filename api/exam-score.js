@@ -318,10 +318,22 @@ export default async function handler(req, res) {
 
     // ── 누적 성적표 ──
     if (action === 'get_score_matrix') {
-      const [rRows, qRows] = await Promise.all([
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const [rRows, qRows, sRows] = await Promise.all([
         queryDB(DB_RESULTS),
-        queryDB(DB_QUESTIONS)
+        queryDB(DB_QUESTIONS),
+        DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
       ]);
+
+      // 학생 정보 맵 (이름 → type/grade/school)
+      const studentInfoMap = {};
+      sRows.forEach(p => {
+        const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
+        const type   = p.properties['구분']?.select?.name || '';
+        const grade  = p.properties['학년']?.select?.name || '';
+        const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
+        if (name) studentInfoMap[name] = { type, grade, school };
+      });
 
       // 시험별 문항 정보 맵
       const examQMap = {};
@@ -352,11 +364,22 @@ export default async function handler(req, res) {
         try { answers = JSON.parse(answersJson); } catch {}
         let score = extra;
         (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
-        if (!studentMap[name]) studentMap[name] = { name, scores: {} };
+        if (!studentMap[name]) {
+          const info = studentInfoMap[name] || {};
+          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {} };
+        }
         studentMap[name].scores[exam] = Number(score.toFixed(1));
       });
 
-      const rows = Object.values(studentMap).sort((a,b) => a.name.localeCompare(b.name,'ko'));
+      const rows = Object.values(studentMap).sort((a,b) => {
+        const to = {'초등':0,'중등':1,'고등':2};
+        const ta = to[a.type]??3, tb = to[b.type]??3;
+        if (ta !== tb) return ta - tb;
+        if (a.school !== b.school) return a.school.localeCompare(b.school,'ko');
+        const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
+        if (ga !== gb) return ga - gb;
+        return a.name.localeCompare(b.name,'ko');
+      });
       return res.status(200).json({ ok: true, exams, rows });
     }
 
