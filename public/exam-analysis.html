@@ -464,161 +464,158 @@ function filterMatrix() {
   renderMatrix(filtered);
 }
 
+// ── 시험명 → 4개 고정 컬럼 매핑 ──
+const PERIODS = ['1학기 중간', '1학기 기말', '2학기 중간', '2학기 기말'];
+
+function examToPeriod(examName) {
+  const s = (examName||'').replace(/_/g,' ').replace(/^manual /,'');
+  if (s.includes('1학기') && s.includes('중간')) return '1학기 중간';
+  if (s.includes('1학기') && (s.includes('기말')||s.includes('final'))) return '1학기 기말';
+  if (s.includes('2학기') && s.includes('중간')) return '2학기 중간';
+  if (s.includes('2학기') && (s.includes('기말')||s.includes('final'))) return '2학기 기말';
+  return null;
+}
+
 function renderMatrix(d) {
-  const wrap  = document.getElementById('matrix-wrap');
+  const wrap = document.getElementById('matrix-wrap');
   const exams = d.exams || [];
-  const rows  = d.rows  || [];
+  const rows  = (d.rows || []).filter(r => r.type !== '초등' && r.type !== '기타' && r.type !== '');
   if (!rows.length) { wrap.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
 
-  // 시험명 → 짧은 컬럼명 (1학기 중간, 1학기 기말 등)
-  const shortCol = s => {
-    const m = s.match(/(1|2)학기[_ ]*(중간|기말)/);
-    return m ? `${m[1]}학기 ${m[2]}` : s.replace(/^20\d{2}_?/,'').replace(/_/g,' ').slice(0,10);
-  };
-
-  // 자동 점수 셀 (읽기 전용)
   const autoCell = (score, prev) => {
-    const bg    = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef9c3' : '#fee2e2';
-    const color = score >= 80 ? '#15803d' : score >= 60 ? '#854d0e' : '#dc2626';
+    const bg    = score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2';
+    const color = score>=80?'#15803d':score>=60?'#854d0e':'#dc2626';
     let arrow = '';
-    if (prev !== null && prev !== undefined) {
-      const diff = +(score - prev).toFixed(1);
-      if (diff > 0.05)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:800;"> ▲${diff}</span>`;
-      else if (diff < -0.05) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:800;"> ▼${Math.abs(diff)}</span>`;
+    if (prev !== null) {
+      const diff = +(score-prev).toFixed(1);
+      if (diff>0.05)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:800;"> ▲${diff}</span>`;
+      else if (diff<-0.05) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:800;"> ▼${Math.abs(diff)}</span>`;
     }
     return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;padding:7px 10px;font-size:13px;">${score}${arrow}</td>`;
   };
 
-  // 수동 입력 셀
-  const manualCell = (score, name, exam, prev) => {
-    const hasScore = score !== null && score !== undefined;
-    const bg    = hasScore ? (score >= 80 ? '#dbeafe' : score >= 60 ? '#e0e7ff' : '#ede9fe') : 'transparent';
-    const color = hasScore ? (score >= 80 ? '#1d4ed8' : score >= 60 ? '#4338ca' : '#7c3aed') : '#94a3b8';
-    let arrow = '';
-    if (hasScore && prev !== null && prev !== undefined) {
-      const diff = +(score - prev).toFixed(1);
-      if (diff > 0.05)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:800;"> ▲${diff}</span>`;
-      else if (diff < -0.05) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:800;"> ▼${Math.abs(diff)}</span>`;
+  const inputCell = (score, isManual, name, period, school, grade) => {
+    const eN=encodeURIComponent(name), eP=encodeURIComponent(period),
+          eS=encodeURIComponent(school), eG=encodeURIComponent(grade);
+    if (score !== null) {
+      const bg    = isManual?(score>=80?'#dbeafe':score>=60?'#e0e7ff':'#ede9fe'):(score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2');
+      const color = isManual?(score>=80?'#1d4ed8':score>=60?'#4338ca':'#7c3aed'):(score>=80?'#15803d':score>=60?'#854d0e':'#dc2626');
+      return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;padding:7px 10px;font-size:13px;cursor:pointer;"
+        onclick="editMatrixCell(this,'${eN}','${eP}','${eS}','${eG}')">
+        ${score}${isManual?'<span style="font-size:9px;display:block;opacity:.6;">✏️</span>':''}</td>`;
     }
-    const encName = encodeURIComponent(name);
-    const encExam = encodeURIComponent(exam);
-    return `<td style="background:${bg};text-align:center;padding:5px 8px;cursor:pointer;"
-      onclick="editCell(this,'${encName}','${encExam}')"
-      data-name="${encName}" data-exam="${encExam}" data-score="${hasScore?score:''}">
-      ${hasScore
-        ? `<span style="color:${color};font-weight:700;font-size:13px;">${score}${arrow}</span><span style="font-size:9px;color:#a5b4fc;display:block;">✏️수동</span>`
-        : `<span style="font-size:11px;color:#cbd5e1;">클릭 입력</span>`}
-    </td>`;
+    return `<td style="text-align:center;padding:5px 8px;cursor:pointer;color:#cbd5e1;font-size:11px;"
+      onclick="editMatrixCell(this,'${eN}','${eP}','${eS}','${eG}')">클릭 입력</td>`;
   };
 
-  // 그룹핑: type+grade(큰 섹션) → school(소섹션)
-  const typeOrder = {'초등':0,'중등':1,'고등':2};
-  const groups = {}; // { 'type_grade': { school: [rows] } }
+  const typeOrder = {'중등':0,'고등':1};
+  const typeEmoji = {'중등':'📚','고등':'🎓'};
+  const groups = {};
   rows.forEach(r => {
-    const key = `${r.type||'기타'}_${r.grade||'미입력'}`;
-    const s   = r.school || '미입력';
-    if (!groups[key]) groups[key] = { type: r.type||'기타', grade: r.grade||'', schools: {} };
-    if (!groups[key].schools[s]) groups[key].schools[s] = [];
-    groups[key].schools[s].push(r);
+    const key = `${r.type||'기타'}_${r.grade||''}`;
+    const sc  = r.school||'미입력';
+    if (!groups[key]) groups[key]={type:r.type||'',grade:r.grade||'',schools:{}};
+    if (!groups[key].schools[sc]) groups[key].schools[sc]=[];
+    groups[key].schools[sc].push(r);
   });
 
-  const typeEmoji = {'초등':'🏫','중등':'📚','고등':'🎓'};
-  const sortedKeys = Object.keys(groups).sort((a,b) => {
-    const [ta,ga] = a.split('_'); const [tb,gb] = b.split('_');
-    const d = (typeOrder[ta]??3) - (typeOrder[tb]??3);
-    return d !== 0 ? d : (parseInt(ga)||0) - (parseInt(gb)||0);
+  const sortedKeys = Object.keys(groups).sort((a,b)=>{
+    const [ta,ga]=a.split('_'), [tb,gb]=b.split('_');
+    const d=(typeOrder[ta]??9)-(typeOrder[tb]??9);
+    return d!==0?d:(parseInt(ga)||0)-(parseInt(gb)||0);
   });
 
-  let html = `<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:max-content;min-width:100%;">
-    <thead>
-      <tr style="background:#1e293b;">
-        <th style="position:sticky;left:0;background:#1e293b;color:white;padding:10px 14px;font-size:12px;min-width:110px;text-align:left;z-index:3;">이름</th>
-        ${exams.map(e=>`<th style="padding:9px 10px;font-size:11px;color:#94a3b8;min-width:100px;font-weight:600;">${shortCol(e)}<br><span style="font-size:9px;color:#64748b;">${e.replace(/^20\d{2}_?/,'').split(/[_ ]/)[0]||''}</span></th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>`;
+  const colHeader = () => `<tr style="background:#1e293b;">
+    <th style="position:sticky;left:0;background:#1e293b;color:#94a3b8;padding:7px 14px;
+      font-size:11px;min-width:110px;text-align:left;z-index:3;font-weight:600;">이름</th>
+    ${PERIODS.map(p=>`<th style="padding:7px 18px;font-size:11px;color:#94a3b8;min-width:110px;font-weight:600;text-align:center;">${p}</th>`).join('')}
+  </tr>`;
 
-  sortedKeys.forEach(key => {
-    const { type, grade, schools } = groups[key];
-    const emoji = typeEmoji[type]||'📌';
-    // 큰 섹션 헤더: 고등부 1학년
-    html += `<tr><td colspan="${exams.length+1}"
-      style="background:#0f172a;color:white;font-weight:800;font-size:13px;
-        padding:9px 14px;letter-spacing:.5px;position:sticky;left:0;">
-      ${emoji} ${type}부 ${grade}
-    </td></tr>`;
+  const getStudentPeriodScores = r => {
+    const ps={};
+    exams.forEach(e=>{
+      const period=examToPeriod(e);
+      if (!period) return;
+      const score=r.scores[e];
+      if (score===undefined) return;
+      const isManual=!!(r.manual&&r.manual[e]);
+      if (!ps[period]||(ps[period].isManual&&!isManual)) ps[period]={score,isManual};
+    });
+    return ps;
+  };
 
-    const sortedSchools = Object.keys(schools).sort((a,b)=>a.localeCompare(b,'ko'));
-    sortedSchools.forEach(school => {
-      // 소섹션 헤더: 형곡고
-      html += `<tr><td colspan="${exams.length+1}"
-        style="background:#334155;color:#e2e8f0;font-size:11px;font-weight:700;
-          padding:5px 14px;border-top:1px solid #475569;">
-        🏫 ${school}
-      </td></tr>`;
+  let html = '<div style="overflow-x:auto;">';
+  sortedKeys.forEach(key=>{
+    const {type,grade,schools}=groups[key];
+    const emoji=typeEmoji[type]||'📌';
+    html += `<table style="border-collapse:collapse;width:max-content;min-width:100%;margin-bottom:20px;">
+      <thead>
+        <tr><td colspan="5" style="background:#0f172a;color:white;font-weight:800;font-size:13px;
+          padding:10px 14px;letter-spacing:.5px;">${emoji} ${type}부 ${grade}</td></tr>
+        ${colHeader()}
+      </thead><tbody>`;
 
-      schools[school].forEach((r, idx) => {
-        let prevScore = null;
-        const cells = exams.map((e, i) => {
-          const score = r.scores[e] ?? null;
-          const isManual = r.manual?.[e] || false;
-          const prev = prevScore;
-          if (score !== null) prevScore = score;
-          else if (i > 0 && !isManual) prevScore = null;
+    Object.keys(schools).sort((a,b)=>a.localeCompare(b,'ko')).forEach(school=>{
+      html+=`<tr><td colspan="5" style="background:#334155;color:#e2e8f0;font-size:11px;
+        font-weight:700;padding:5px 14px;border-top:1px solid #475569;">🏫 ${school}</td></tr>`;
 
-          if (score === null) return manualCell(null, r.name, e, null);
-          if (isManual) return manualCell(score, r.name, e, prev);
-          return autoCell(score, prev);
+      schools[school].forEach((r,idx)=>{
+        const ps=getStudentPeriodScores(r);
+        let prev=null;
+        const cells=PERIODS.map(p=>{
+          const entry=ps[p];
+          const prevScore=prev;
+          if (entry) { prev=entry.score; return entry.isManual?inputCell(entry.score,true,r.name,p,r.school,r.grade):autoCell(entry.score,prevScore); }
+          prev=null;
+          return inputCell(null,false,r.name,p,r.school,r.grade);
         }).join('');
 
-        html += `<tr style="border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        html+=`<tr style="border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
           <td style="position:sticky;left:0;background:white;z-index:1;padding:8px 14px;
             font-size:13px;white-space:nowrap;border-right:1px solid #e5e7eb;">
             <span style="color:#94a3b8;font-size:11px;margin-right:4px;">${idx+1}.</span>${r.name}
-          </td>
-          ${cells}
-        </tr>`;
+          </td>${cells}</tr>`;
       });
     });
+    html+='</tbody></table>';
   });
 
-  html += `</tbody></table></div>
-    <div style="font-size:11px;color:var(--text3);margin-top:10px;">
-      💡 <b style="color:#4338ca;">파란 셀</b> = 수동 입력 점수 · 빈 셀 클릭하면 점수 입력 가능
-    </div>`;
-  wrap.innerHTML = html;
+  html+=`</div><div style="font-size:11px;color:var(--text3);margin-top:10px;">
+    💡 빈 셀 또는 <b style="color:#4338ca;">✏️ 파란 셀</b> 클릭 → 점수 입력/수정 가능
+  </div>`;
+  wrap.innerHTML=html;
 }
 
-// ── 셀 클릭 → 인라인 입력 ──
-function editCell(td, encName, encExam) {
-  const name  = decodeURIComponent(encName);
-  const exam  = decodeURIComponent(encExam);
-  const cur   = td.dataset.score || '';
-  td.innerHTML = `
-    <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
-      <input type="number" value="${cur}" step="0.1" min="0" max="100"
-        style="width:60px;padding:3px 6px;border:1.5px solid var(--blue);border-radius:5px;font-size:12px;text-align:center;"
-        id="cell-input" onkeydown="if(event.key==='Enter') saveCellScore(this,'${encName}','${encExam}',this.closest('td'))">
-      <button onclick="saveCellScore(document.getElementById('cell-input'),'${encName}','${encExam}',this.closest('td'))"
-        style="padding:3px 8px;background:var(--blue);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">저장</button>
-      <button onclick="loadMatrix()"
-        style="padding:3px 6px;background:#f1f5f9;color:#64748b;border:none;border-radius:5px;font-size:11px;cursor:pointer;">✕</button>
-    </div>`;
-  document.getElementById('cell-input').focus();
+function editMatrixCell(td, encName, encPeriod, encSchool, encGrade) {
+  const cur = td.innerText.trim().split('\n')[0] || '';
+  const prevScore = parseFloat(cur) || '';
+  td.innerHTML = `<div style="display:flex;gap:4px;align-items:center;justify-content:center;padding:4px;">
+    <input type="number" value="${prevScore}" step="0.1" min="0" max="100"
+      style="width:60px;padding:3px 6px;border:1.5px solid var(--blue);border-radius:5px;font-size:12px;text-align:center;"
+      id="cell-inp" onkeydown="if(event.key==='Enter') saveMatrixCell(this,'${encName}','${encPeriod}','${encSchool}','${encGrade}',this.closest('td'))">
+    <button onclick="saveMatrixCell(document.getElementById('cell-inp'),'${encName}','${encPeriod}','${encSchool}','${encGrade}',this.closest('td'))"
+      style="padding:3px 8px;background:var(--blue);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">저장</button>
+    <button onclick="loadMatrix()" style="padding:3px 6px;background:#f1f5f9;color:#64748b;border:none;border-radius:5px;font-size:11px;cursor:pointer;">✕</button>
+  </div>`;
+  document.getElementById('cell-inp').focus();
 }
 
-async function saveCellScore(input, encName, encExam, td) {
-  const name  = decodeURIComponent(encName);
-  const exam  = decodeURIComponent(encExam);
-  const score = parseFloat(input.value);
+async function saveMatrixCell(input, encName, encPeriod, encSchool, encGrade, td) {
+  const name   = decodeURIComponent(encName);
+  const period = decodeURIComponent(encPeriod);
+  const school = decodeURIComponent(encSchool);
+  const grade  = decodeURIComponent(encGrade);
+  const score  = parseFloat(input.value);
   if (isNaN(score)) { toast('올바른 점수를 입력하세요.'); return; }
+  const examId = `manual_${school}_${grade}_${period.replace(/ /g,'')}`;
   td.innerHTML = '<span style="font-size:11px;color:var(--text3);">저장 중...</span>';
   try {
-    await call('save_manual_score', { studentName: name, examId: exam, score });
-    toast(`${name} - ${exam.replace(/^20\d{2}_?/,'').replace(/_/g,' ')} 저장 완료!`);
+    await call('save_manual_score', { studentName: name, examId, score });
+    toast(`${name} · ${period} 저장 완료!`);
     loadMatrix();
   } catch(e) { toast('저장 실패: '+e.message); loadMatrix(); }
 }
+
 
 // ── 초기화 ──
 window.onload = async () => {
