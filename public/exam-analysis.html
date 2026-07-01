@@ -738,9 +738,15 @@ function renderReport(d) {
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
 
-  // 총평 자동 생성 (비어있으면)
-  const autoComment = d.commonComment || autoGenComment(d);
-  document.getElementById('r-common').textContent = autoComment;
+  // 총평 AI 생성
+  const rCommon = document.getElementById('r-common');
+  const teacherCommon = d.commonComment || '';
+  rCommon.textContent = '총평 생성 중...';
+  rCommon.style.color = 'var(--text3)';
+  generateCommonComment(d, teacherCommon).then(text => {
+    rCommon.textContent = text;
+    rCommon.style.color = '';
+  });
 
   // 단원별 분포 요약 테이블
   const totalQ = (d.unitValues||[]).reduce((a,b)=>a+b,0)||1;
@@ -815,15 +821,46 @@ function closeReport(){
   document.getElementById('main-wrap').style.display='block';
 }
 
-// ── 총평 자동 생성 (등록된 총평 없을 때) ──
+// ── 시험 총평 AI 생성 ──
+async function generateCommonComment(d, teacherComment) {
+  const totalQ  = (d.unitValues||[]).reduce((a,b)=>a+b,0) || 0;
+  const unitStr = (d.unitLabels||[]).map((l,i)=>`${l} ${d.unitValues[i]}문항`).join(', ');
+  const areaStr = (d.areaLabels||[]).map((l,i)=>`${l} ${d.areaValues[i]}문항`).join(', ');
+
+  const prompt = teacherComment
+    ? `채움영어학원 선생님이 작성한 시험 총평을 아래 시험 구성 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 선생님 글의 핵심 내용과 톤을 유지하면서 출제 데이터를 자연스럽게 녹여주세요.
+
+시험명: ${d.examId || ''}
+전체 문항: ${totalQ}문항
+단원별: ${unitStr}
+영역별: ${areaStr}
+선생님 작성 총평: ${teacherComment}
+
+[규칙] 3~5문장, 학부모가 읽기 좋은 따뜻하고 전문적인 어투, 마크다운 없이 본문만`
+    : `채움영어학원 아래 시험의 전체 총평을 3~5문장으로 작성해 주세요.
+
+시험명: ${d.examId || ''}
+전체 문항: ${totalQ}문항
+단원별 출제: ${unitStr}
+영역별 출제: ${areaStr}
+
+[규칙] 시험의 구성 특징(단원 배분, 영역 비중)을 자연스럽게 짚어주면서 학습 방향을 안내하는 어투, 학부모 공통 전달용, 마크다운 없이 본문만`;
+
+  try {
+    const d2 = await call('generate_common_comment', { prompt });
+    return d2.text || autoGenComment(d);
+  } catch {
+    return autoGenComment(d);
+  }
+}
+
+// ── 총평 폴백 (API 실패 시) ──
 function autoGenComment(d) {
   if (!d.unitLabels?.length) return '';
-  const total = d.unitValues.reduce((a,b)=>a+b,0);
+  const total = (d.unitValues||[]).reduce((a,b)=>a+b,0);
   const unitSummary = d.unitLabels.map((l,i)=>`${l}(${d.unitValues[i]}문항)`).join(', ');
   const areaSummary = d.areaLabels?.map((l,i)=>`${l} ${d.areaValues[i]}문항`).join(', ') || '';
-  const topArea = d.areaLabels?.[d.areaValues?.indexOf(Math.max(...(d.areaValues||[0])))] || '';
-  const topAreaPct = Math.round((Math.max(...(d.areaValues||[0]))/total)*100);
-  return `전체 ${total}문항 중 단원별 배분은 ${unitSummary}입니다. 출제 영역은 ${areaSummary}으로 구성되었으며, ${topArea} 영역이 ${topAreaPct}%로 가장 높은 비중을 차지합니다.`;
+  return `전체 ${total}문항은 ${unitSummary}으로 구성되었습니다. 출제 영역은 ${areaSummary}로 이루어졌습니다.`;
 }
 
 // ── AI 피드백 (선생님 피드백 칸에 통합) ──
