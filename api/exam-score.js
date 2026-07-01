@@ -270,7 +270,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── 시험 총평 AI 생성 ──
+    // ── 시험 총평 AI 생성 (생성만, 저장은 시험지 저장 버튼으로) ──
     if (action === 'generate_common_comment') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
       const { prompt } = req.body;
