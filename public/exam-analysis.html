@@ -470,50 +470,94 @@ function renderMatrix(d) {
   const rows  = d.rows  || [];
   if (!rows.length) { wrap.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
 
-  // 시험명 짧게 표시 (2026_형곡고_1_1_기말 → 형곡고1-1 기말)
-  const shortName = s => s
-    .replace(/^20\d{2}_/, '')
-    .replace(/_/g, ' ')
-    .replace(/(\d+) (\d+)/, '$1-$2');
+  const shortName = s => s.replace(/^20\d{2}_?/,'').replace(/_/g,' ').replace(/(\d+) (\d+)/,'$1-$2');
 
   const scoreCell = (score, prev) => {
-    if (score === null) return '<td style="background:#f8f9fa;color:#ccc;text-align:center;">—</td>';
-    const bg = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef9c3' : '#fee2e2';
+    if (score === null || score === undefined)
+      return `<td style="text-align:center;color:#d1d5db;font-size:12px;">—</td>`;
+    const bg    = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef9c3' : '#fee2e2';
     const color = score >= 80 ? '#15803d' : score >= 60 ? '#854d0e' : '#dc2626';
     let arrow = '';
     if (prev !== null && prev !== undefined) {
-      const diff = score - prev;
-      if (diff > 0.1)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:700;"> ▲${diff.toFixed(1)}</span>`;
-      else if (diff < -0.1) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:700;"> ▼${Math.abs(diff).toFixed(1)}</span>`;
+      const diff = +(score - prev).toFixed(1);
+      if (diff > 0.05)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:800;"> ▲${diff}</span>`;
+      else if (diff < -0.05) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:800;"> ▼${Math.abs(diff)}</span>`;
     }
     return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;
-      padding:8px 10px;white-space:nowrap;cursor:pointer;font-size:13px;"
-      onclick="openReport('${score}')">
+      padding:7px 10px;white-space:nowrap;font-size:13px;">
       ${score}${arrow}
     </td>`;
   };
 
-  const thead = `<tr>
-    <th style="position:sticky;left:0;background:#f8f9fa;z-index:2;padding:8px 12px;font-size:12px;min-width:80px;">이름</th>
-    ${exams.map(e=>`<th style="padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap;min-width:90px;">${shortName(e)}</th>`).join('')}
+  const theadRow = `<tr style="background:#f1f5f9;">
+    <th style="position:sticky;left:0;background:#f1f5f9;z-index:3;padding:8px 14px;font-size:12px;min-width:80px;text-align:left;">이름</th>
+    ${exams.map(e=>`<th style="padding:8px 10px;font-size:11px;color:var(--text2);min-width:110px;font-weight:700;">${shortName(e)}</th>`).join('')}
   </tr>`;
 
-  const tbody = rows.map(r => {
-    const cells = exams.map((e, i) => {
-      const prev = i > 0 ? r.scores[exams[i-1]] : null;
-      return scoreCell(r.scores[e] ?? null, prev);
-    }).join('');
-    return `<tr>
-      <td style="position:sticky;left:0;background:white;z-index:1;padding:8px 12px;font-weight:600;font-size:13px;white-space:nowrap;border-right:1px solid #e5e7eb;">${r.name}</td>
-      ${cells}
+  // 그룹핑: 중등/고등 → 학교 → 학년
+  const typeOrder = {'초등':0,'중등':1,'고등':2};
+  const typeLabel = {'초등':'🏫 초등부','중등':'📚 중등부','고등':'🎓 고등부'};
+
+  // 그룹 구조 생성
+  const groups = {}; // { type: { school: { grade: [rows] } } }
+  rows.forEach(r => {
+    const t = r.type || '기타';
+    const s = r.school || '미입력';
+    const g = r.grade || '미입력';
+    if (!groups[t]) groups[t] = {};
+    if (!groups[t][s]) groups[t][s] = {};
+    if (!groups[t][s][g]) groups[t][s][g] = [];
+    groups[t][s][g].push(r);
+  });
+
+  const sortedTypes = Object.keys(groups).sort((a,b)=>(typeOrder[a]??9)-(typeOrder[b]??9));
+
+  let tbody = '';
+  sortedTypes.forEach(type => {
+    // 구분 헤더 (중등부 / 고등부)
+    tbody += `<tr>
+      <td colspan="${exams.length+1}" style="background:#1e293b;color:white;font-weight:800;
+        font-size:12px;padding:7px 14px;letter-spacing:1px;position:sticky;left:0;">
+        ${typeLabel[type]||type}
+      </td>
     </tr>`;
-  }).join('');
+
+    const schools = Object.keys(groups[type]).sort((a,b)=>a.localeCompare(b,'ko'));
+    schools.forEach(school => {
+      const grades = Object.keys(groups[type][school]).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+      grades.forEach((grade, gi) => {
+        // 학교+학년 소헤더
+        tbody += `<tr>
+          <td colspan="${exams.length+1}" style="background:#e2e8f0;color:#475569;font-weight:700;
+            font-size:11px;padding:5px 14px;border-top:1px solid #cbd5e1;">
+            🏫 ${school} · ${grade}
+          </td>
+        </tr>`;
+
+        groups[type][school][grade].forEach(r => {
+          const cells = exams.map((e,i) => {
+            const prev = i > 0 ? (r.scores[exams[i-1]] ?? null) : null;
+            return scoreCell(r.scores[e] ?? null, prev);
+          }).join('');
+          tbody += `<tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="position:sticky;left:0;background:white;z-index:1;padding:7px 14px;
+              font-weight:600;font-size:13px;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              ${r.name}
+            </td>
+            ${cells}
+          </tr>`;
+        });
+      });
+    });
+  });
 
   wrap.innerHTML = `
-    <table style="border-collapse:collapse;width:max-content;min-width:100%;">
-      <thead style="background:#f8f9fa;border-bottom:2px solid var(--border);">${thead}</thead>
-      <tbody>${tbody}</tbody>
-    </table>`;
+    <div style="overflow-x:auto;">
+      <table style="border-collapse:collapse;width:max-content;min-width:100%;">
+        <thead>${theadRow}</thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>`;
 }
 
 // ── 초기화 ──
