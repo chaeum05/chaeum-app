@@ -722,14 +722,23 @@ async function loadStudentList() {
     const d = await call('get_submitted_students', {examId:currentExam});
     const ss = d.students||[];
     if(!ss.length){list.innerHTML='<div class="empty">제출 없음</div>';return;}
-    list.innerHTML = ss.map(n=>`
-      <div class="si">
-        <div class="si-name">${n}</div>
-        <div class="si-btns">
-          <button class="sib sib-view" onclick="openReport('${n}')">📊 보기</button>
-          <button class="sib sib-edit" onclick="editStudent('${n}')">✏️ 수정</button>
-        </div>
-      </div>`).join('');
+    list.innerHTML = ss.map(s=>{
+      const name = typeof s === 'string' ? s : s.name;
+      const score = s.score !== undefined ? `<span style="font-size:13px;font-weight:800;color:var(--blue);margin-left:6px;">${s.score}점</span>` : '';
+      const fbBadge = s.hasFeedback
+        ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:6px;">💬 피드백</span>`
+        : `<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;">미작성</span>`;
+      return `
+        <div class="si">
+          <div class="si-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
+            ${name}${score}${fbBadge}
+          </div>
+          <div class="si-btns">
+            <button class="sib sib-view" onclick="openReport('${name}')">📊 보기</button>
+            <button class="sib sib-edit" onclick="editStudent('${name}')">✏️ 수정</button>
+          </div>
+        </div>`;
+    }).join('');
   } catch(e){list.innerHTML='<div class="empty">로드 실패</div>';}
 }
 
@@ -931,7 +940,7 @@ async function saveFeedback() {
     btn.textContent = '✅ 저장됨';
     btn.style.background = '#15803d';
     toast(`${reportData.studentName} 피드백 저장 완료!`);
-    setTimeout(() => { btn.disabled=false; btn.textContent='💾 피드백 저장'; }, 2000);
+    setTimeout(() => { btn.disabled=false; btn.textContent='💾 피드백 저장'; loadStudentList(); }, 2000);
   } catch(e) {
     toast('저장 실패: ' + e.message);
     btn.disabled=false; btn.textContent='💾 피드백 저장';
