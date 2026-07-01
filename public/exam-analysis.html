@@ -434,10 +434,18 @@ async function onExamChange() {
   currentExam = document.getElementById('examSel').value;
   if (!currentExam) { currentQs=[]; return; }
   try {
-    const d = await call('get_exam_details', {examId: currentExam});
+    const d = await call('get_exam_details', { examId: currentExam });
     currentQs = d.questions || [];
     renderQList();
     loadStudentList();
+
+    // 시험지 등록/수정 탭에도 자동 반영
+    document.getElementById('examTbody').innerHTML = '';
+    currentQs.forEach(q => addExamRow(
+      q.numStr || q.num || '', q.unit||'', q.area||'', q.type||'', q.score||0
+    ));
+    document.getElementById('examName').value   = currentExam;
+    document.getElementById('examCommon').value = currentQs[0]?.common || '';
   } catch(e) { toast('문항 로드 실패: '+e.message); }
 }
 
@@ -571,16 +579,21 @@ async function loadExamForEdit() {
   const examId = document.getElementById('examSel').value || document.getElementById('examName').value.trim();
   if (!examId) { toast('시험을 선택하거나 시험명을 입력하세요.'); return; }
   try {
-    const d = await call('get_exam_details', {examId});
+    const d = await call('get_exam_details', { examId });
     const qs = d.questions || [];
     if (!qs.length) { toast('등록된 문항 없음'); return; }
-    // 테이블 초기화 후 채우기
     document.getElementById('examTbody').innerHTML = '';
-    qs.forEach(q => addExamRow(q.num, q.unit, q.area, q.type, q.score));
-    document.getElementById('examName').value = examId;
+    qs.forEach(q => addExamRow(
+      q.numStr || q.num || '',   // ← 실제 표시 번호 (서술형1 등 포함)
+      q.unit  || '',
+      q.area  || '',
+      q.type  || '',
+      q.score || 0
+    ));
+    document.getElementById('examName').value   = examId;
     document.getElementById('examCommon').value = qs[0]?.common || '';
     toast(`"${examId}" 불러오기 완료 (${qs.length}문항)`);
-  } catch(e) { toast('불러오기 실패: '+e.message); }
+  } catch(e) { toast('불러오기 실패: ' + e.message); }
 }
 
 // ── 성적 입력 ──
