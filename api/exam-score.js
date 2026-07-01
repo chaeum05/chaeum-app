@@ -200,16 +200,32 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 제출 학생 목록 (점수 + 피드백 여부 포함) ──
     if (action === 'get_submitted_students') {
       const { examId } = body;
-      const rows = await queryDB(DB_RESULTS, {
-        property: '시험명', rich_text: { equals: examId }
-      });
-      const names = rows
-        .map(p => p.properties['학생이름']?.rich_text?.[0]?.text?.content || '')
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, 'ko'));
-      return res.status(200).json({ ok: true, students: names });
+      const [rRows, qRows] = await Promise.all([
+        queryDB(DB_RESULTS,   { property: '시험명', rich_text: { equals: examId } }),
+        queryDB(DB_QUESTIONS, { property: '시험명', title:     { equals: examId } })
+      ]);
+
+      const questions = qRows.map(p => ({
+        num:   p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
+        score: p.properties['배점']?.number || 0,
+      }));
+
+      const students = rRows.map(p => {
+        const name     = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+        const feedback = p.properties['피드백']?.rich_text?.[0]?.text?.content || '';
+        const extra    = p.properties['추가점수']?.number || 0;
+        const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+        let answers = {};
+        try { answers = JSON.parse(answersJson); } catch {}
+        let score = extra;
+        questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
+        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0 };
+      }).filter(s => s.name).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+
+      return res.status(200).json({ ok: true, students });
     }
 
     // ── 기존 데이터 불러오기 ──
