@@ -270,6 +270,21 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── 시험 총평 AI 생성 ──
+    if (action === 'generate_common_comment') {
+      if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
+      const { prompt } = req.body;
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:400, messages:[{role:'user',content:prompt}] })
+      });
+      const data = await r.json();
+      const text = data.content?.[0]?.text?.trim();
+      if (!text) throw new Error('Claude 응답 오류');
+      return res.status(200).json({ ok: true, text });
+    }
+
     if (action === 'generate_ai_feedback') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
       const { studentName, examId, totalScore, incorrectList, teacherMemo, hasTeacherMemo } = req.body;
