@@ -179,6 +179,7 @@ textarea.fi{resize:vertical;min-height:72px;}
   <nav class="hdr-nav">
     <button class="hn active" id="hn-exam" onclick="switchPage('exam')">📋 시험지 등록</button>
     <button class="hn" id="hn-score" onclick="switchPage('score')">✏️ 성적 입력</button>
+    <button class="hn" id="hn-matrix" onclick="switchPage('matrix')">📊 성적표</button>
   </nav>
 </header>
 <div class="loading-bar" id="lbar"></div>
@@ -302,6 +303,30 @@ textarea.fi{resize:vertical;min-height:72px;}
       </div>
     </div>
 
+    <!-- ③ 성적표 페이지 -->
+    <div class="page" id="page-matrix">
+      <div class="card" style="overflow-x:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">📊 누적 성적표</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="matrix-filter" placeholder="이름 검색" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Noto Sans KR',sans-serif;width:120px;" oninput="filterMatrix()">
+            <button class="btn btn-ghost" onclick="loadMatrix()" style="font-size:12px;">🔄 새로고침</button>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;display:flex;gap:14px;">
+          <span><span style="background:#dcfce7;padding:1px 7px;border-radius:4px;">●</span> 80점 이상</span>
+          <span><span style="background:#fef9c3;padding:1px 7px;border-radius:4px;">●</span> 60~79점</span>
+          <span><span style="background:#fee2e2;padding:1px 7px;border-radius:4px;">●</span> 60점 미만</span>
+          <span style="color:#16a34a;font-weight:700;">▲</span> 상승 &nbsp; <span style="color:#dc2626;font-weight:700;">▼</span> 하락
+        </div>
+
+        <div id="matrix-wrap">
+          <div class="empty">성적표 탭을 처음 열면 자동으로 불러와요</div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 </div>
@@ -413,6 +438,82 @@ function switchPage(tab) {
   document.getElementById('page-'+tab).classList.add('active');
   document.querySelectorAll('.hn').forEach(b=>b.classList.remove('active'));
   document.getElementById('hn-'+tab).classList.add('active');
+  if (tab === 'matrix') loadMatrix();
+}
+
+// ── 누적 성적표 ──
+let matrixData = null;
+
+async function loadMatrix() {
+  const wrap = document.getElementById('matrix-wrap');
+  wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
+  try {
+    const d = await call('get_score_matrix');
+    matrixData = d;
+    renderMatrix(d);
+  } catch(e) { wrap.innerHTML = `<div class="empty" style="color:var(--burgundy);">오류: ${e.message}</div>`; }
+}
+
+function filterMatrix() {
+  if (!matrixData) return;
+  const q = document.getElementById('matrix-filter').value.trim().toLowerCase();
+  const filtered = {
+    ...matrixData,
+    rows: matrixData.rows.filter(r => r.name.toLowerCase().includes(q))
+  };
+  renderMatrix(filtered);
+}
+
+function renderMatrix(d) {
+  const wrap = document.getElementById('matrix-wrap');
+  const exams = d.exams || [];
+  const rows  = d.rows  || [];
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+
+  // 시험명 짧게 표시 (2026_형곡고_1_1_기말 → 형곡고1-1 기말)
+  const shortName = s => s
+    .replace(/^20\d{2}_/, '')
+    .replace(/_/g, ' ')
+    .replace(/(\d+) (\d+)/, '$1-$2');
+
+  const scoreCell = (score, prev) => {
+    if (score === null) return '<td style="background:#f8f9fa;color:#ccc;text-align:center;">—</td>';
+    const bg = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef9c3' : '#fee2e2';
+    const color = score >= 80 ? '#15803d' : score >= 60 ? '#854d0e' : '#dc2626';
+    let arrow = '';
+    if (prev !== null && prev !== undefined) {
+      const diff = score - prev;
+      if (diff > 0.1)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:700;"> ▲${diff.toFixed(1)}</span>`;
+      else if (diff < -0.1) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:700;"> ▼${Math.abs(diff).toFixed(1)}</span>`;
+    }
+    return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;
+      padding:8px 10px;white-space:nowrap;cursor:pointer;font-size:13px;"
+      onclick="openReport('${score}')">
+      ${score}${arrow}
+    </td>`;
+  };
+
+  const thead = `<tr>
+    <th style="position:sticky;left:0;background:#f8f9fa;z-index:2;padding:8px 12px;font-size:12px;min-width:80px;">이름</th>
+    ${exams.map(e=>`<th style="padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap;min-width:90px;">${shortName(e)}</th>`).join('')}
+  </tr>`;
+
+  const tbody = rows.map(r => {
+    const cells = exams.map((e, i) => {
+      const prev = i > 0 ? r.scores[exams[i-1]] : null;
+      return scoreCell(r.scores[e] ?? null, prev);
+    }).join('');
+    return `<tr>
+      <td style="position:sticky;left:0;background:white;z-index:1;padding:8px 12px;font-weight:600;font-size:13px;white-space:nowrap;border-right:1px solid #e5e7eb;">${r.name}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table style="border-collapse:collapse;width:max-content;min-width:100%;">
+      <thead style="background:#f8f9fa;border-bottom:2px solid var(--border);">${thead}</thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
 }
 
 // ── 초기화 ──
