@@ -325,7 +325,7 @@ export default async function handler(req, res) {
         DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
       ]);
 
-      // 학생 정보 맵 (이름 → type/grade/school)
+      // 학생 정보 맵
       const studentInfoMap = {};
       sRows.forEach(p => {
         const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
@@ -346,41 +346,97 @@ export default async function handler(req, res) {
       });
 
       // 시험명 목록 (생성일 순)
-      const exams = [...new Set(
+      const autoExams = [...new Set(
         qRows
           .sort((a,b) => new Date(a.created_time||0) - new Date(b.created_time||0))
           .map(p => p.properties['시험명']?.title?.[0]?.text?.content || '')
       )].filter(Boolean);
 
-      // 학생별 시험 점수 계산
+      // 학생별 점수 (자동 + 수동)
       const studentMap = {};
+      const manualExams = new Set();
+
       rRows.forEach(p => {
         const name  = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
         const exam  = p.properties['시험명']?.rich_text?.[0]?.text?.content || '';
         const extra = p.properties['추가점수']?.number || 0;
         const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
         if (!name || !exam) return;
+
         let answers = {};
         try { answers = JSON.parse(answersJson); } catch {}
-        let score = extra;
-        (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
+
+        let score, isManual = false;
+        if (answers._manual) {
+          score = answers._total || 0;
+          isManual = true;
+          manualExams.add(exam);
+        } else {
+          score = extra;
+          (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
+        }
+
         if (!studentMap[name]) {
           const info = studentInfoMap[name] || {};
-          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {} };
+          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
         }
         studentMap[name].scores[exam] = Number(score.toFixed(1));
+        if (isManual) studentMap[name].manual[exam] = true;
       });
+
+      // 점수 없는 학생도 포함 (등원 일정 DB 전체 기준)
+      Object.entries(studentInfoMap).forEach(([name, info]) => {
+        if (!studentMap[name]) {
+          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
+        }
+      });
+
+      // 전체 시험 목록 = 수동 시험 + 자동 시험 (시간순)
+      const manualExamList = [...manualExams].filter(e => !autoExams.includes(e)).sort();
+      const exams = [...manualExamList, ...autoExams];
 
       const rows = Object.values(studentMap).sort((a,b) => {
         const to = {'초등':0,'중등':1,'고등':2};
         const ta = to[a.type]??3, tb = to[b.type]??3;
         if (ta !== tb) return ta - tb;
-        if (a.school !== b.school) return a.school.localeCompare(b.school,'ko');
         const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
         if (ga !== gb) return ga - gb;
+        if (a.school !== b.school) return a.school.localeCompare(b.school,'ko');
         return a.name.localeCompare(b.name,'ko');
       });
       return res.status(200).json({ ok: true, exams, rows });
+    }
+
+    // ── 수동 점수 저장 ──
+    if (action === 'save_manual_score') {
+      const { studentName, examId, score } = body;
+      const existing = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (existing.length) {
+        await nFetch(`https://api.notion.com/v1/pages/${existing[0].id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ properties: {
+            '유형': { rich_text: [{ text: { content: JSON.stringify({ _manual: true, _total: Number(score) }) } }] },
+            '추가점수': { number: 0 }
+          }})
+        });
+      } else {
+        await nFetch('https://api.notion.com/v1/pages', {
+          method: 'POST',
+          body: JSON.stringify({ parent: { database_id: DB_RESULTS }, properties: {
+            '기록ID':   { title:     [{ text: { content: `${studentName}_${examId}_manual` } }] },
+            '학생이름': { rich_text: [{ text: { content: studentName } }] },
+            '시험명':   { rich_text: [{ text: { content: examId } }] },
+            '유형':     { rich_text: [{ text: { content: JSON.stringify({ _manual: true, _total: Number(score) }) } }] },
+            '추가점수': { number: 0 },
+          }})
+        });
+      }
+      return res.status(200).json({ ok: true });
     }
 
     // ── 시험 총평 AI 생성 (생성만, 저장은 시험지 저장 버튼으로) ──
