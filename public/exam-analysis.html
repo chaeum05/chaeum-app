@@ -374,6 +374,8 @@ textarea.fi{resize:vertical;min-height:72px;}
     <button class="rb rb-black" onclick="saveImg()">📸 카톡 이미지</button>
     <button class="rb rb-blue" onclick="window.print()">📄 PDF</button>
     <button class="rb rb-ai" id="aiBtn" onclick="genAI()">✨ AI 피드백</button>
+    <button class="rb" id="saveFbBtn" onclick="saveFeedback()"
+      style="background:#16a34a;color:white;">💾 피드백 저장</button>
     <button class="rb rb-back" onclick="closeReport()">← 목록</button>
   </div>
 </div>
@@ -768,6 +770,14 @@ function renderReport(d) {
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
 
+  // 피드백 저장 버튼 상태 초기화
+  const saveFbBtn = document.getElementById('saveFbBtn');
+  if (saveFbBtn) {
+    saveFbBtn.textContent = d.teacherFeedback ? '✅ 저장됨' : '💾 피드백 저장';
+    saveFbBtn.style.background = d.teacherFeedback ? '#15803d' : '#16a34a';
+    saveFbBtn.disabled = false;
+  }
+
   // 총평 — DB에 저장된 것만 표시
   const rCommon = document.getElementById('r-common');
   rCommon.textContent = d.commonComment || '(총평이 작성되지 않았습니다. 시험지 등록 탭에서 작성해주세요.)';
@@ -903,6 +913,28 @@ async function genCommonDraft() {
     toast('AI 오류: ' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = '✨ AI 초안';
+  }
+}
+
+// ── 피드백 저장 ──
+async function saveFeedback() {
+  if (!reportData) return;
+  const btn = document.getElementById('saveFbBtn');
+  const feedback = document.getElementById('r-teacher').textContent.trim();
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    await call('save_feedback', {
+      studentName: reportData.studentName,
+      examId:      reportData.examId,
+      feedback,
+    });
+    btn.textContent = '✅ 저장됨';
+    btn.style.background = '#15803d';
+    toast(`${reportData.studentName} 피드백 저장 완료!`);
+    setTimeout(() => { btn.disabled=false; btn.textContent='💾 피드백 저장'; }, 2000);
+  } catch(e) {
+    toast('저장 실패: ' + e.message);
+    btn.disabled=false; btn.textContent='💾 피드백 저장';
   }
 }
 
