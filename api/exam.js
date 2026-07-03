@@ -42,6 +42,7 @@ export default async function handler(req, res) {
         id:            p.id,
         school:        p.properties['학교명']?.title?.[0]?.text?.content || '',
         grade:         p.properties['학년']?.select?.name || '',
+        semester:      p.properties['학기']?.select?.name || '',
         examType:      p.properties['시험종류']?.select?.name || '',
         periodStart:   p.properties['시험기간_시작']?.date?.start || '',
         periodEnd:     p.properties['시험기간_종료']?.date?.start || '',
@@ -61,11 +62,12 @@ export default async function handler(req, res) {
 
     // ── 학교 시험정보 저장/수정 ──
     if (action === 'save_exam') {
-      const { id, school, grade, examType, periodStart, periodEnd, examDate,
+      const { id, school, grade, semester, examType, periodStart, periodEnd, examDate,
               attendDay, textbookRange, subTextRange, mockRange, memo } = req.body;
       const props = {
         '학교명':      { title:     [{ text: { content: school || '' } }] },
         '학년':        { select:    grade    ? { name: grade }    : null },
+        '학기':        { select:    semester ? { name: semester } : null },
         '시험종류':    { select:    examType ? { name: examType } : null },
         '등원일':      { rich_text: [{ text: { content: attendDay     || '' } }] },
         '교과서_범위': { rich_text: [{ text: { content: textbookRange || '' } }] },
