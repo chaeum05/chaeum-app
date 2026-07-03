@@ -521,6 +521,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <button class="exam-tab"        id="exam-school-tab-high" onclick="filterExamSchool('high')">고등</button>
             <button class="exam-tab"        id="exam-school-tab-mid"  onclick="filterExamSchool('mid')">중등</button>
           </div>
+          <select id="exam-semester-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--burgundy);border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;color:var(--burgundy);">
+            <option value="2026-1학기">2026-1학기</option>
+            <option value="2026-2학기">2026-2학기</option>
+            <option value="2027-1학기">2027-1학기</option>
+            <option value="2027-2학기">2027-2학기</option>
+            <option value="">전체 학기</option>
+          </select>
           <select id="exam-type-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none;">
             <option value="">전체 시험종류</option>
             <option value="1차 지필">1차 지필</option>
@@ -589,6 +596,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <div class="modal-field" style="flex:2;">
             <label>학교명</label>
             <input type="text" id="ef-school" placeholder="예: 형곡고등학교">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>학기</label>
+            <select id="ef-semester">
+              <option value="2026-1학기">2026-1학기</option>
+              <option value="2026-2학기">2026-2학기</option>
+              <option value="2027-1학기">2027-1학기</option>
+              <option value="2027-2학기">2027-2학기</option>
+            </select>
           </div>
           <div class="modal-field" style="flex:1;">
             <label>학년</label>
@@ -1790,12 +1806,37 @@ function getMemo(name, type, grade) {
 
 function renderAttGrid() {
   const grid = document.getElementById('att-grid');
-  const regular = attStudents.filter(s => !s.isMakeup);
-  const makeup  = attStudents.filter(s => s.isMakeup);
+  const date = document.getElementById('att-date').value;
 
-  if (!regular.length && !makeup.length) {
+  // ── 시험기간 학교+학년 파악 ──
+  const examGroups = new Set(); // "형곡고_2학년" 형태
+  if (date && typeof examsCache !== 'undefined') {
+    examsCache.forEach(e => {
+      if (!e.periodStart || !e.periodEnd) return;
+      const s = new Date(e.periodStart + 'T00:00:00');
+      const en = new Date(e.periodEnd + 'T00:00:00');
+      const sel = new Date(date + 'T00:00:00');
+      if (sel >= s && sel <= en) examGroups.add(`${e.school}_${e.grade || ''}`);
+    });
+  }
+
+  const isExamStudent = s => {
+    if (!s.school || examGroups.size === 0) return false;
+    return [...examGroups].some(key => {
+      const [school, grade] = key.split('_');
+      const schoolMatch = school.includes(s.school) || s.school.includes(school);
+      const gradeMatch  = !grade || !s.grade || s.grade === grade;
+      return schoolMatch && gradeMatch;
+    });
+  };
+
+  const regular = attStudents.filter(s => !s.isMakeup && !isExamStudent(s));
+  const exam    = attStudents.filter(s => !s.isMakeup &&  isExamStudent(s));
+  const makeup  = attStudents.filter(s =>  s.isMakeup);
+
+  if (!regular.length && !exam.length && !makeup.length) {
     grid.innerHTML = '<div class="loading-spinner" style="padding:20px">오늘 등원 예정 학생이 없습니다</div>';
-    updateSummary();
+    updateSummary(exam);
     return;
   }
 
@@ -1806,11 +1847,11 @@ function renderAttGrid() {
     return ta-tb || ga-gb || a.name.localeCompare(b.name,'ko');
   });
 
-  const renderRows = (students, isMakeup) => {
+  const renderRows = (students, isMakeup, isExam) => {
     let html = '', lastKey = null;
     sortStudents(students).forEach(s => {
-      const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
-      const typeLabel  = s.type==='초등' ? '초등' : s.type==='중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+      const sectionKey = s.type === '초등' ? '초등' : `${s.type}-${s.grade}`;
+      const typeLabel  = s.type === '초등' ? '초등' : s.type === '중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
       if (sectionKey !== lastKey) {
         lastKey = sectionKey;
         html += `<div class="att-type-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
@@ -1818,42 +1859,76 @@ function renderAttGrid() {
       const st   = getStatus(s.name, s.type, s.grade);
       const memo = getMemo(s.name, s.type, s.grade);
       const enc  = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
-      const delBtn = isMakeup
-        ? `<button class="amini" style="background:#fdecea;color:var(--burgundy);padding:3px 6px;" onclick="removeMakeupFromGrid('${s.name}','${s.type}','${s.grade}')" title="보강 목록에서 제거">🗑️</button>`
-        : '';
-      // 보강 섹션 출석 버튼은 '보강완료'로 저장
-      const attendAction = isMakeup
-        ? `doAttend('${s.name}','${s.type}','${s.grade}','보강완료')`
-        : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
-      const isPresent = isMakeup ? (st==='보강완료') : (st==='출석');
-      html += `
-        <div class="att-row s-${st||''}" id="arow-${enc}">
-          <span class="att-row-name">${s.name}</span>
-          <span class="att-row-meta">${s.grade}</span>
-          <div class="att-row-btns">
-            <button class="amini p ${isPresent?'on':''}" onclick="${attendAction}">✅ ${isMakeup?'보강완료':'출석'}</button>
-            <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
-            <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
-            ${delBtn}
-          </div>
-          <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
-            onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
-        </div>`;
+
+      if (isExam) {
+        // 시험기간 학생: 시험기간보강 버튼만
+        const isOn = st === '시험기간보강';
+        html += `
+          <div class="att-row${isOn ? ' s-출석' : ''}" id="arow-${enc}">
+            <span class="att-row-name">${s.name}</span>
+            <span class="att-row-meta" style="color:var(--text3);font-size:11px;">${s.school||''}</span>
+            <div class="att-row-btns">
+              <button class="amini p ${isOn?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','시험기간보강')" style="${isOn?'':'opacity:.7'}">
+                📚 ${isOn?'보강출석':'보강왔어요'}
+              </button>
+              <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+            </div>
+            <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
+              onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
+          </div>`;
+      } else {
+        const delBtn = isMakeup
+          ? `<button class="amini" style="background:#fdecea;color:var(--burgundy);padding:3px 6px;" onclick="removeMakeupFromGrid('${s.name}','${s.type}','${s.grade}')" title="보강 목록에서 제거">🗑️</button>`
+          : '';
+        const attendAction = isMakeup
+          ? `doAttend('${s.name}','${s.type}','${s.grade}','보강완료')`
+          : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
+        const isPresent = isMakeup ? (st==='보강완료') : (st==='출석');
+        html += `
+          <div class="att-row s-${st||''}" id="arow-${enc}">
+            <span class="att-row-name">${s.name}</span>
+            <span class="att-row-meta">${s.grade}</span>
+            <div class="att-row-btns">
+              <button class="amini p ${isPresent?'on':''}" onclick="${attendAction}">✅ ${isMakeup?'보강완료':'출석'}</button>
+              <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
+              <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+              ${delBtn}
+            </div>
+            <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
+              onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
+          </div>`;
+      }
     });
     return html;
   };
 
   let html = '';
+
+  // 정규 수업
   if (regular.length) {
-    html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 4px 4px;border-bottom:2px solid var(--dark);margin-bottom:2px;">📚 정규 수업 (${regular.length}명)</div>`;
-    html += renderRows(regular, false);
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;padding:6px 4px 4px;border-bottom:2px solid var(--dark);margin-bottom:2px;">
+      📚 정규 수업 <span style="font-weight:400;color:var(--text3)">(${regular.length}명)</span>
+    </div>`;
+    html += renderRows(regular, false, false);
   }
+
+  // 시험기간 학생
+  if (exam.length) {
+    const examSchools = [...new Set(exam.map(s => s.school).filter(Boolean))].join(' · ');
+    html += `<div style="font-size:12px;font-weight:700;color:var(--burgundy);letter-spacing:1px;padding:12px 4px 4px;border-bottom:2px solid #f9a8d4;margin-bottom:2px;">
+      📝 시험 기간 <span style="font-weight:400;font-size:11px;color:var(--text3)">${examSchools} · ${exam.length}명 · 오면 버튼 터치</span>
+    </div>`;
+    html += renderRows(exam, false, true);
+  }
+
+  // 보강
   if (makeup.length) {
-    html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;text-transform:uppercase;padding:12px 4px 4px;border-bottom:2px solid #d4af37;margin-bottom:2px;">🔄 보강 수업 (${makeup.length}명)</div>`;
-    html += renderRows(makeup, true);
+    html += `<div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px;padding:12px 4px 4px;border-bottom:2px solid #d4af37;margin-bottom:2px;">🔄 보강 수업 (${makeup.length}명)</div>`;
+    html += renderRows(makeup, true, false);
   }
+
   grid.innerHTML = html;
-  updateSummary();
+  updateSummary(exam);
 }
 
 // 조용한 백그라운드 갱신 (입력 중인 메모 건드리지 않음)
@@ -1889,7 +1964,7 @@ async function silentRefresh() {
     }
 
     renderMakeupList();
-    updateSummary();
+    renderAttGrid(); // 시험기간 분리 반영
 
     // 요일 뱃지 잠깐 초록색으로 → 갱신됐음을 살짝 표시
     const badge = document.getElementById('att-day-badge');
@@ -1900,24 +1975,27 @@ async function silentRefresh() {
   } catch(e) {} // 백그라운드 갱신 실패는 무시
 }
 
-function updateSummary() {
-  const total = attStudents.length;
+function updateSummary(examStudents) {
+  const examNames = new Set((examStudents||[]).map(s=>s.name));
+  const regular   = attStudents.filter(s => !s.isMakeup && !examNames.has(s.name));
+  const total     = regular.length;
 
-  // 학생별 최신 상태 추출 (이름 기준 중복 제거)
   const statusMap = {};
   attRecords.forEach(r => { if(r.name) statusMap[r.name] = r.status; });
 
-  const present   = Object.values(statusMap).filter(s=>s==='출석').length;
-  const absent    = Object.values(statusMap).filter(s=>s==='결석').length;
+  const present   = regular.filter(s => statusMap[s.name]==='출석').length;
+  const absent    = regular.filter(s => statusMap[s.name]==='결석').length;
   const makeup    = Object.values(statusMap).filter(s=>['보강','보강완료'].includes(s)).length;
-  const unchecked = total - Object.keys(statusMap).length;
+  const examOn    = (examStudents||[]).filter(s => statusMap[s.name]==='시험기간보강').length;
+  const unchecked = total - Object.keys(statusMap).filter(n => regular.find(s=>s.name===n)).length;
 
   document.getElementById('att-summary').innerHTML =
     `<div>전체: <b>${total}명</b></div>
      <div style="color:#2d8a4e">✅ 출석: <b>${present}명</b></div>
      <div style="color:var(--burgundy)">❌ 결석: <b>${absent}명</b></div>
      <div style="color:#92400e">🔄 보강: <b>${makeup}명</b></div>
-     <div style="color:var(--text3)">미체크: <b>${unchecked}명</b></div>`;
+     ${examStudents?.length ? `<div style="color:#7c3aed">📝 시험기간: <b>${examOn}/${examStudents.length}명</b></div>` : ''}
+     <div style="color:var(--text3)">미체크: <b>${Math.max(0,unchecked)}명</b></div>`;
 }
 
 // 수동 학생 추가
@@ -2648,8 +2726,10 @@ async function loadExams() {
 
 function renderExams() {
   const typeFilter = document.getElementById('exam-type-filter').value;
+  const semFilter  = document.getElementById('exam-semester-filter')?.value || '';
   let filtered = examsCache;
 
+  if (semFilter)  filtered = filtered.filter(e => (e.semester || '2026-1학기') === semFilter);
   if (examSchoolFilter === 'high') filtered = filtered.filter(e => e.school.includes('고'));
   if (examSchoolFilter === 'mid')  filtered = filtered.filter(e => e.school.includes('중'));
   if (typeFilter) filtered = filtered.filter(e => e.examType === typeFilter);
@@ -2774,6 +2854,7 @@ function openExamForm(id) {
     const e = examsCache.find(x => x.id === id);
     if (!e) return;
     document.getElementById('ef-school').value       = e.school;
+    document.getElementById('ef-semester').value     = e.semester || '2026-1학기';
     document.getElementById('ef-grade').value        = e.grade;
     document.getElementById('ef-type').value         = e.examType;
     document.getElementById('ef-period-start').value = e.periodStart;
@@ -2801,6 +2882,7 @@ async function saveExam() {
     const d = await api('exam', {
       action: 'save_exam', id: id || undefined,
       school, grade:         document.getElementById('ef-grade').value,
+      semester:              document.getElementById('ef-semester').value,
       examType:              document.getElementById('ef-type').value,
       periodStart:           document.getElementById('ef-period-start').value,
       periodEnd:             document.getElementById('ef-period-end').value,
