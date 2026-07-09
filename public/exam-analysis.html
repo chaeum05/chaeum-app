@@ -923,10 +923,31 @@ async function loadStudentList() {
   try {
     const d = await call('get_submitted_students', {examId:currentExam});
     const ss = d.students||[];
-    if(!ss.length){list.innerHTML='<div class="empty">제출 없음</div>';return;}
-    list.innerHTML = ss.map(s=>{
-      const name = typeof s === 'string' ? s : s.name;
-      const score = s.score !== undefined ? `<span style="font-size:13px;font-weight:800;color:var(--blue);margin-left:6px;">${s.score}점</span>` : '';
+    const missing = d.missing||[];
+    const total = d.totalTarget || ss.length;
+
+    if(!ss.length && !missing.length){list.innerHTML='<div class="empty">제출 없음</div>';return;}
+
+    const pct = total ? Math.round(ss.length/total*100) : 0;
+
+    // 상단 진행률 요약
+    let html = `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:700;color:var(--text);">제출 현황</span>
+          <span style="font-size:12px;font-weight:800;color:${pct===100?'#16a34a':'var(--blue)'};">
+            ${ss.length} / ${total}명 (${pct}%)
+          </span>
+        </div>
+        <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${pct===100?'#16a34a':'var(--blue)'};transition:.3s;"></div>
+        </div>
+      </div>`;
+
+    // 제출 완료
+    const submittedCards = ss.map(s=>{
+      const name = s.name;
+      const score = s.score!==undefined&&s.score!==null ? `<span style="font-size:13px;font-weight:800;color:var(--blue);margin-left:6px;">${s.score}점</span>` : '';
       const fbBadge = s.hasFeedback
         ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:6px;">💬 피드백</span>`
         : `<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;">미작성</span>`;
@@ -941,7 +962,35 @@ async function loadStudentList() {
           </div>
         </div>`;
     }).join('');
+
+    html += submittedCards;
+
+    // 미제출 섹션
+    if (missing.length) {
+      html += `<div style="font-size:11px;font-weight:800;color:#dc2626;margin:14px 0 8px;padding:5px 10px;background:#fef2f2;border-radius:6px;">
+        ⚠️ 미제출 ${missing.length}명
+      </div>`;
+      html += missing.map(s=>`
+        <div class="si" style="opacity:.75;">
+          <div class="si-name" style="color:#94a3b8;">${s.name}</div>
+          <div class="si-btns">
+            <button class="sib sib-edit" style="background:#fee2e2;color:#dc2626;" onclick="startInputFor('${s.name}')">+ 성적 입력</button>
+          </div>
+        </div>`).join('');
+    }
+
+    list.innerHTML = html;
   } catch(e){list.innerHTML='<div class="empty">로드 실패</div>';}
+}
+
+// 미제출 학생 → 성적 입력 화면으로 이동
+function startInputFor(name) {
+  switchPage('score');
+  document.getElementById('studentName').value = name;
+  currentQs.forEach(q=>setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
+  updateScorePreview();
+  document.getElementById('studentName').scrollIntoView({behavior:'smooth', block:'center'});
+  toast(`${name} 성적 입력을 시작하세요`);
 }
 
 async function editStudent(name) {
