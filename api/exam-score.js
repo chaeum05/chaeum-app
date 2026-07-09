@@ -200,12 +200,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    // ── 제출 학생 목록 (점수 + 피드백 여부 포함) ──
+    // ── 제출 학생 목록 (점수 + 피드백 + 미제출 대상 포함) ──
     if (action === 'get_submitted_students') {
       const { examId } = body;
-      const [rRows, qRows] = await Promise.all([
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const [rRows, qRows, sRows] = await Promise.all([
         queryDB(DB_RESULTS,   { property: '시험명', rich_text: { equals: examId } }),
-        queryDB(DB_QUESTIONS, { property: '시험명', title:     { equals: examId } })
+        queryDB(DB_QUESTIONS, { property: '시험명', title:     { equals: examId } }),
+        DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
       ]);
 
       const questions = qRows.map(p => ({
@@ -213,7 +215,8 @@ export default async function handler(req, res) {
         score: p.properties['배점']?.number || 0,
       }));
 
-      const students = rRows.map(p => {
+      // 제출한 학생
+      const submitted = rRows.map(p => {
         const name     = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
         const feedback = p.properties['피드백']?.rich_text?.[0]?.text?.content || '';
         const extra    = p.properties['추가점수']?.number || 0;
@@ -221,11 +224,44 @@ export default async function handler(req, res) {
         let answers = {};
         try { answers = JSON.parse(answersJson); } catch {}
         let score = extra;
-        questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
-        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0 };
-      }).filter(s => s.name).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+        if (answers._manual) score = answers._total || 0;
+        else questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
+        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, submitted: true };
+      }).filter(s => s.name);
 
-      return res.status(200).json({ ok: true, students });
+      const submittedNames = new Set(submitted.map(s => s.name));
+
+      // 시험명에서 학교/학년 파싱 → 대상 학생 추출
+      // 예: "2026 형곡고 1학년 1학기 기말고사" → 학교키워드 형곡고, 학년 1학년
+      const gradeMatch = examId.match(/([1-3])학년/);
+      const targetGrade = gradeMatch ? gradeMatch[1] + '학년' : '';
+
+      // 시험명에서 학교명 후보 추출 (등원 DB 학교와 부분매칭)
+      let missing = [];
+      if (sRows.length && targetGrade) {
+        sRows.forEach(p => {
+          const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
+          const grade  = p.properties['학년']?.select?.name || '';
+          const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
+          if (!name || !school) return;
+          if (grade !== targetGrade) return;
+          // 학교명이 시험명에 포함되는지 (부분매칭)
+          const schoolCore = school.replace(/(고등학교|중학교|고|중)$/,'');
+          if (!examId.includes(school) && !examId.includes(schoolCore)) return;
+          if (submittedNames.has(name)) return;
+          missing.push({ name, score: null, hasFeedback: false, submitted: false });
+        });
+      }
+
+      submitted.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      missing.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+
+      return res.status(200).json({
+        ok: true,
+        students: submitted,
+        missing,
+        totalTarget: submitted.length + missing.length
+      });
     }
 
     // ── 기존 데이터 불러오기 ──
