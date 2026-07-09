@@ -231,23 +231,34 @@ export default async function handler(req, res) {
 
       const submittedNames = new Set(submitted.map(s => s.name));
 
-      // 시험명에서 학교/학년 파싱 → 대상 학생 추출
-      // 예: "2026 형곡고 1학년 1학기 기말고사" → 학교키워드 형곡고, 학년 1학년
+      // 시험명에서 학교/학년/학교급 파싱 → 대상 학생 추출
+      // 예: "2026 형곡고 1학년 1학기 기말고사" → 학년 1학년, 학교급 고
       const gradeMatch = examId.match(/([1-3])학년/);
       const targetGrade = gradeMatch ? gradeMatch[1] + '학년' : '';
 
-      // 시험명에서 학교명 후보 추출 (등원 DB 학교와 부분매칭)
+      // 시험명의 학교급 판별 (고 vs 중) — "형곡고", "형곡중" 구분
+      // 학교명+급 패턴을 직접 추출 (예: 형곡고, 구미여중)
+      const isHighExam = /[가-힣]+(고|고등학교)(\s|$|\d)/.test(examId) || examId.includes('고 ') || /[가-힣]+고\d?학년/.test(examId);
+      const isMidExam  = /[가-힣]+(중|중학교)(\s|$|\d)/.test(examId) || examId.includes('중 ') || /[가-힣]+중\d?학년/.test(examId);
+
       let missing = [];
       if (sRows.length && targetGrade) {
         sRows.forEach(p => {
           const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
           const grade  = p.properties['학년']?.select?.name || '';
+          const type   = p.properties['구분']?.select?.name || '';
           const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
           if (!name || !school) return;
           if (grade !== targetGrade) return;
-          // 학교명이 시험명에 포함되는지 (부분매칭)
-          const schoolCore = school.replace(/(고등학교|중학교|고|중)$/,'');
-          if (!examId.includes(school) && !examId.includes(schoolCore)) return;
+
+          // 학교급 확인: 시험이 '고'면 학생도 고등, '중'이면 중등
+          if (isHighExam && !isMidExam && type !== '고등') return;
+          if (isMidExam && !isHighExam && type !== '중등') return;
+
+          // 학교명 매칭: 풀네임(형곡고등학교)/축약형(형곡고) 모두 대응
+          const schoolShort = school.replace(/고등학교/,'고').replace(/중학교/,'중');
+          if (!examId.includes(school) && !examId.includes(schoolShort)) return;
+
           if (submittedNames.has(name)) return;
           missing.push({ name, score: null, hasFeedback: false, submitted: false });
         });
