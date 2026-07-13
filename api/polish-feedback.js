@@ -8,10 +8,53 @@ export default async function handler(req, res) {
   const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
   if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키가 설정되지 않았습니다.' });
 
-  const { notes, name, grade, type, attendanceInfo } = req.body;
-  if (!notes || !notes.length) return res.status(400).json({ error: '메모가 없습니다.' });
+  const { notes, name, grade, type, attendanceInfo, newbieMode, attitude, adapt, learning, note } = req.body;
 
   const typeLabel = type === '초등' ? '초등학생' : type === '중등' ? '중학생' : '고등학생';
+
+  // ── 신규생 첫 피드백 모드 ──
+  if (newbieMode) {
+    try {
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: `당신은 채움영어학원의 원장입니다. 새로 등록한 학생의 첫 수업 후, 학부모에게 상담 전화 대신 보낼 따뜻한 카카오톡 메시지를 작성해주세요.
+
+학생: ${name} (${typeLabel})
+[오늘 첫 수업 관찰]
+- 수업 태도: ${attitude}
+- 분위기 적응: ${adapt}
+- 학습 상태: ${learning}${note ? `\n- 강점/특이사항: ${note}` : ''}
+
+[작성 규칙]
+- 첫인사로 시작 ("어머니, 안녕하세요. 채움영어입니다" 등)
+- 첫 수업을 잘 마쳤다는 안심의 메시지
+- 위 관찰 내용(태도·적응·학습)을 자연스럽게 녹여 3~5문장
+- 앞으로 세심하게 지도하겠다는 다짐
+- 궁금한 점 문의 안내
+- 마지막 줄에 "형곡동은 채움입니다." 서명
+- 따뜻하고 진심 어린 어투, 존댓말 격식체
+- 과장된 칭찬보다 구체적 관찰 중심
+- 마크다운 기호 없이 본문만`
+          }]
+        })
+      });
+      const claudeData = await claudeRes.json();
+      const feedback = claudeData.content?.[0]?.text?.trim();
+      if (!feedback) throw new Error('Claude 응답 오류');
+      return res.status(200).json({ ok: true, feedback });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── 일반 보고서 모드 ──
+  if (!notes || !notes.length) return res.status(400).json({ error: '메모가 없습니다.' });
 
   // 출결 정보 텍스트 구성
   let attendanceText = '';
