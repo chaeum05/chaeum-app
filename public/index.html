@@ -456,6 +456,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="panel-title">학습 보고서 생성</div>
       <div class="panel-sub">노션 기록을 불러와 AI가 피드백을 자동으로 다듬습니다</div>
       <div class="report-controls">
+        <!-- 신규생 모드 토글 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;">
+          <input type="checkbox" id="rep-newbie" onchange="toggleNewbieMode()" style="width:16px;height:16px;cursor:pointer;accent-color:#16a34a;">
+          <label for="rep-newbie" style="font-size:13px;font-weight:700;color:#15803d;cursor:pointer;margin:0;">🌱 신규생 첫 피드백 모드</label>
+          <span style="font-size:11px;color:#4ade80;margin-left:auto;">오늘 수업 태도·적응 중심</span>
+        </div>
+
         <!-- 학생 빠른 선택 -->
         <div style="margin-bottom:14px;">
           <label style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:7px;">학생 빠른 선택</label>
@@ -476,7 +483,42 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             </select>
           </div>
         </div>
-        <div class="form-row" style="margin-bottom:0">
+
+        <!-- 신규생 관찰 입력 (신규생 모드에서만 표시) -->
+        <div id="newbie-fields" style="display:none;margin-bottom:12px;padding:12px;background:#fafffe;border:1px solid #d1fae5;border-radius:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:11px;">😊 수업 태도</label>
+              <select id="nb-attitude" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Pretendard',sans-serif;">
+                <option value="적극적이고 열의 있는">적극적</option>
+                <option value="차분하고 성실한">보통/차분</option>
+                <option value="아직 조심스러운">소극적</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:11px;">🤝 분위기 적응</label>
+              <select id="nb-adapt" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Pretendard',sans-serif;">
+                <option value="친구들과 자연스럽게 어울리며 잘 적응하는">잘 어울림</option>
+                <option value="무난하게 적응해가는">무난</option>
+                <option value="아직 낯설어하지만 조금씩 편안해지는">낯설어함</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:11px;">📚 학습 상태</label>
+              <select id="nb-learning" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Pretendard',sans-serif;">
+                <option value="수업 내용을 잘 따라오는">잘 따라옴</option>
+                <option value="차근차근 익혀가는">보통</option>
+                <option value="다소 어려워하지만 노력하는">어려워함</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:11px;">💬 강점 / 특이사항 (선택)</label>
+            <input type="text" id="nb-note" placeholder="예: 단어 암기력이 좋음, 발표를 좋아함" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;">
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:0" id="rep-date-row">
           <div class="form-group"><label>시작일</label><input type="date" id="rep-start"></div>
           <div class="form-group"><label>종료일</label><input type="date" id="rep-end"></div>
         </div>
@@ -1039,15 +1081,67 @@ function smartRange(arr) {
 
 let lastData = null;
 
+// ── 신규생 모드 토글 ──
+function toggleNewbieMode() {
+  const on = document.getElementById('rep-newbie').checked;
+  document.getElementById('newbie-fields').style.display = on ? 'block' : 'none';
+  document.getElementById('rep-date-row').style.display  = on ? 'none' : 'flex';
+  // 신규생 모드는 오늘 날짜로 고정
+  if (on) {
+    const today = localDateStr(new Date());
+    document.getElementById('rep-start').value = today;
+    document.getElementById('rep-end').value   = today;
+  }
+}
+
 async function generateReport(withAI = false) {
   const name  = document.getElementById('rep-name').value.trim();
   const type  = document.getElementById('rep-type').value;
-  const start = document.getElementById('rep-start').value;
-  const end   = document.getElementById('rep-end').value;
+  const isNewbie = document.getElementById('rep-newbie').checked;
   if (!name) { toast('학생 이름을 입력해주세요.'); return; }
 
   const status = document.getElementById('rep-status');
   status.className = 'status-msg loading';
+
+  // ── 신규생 첫 피드백 모드 ──
+  if (isNewbie) {
+    status.textContent = withAI ? '⏳ 신규생 적응 피드백 생성 중...' : '⏳ 리포트 구성 중...';
+    const attitude = document.getElementById('nb-attitude').value;
+    const adapt    = document.getElementById('nb-adapt').value;
+    const learning = document.getElementById('nb-learning').value;
+    const note     = document.getElementById('nb-note').value.trim();
+    const grade    = type; // 신규생은 간단히 구분만
+
+    try {
+      let feedback;
+      if (withAI) {
+        const r = await api('polish-feedback', {
+          newbieMode: true,
+          name, type,
+          attitude, adapt, learning, note,
+        });
+        feedback = r.feedback;
+      } else {
+        // AI 없이 조합
+        feedback = `${name} 학생이 오늘 첫 수업을 잘 마쳤습니다. 수업 태도는 ${attitude} 모습이었고, ${adapt} 모습이 보기 좋았습니다. 학습 면에서는 ${learning} 모습을 보였습니다.${note ? ' '+note+' 등의 강점도 눈에 띄었습니다.' : ''} 앞으로도 세심하게 지도하겠습니다.`;
+      }
+
+      const today = localDateStr(new Date());
+      lastData = { name, type, grade, start: today, end: today, feedback, isNewbie:true,
+                   words:[], grammars:[], readings:[], listenings:[], writings:[] };
+      renderNewbieReport({ name, type, feedback });
+      status.className = 'status-msg success';
+      status.textContent = '✅ 신규생 첫 피드백 생성 완료';
+    } catch(e) {
+      status.className = 'status-msg error';
+      status.textContent = '❌ ' + e.message;
+    }
+    return;
+  }
+
+  // ── 일반 보고서 (기존) ──
+  const start = document.getElementById('rep-start').value;
+  const end   = document.getElementById('rep-end').value;
   status.textContent = withAI ? '⏳ 데이터 조회 중... AI 피드백 생성 중...' : '⏳ 노션 데이터 조회 중...';
 
   try {
@@ -1071,6 +1165,33 @@ async function generateReport(withAI = false) {
     status.textContent = '❌ ' + e.message;
   }
 }
+
+// ── 신규생 리포트 렌더 ──
+function renderNewbieReport({ name, type, feedback }) {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
+  const isHigh = type === '고등';
+  const accentClass = isHigh ? 'high' : 'mid';
+
+  const html = `
+    <div class="rc-header-${accentClass}">
+      <div class="rc-academy">Chaeum English Academy</div>
+      <div class="rc-report-title">🌱 신규생 첫 만남 리포트</div>
+      <div class="rc-student-${accentClass}">${name} 학생</div>
+    </div>
+    <div class="rc-section">
+      <div class="rc-section-title-${accentClass}">📅 첫 수업일 : <span class="rc-date-${accentClass}">${dateStr}</span></div>
+    </div>
+    <div class="rc-section">
+      <div class="rc-section-title-${accentClass}">💬 오늘의 관찰 및 전달사항</div>
+      <div class="rc-feedback-${accentClass}" contenteditable="true">${feedback}</div>
+    </div>
+    <div class="rc-footer">형곡동은 채움입니다 · 채움영어학원</div>
+  `;
+  document.getElementById('reportCard').innerHTML = html;
+  document.getElementById('report-actions').classList.add('visible');
+}
+
 
 function renderReport({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
   const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
@@ -1175,10 +1296,17 @@ function saveReportImage() {
 }
 
 function copyReportText() {
+  const feedback = document.querySelector('.rc-feedback-high, .rc-feedback-mid')?.innerText || '';
+
+  // 신규생 리포트는 피드백 자체가 완성된 카톡 메시지
+  if (lastData?.isNewbie) {
+    navigator.clipboard.writeText(feedback).then(() => toast('카톡 메시지가 복사되었습니다'));
+    return;
+  }
+
   const name     = lastData ? `${lastData.grade} ${lastData.name} 학생` : '';
   const period   = lastData ? `${lastData.start.replace(/-/g,'.')} ~ ${lastData.end.replace(/-/g,'.')}` : '';
   const contents = document.querySelector('.rc-content-box')?.innerText || '';
-  const feedback = document.querySelector('.rc-feedback-high, .rc-feedback-mid')?.innerText || '';
   const text = `📚 [채움영어 학습 보고]\n\n학생: ${name}\n기간: ${period}\n\n✅ 학습 내용\n${contents}\n\n✅ 원장 피드백\n${feedback}\n\n감사합니다! 😊`;
   navigator.clipboard.writeText(text).then(() => toast('카톡용 텍스트가 복사되었습니다'));
 }
