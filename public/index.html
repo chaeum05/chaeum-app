@@ -1188,7 +1188,9 @@ function renderNewbieReport({ name, type, feedback }) {
     </div>
     <div class="rc-footer">형곡동은 채움입니다 · 채움영어학원</div>
   `;
-  document.getElementById('reportCard').innerHTML = html;
+  const card = document.getElementById('reportCard');
+  card.innerHTML = html;
+  card.style.display = 'block';
   document.getElementById('report-actions').classList.add('visible');
 }
 
