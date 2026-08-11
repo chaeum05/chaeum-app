@@ -46,11 +46,12 @@ export default async function handler(req, res) {
     const scheduleData = await scheduleRes.json();
 
     const students = (scheduleData.results || []).map(p => ({
-      id: p.id,
-      name:  p.properties['학생이름']?.title?.[0]?.text?.content || '',
-      type:  p.properties['구분']?.select?.name || '',
-      grade: p.properties['학년']?.select?.name || '',
-      isMakeup: false,  // 정규 수업
+      id:     p.id,
+      name:   p.properties['학생이름']?.title?.[0]?.text?.content || '',
+      type:   p.properties['구분']?.select?.name || '',
+      grade:  p.properties['학년']?.select?.name || '',
+      school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
+      isMakeup: false,
     })).filter(s => s.name);
 
     // 2. 오늘 날짜 출결 기록 조회 (timezone 안전하게 on_or_after + on_or_before)
@@ -122,9 +123,30 @@ export default async function handler(req, res) {
     });
     const scheduledData = await scheduledRes.json();
 
+    // ── 30일 지난 보강 기록 자동 삭제 (보강/보강완료 모두) ──
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30일 전
+    const toArchive = (scheduledData.results || []).filter(p => {
+      const md = p.properties['날짜']?.date?.start || '';
+      if (!md) return false;
+      return new Date(md) < cutoff;
+    });
+    // 백그라운드 삭제 (응답 지연 방지를 위해 최대 25건씩)
+    if (toArchive.length) {
+      await Promise.all(toArchive.slice(0, 25).map(p =>
+        fetch(`https://api.notion.com/v1/pages/${p.id}`, {
+          method: 'PATCH', headers,
+          body: JSON.stringify({ archived: true })
+        }).catch(() => {})
+      ));
+    }
+    // 삭제된 건 이후 로직에서 제외
+    const archivedIds = new Set(toArchive.map(p => p.id));
+
     // 보강 기록 인덱싱
     const scheduledByName = {};
     (scheduledData.results || []).forEach(p => {
+      if (archivedIds.has(p.id)) return; // 삭제 대상 제외
       const n      = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
       const ad     = p.properties['원래날짜']?.date?.start || '';
       const md     = p.properties['날짜']?.date?.start || '';
