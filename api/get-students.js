@@ -5,12 +5,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
-  const DB_SCHEDULE  = process.env.NOTION_DB_SCHEDULE; // 등원 일정 DB (이름/구분/학년/요일)
-  const DB_STUDENTS  = process.env.NOTION_DB_STUDENTS; // 학생 목록 DB (학교 정보)
+  const DB_SCHEDULE  = process.env.NOTION_DB_SCHEDULE;
+  const DB_STUDENTS  = process.env.NOTION_DB_STUDENTS;
 
-  if (!NOTION_TOKEN || !DB_SCHEDULE) {
+  if (!NOTION_TOKEN || !DB_SCHEDULE)
     return res.status(500).json({ error: '환경변수를 확인해주세요.' });
-  }
 
   const headers = {
     'Authorization': `Bearer ${NOTION_TOKEN}`,
@@ -35,16 +34,25 @@ export default async function handler(req, res) {
   };
 
   try {
-    // 1. 등원 일정 DB → 이름, 구분, 학년, 학교(있으면)
+    // 1. 등원 일정 DB → 이름/구분/학년/요일/학교
     const scheduleRows = await queryAll(DB_SCHEDULE);
-    const students = scheduleRows.map(p => ({
-      name:   p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '',
-      type:   p.properties['구분']?.select?.name || '',
-      grade:  p.properties['학년']?.select?.name || '',
-      school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
-    })).filter(s => s.name);
+    const students = scheduleRows.map(p => {
+      const days = [];
+      if (p.properties['월']?.checkbox) days.push('월');
+      if (p.properties['화']?.checkbox) days.push('화');
+      if (p.properties['수']?.checkbox) days.push('수');
+      if (p.properties['목']?.checkbox) days.push('목');
+      if (p.properties['금']?.checkbox) days.push('금');
+      return {
+        name:   p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '',
+        type:   p.properties['구분']?.select?.name || '',
+        grade:  p.properties['학년']?.select?.name || '',
+        school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
+        days,
+      };
+    }).filter(s => s.name);
 
-    // 2. 학생 목록 DB → 학교 정보로 보완 (등원 일정 DB에 학교가 없는 학생 보완)
+    // 2. 학생 목록 DB → 학교 보완
     if (DB_STUDENTS) {
       try {
         const studentRows = await queryAll(DB_STUDENTS);
@@ -54,19 +62,14 @@ export default async function handler(req, res) {
           const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
           if (name && school) schoolMap[name] = school;
         });
-        // 등원 일정 DB에 학교가 없는 경우 학생 목록 DB 학교로 채움
-        students.forEach(s => {
-          if (!s.school && schoolMap[s.name]) s.school = schoolMap[s.name];
-        });
+        students.forEach(s => { if (!s.school && schoolMap[s.name]) s.school = schoolMap[s.name]; });
       } catch {}
     }
 
     const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
     students.sort((a, b) => {
-      const ta = typeOrder[a.type] ?? 3;
-      const tb = typeOrder[b.type] ?? 3;
-      const ga = parseInt(a.grade) || 0;
-      const gb = parseInt(b.grade) || 0;
+      const ta = typeOrder[a.type] ?? 3, tb = typeOrder[b.type] ?? 3;
+      const ga = parseInt(a.grade) || 0, gb = parseInt(b.grade) || 0;
       return ta - tb || ga - gb || a.name.localeCompare(b.name, 'ko');
     });
 
