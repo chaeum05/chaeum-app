@@ -894,6 +894,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         </div>
         <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
         <button onclick="resetReportStatus()" style="padding:7px 14px;background:#fdecea;color:var(--burgundy);border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔁 전체 초기화</button>
+
+        <!-- 그룹 방식 (주간=초중등 전용) -->
+        <div id="rs-group-toggle" style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-left:auto;">
+          <button class="rs-tab active" id="rs-group-grade" onclick="setRsGroupMode('grade')">학년별</button>
+          <button class="rs-tab"        id="rs-group-day"   onclick="setRsGroupMode('day')">📆 마지막 수업요일별</button>
+        </div>
       </div>
 
       <!-- 진척도 바 -->
@@ -1471,6 +1477,7 @@ function selectRecordStudent() {
 
 // ── 보고서 현황 ──
 let rsCurrentTab  = 'weekly';
+let rsGroupMode   = 'grade';
 let rsStatusCache = {}; // 탭 전환 시 캐시 (새로고침하면 초기화 → 노션에서 다시 로드)
 let rsStatusMap   = {};
 let rsStudents    = [];
@@ -1547,6 +1554,18 @@ function switchReportTab(tab) {
   rsCurrentTab = tab;
   document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
   document.getElementById('rs-tab-monthly').classList.toggle('active', tab==='monthly');
+
+  // 요일별 그룹은 주간(초·중등)에서만
+  const toggle = document.getElementById('rs-group-toggle');
+  if (tab==='weekly') {
+    toggle.style.display = 'flex';
+  } else {
+    toggle.style.display = 'none';
+    rsGroupMode = 'grade'; // 월간은 학년별 고정
+    document.getElementById('rs-group-grade').classList.add('active');
+    document.getElementById('rs-group-day').classList.remove('active');
+  }
+
   const today = localDateStr(new Date());
   document.getElementById('rs-base-date').value =
     tab==='weekly' ? getWeekMonday(today) : getMonthFirst(today);
@@ -1603,6 +1622,15 @@ async function loadReportStatus() {
   }
 }
 
+function setRsGroupMode(mode) {
+  rsGroupMode = mode;
+  document.getElementById('rs-group-grade').classList.toggle('active', mode==='grade');
+  document.getElementById('rs-group-day').classList.toggle('active', mode==='day');
+  const baseDate   = document.getElementById('rs-base-date').value;
+  const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
+  renderReportStatusGrid(baseDate, reportType);
+}
+
 function renderReportStatusGrid(baseDate, reportType) {
   const grid = document.getElementById('rs-grid');
   const prog = document.getElementById('rs-progress');
@@ -1650,26 +1678,77 @@ function renderReportStatusGrid(baseDate, reportType) {
     </div>`;
 
   // 그룹별 렌더
-  const typeOrder = {'초등':0,'중등':1,'고등':2};
-  const sorted = [...rsStudents].sort((a,b) => {
-    const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
-    const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
-    return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
-  });
+  const dayOrder = {'월':0,'화':1,'수':2,'목':3,'금':4};
+  const lastDay = s => {
+    if (!s.days || !s.days.length) return null;
+    return s.days.reduce((a,b) => (dayOrder[b]??-1) > (dayOrder[a]??-1) ? b : a);
+  };
 
   let html='', lastKey=null;
-  sorted.forEach(s => {
-    const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
-    const typeLabel  = s.type==='초등' ? '초등' : s.type==='중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
-    if (sectionKey!==lastKey) {
-      lastKey=sectionKey;
-      html+=`<div class="rs-section-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
-    }
 
+  if (rsGroupMode === 'day') {
+    // ── 마지막 수업 요일별 그룹 (목/금 강조, 나머지는 기타) ──
+    const groupOf = s => {
+      const ld = lastDay(s);
+      if (ld === '목') return '목';
+      if (ld === '금') return '금';
+      return '기타';
+    };
+    const grpOrder = {'목':0,'금':1,'기타':2};
+
+    const sortedByDay = [...rsStudents].sort((a,b) => {
+      const ga = grpOrder[groupOf(a)], gb = grpOrder[groupOf(b)];
+      if (ga !== gb) return ga - gb;
+      const to={'초등':0,'중등':1,'고등':2};
+      return (to[a.type]??3)-(to[b.type]??3) || (parseInt(a.grade)||0)-(parseInt(b.grade)||0) || a.name.localeCompare(b.name,'ko');
+    });
+
+    const grpLabel = {
+      '목': {emoji:'🌳', text:'목요일 마지막 수업', bg:'#ecfdf5'},
+      '금': {emoji:'⭐', text:'금요일 마지막 수업', bg:'#eff6ff'},
+      '기타': {emoji:'📌', text:'그 외 (월·화·수 마지막)', bg:'var(--surface2)'},
+    };
+
+    sortedByDay.forEach(s => {
+      const grp = groupOf(s);
+      if (grp !== lastKey) {
+        lastKey = grp;
+        const info = grpLabel[grp];
+        const cnt = sortedByDay.filter(x => groupOf(x) === grp).length;
+        html += `<div class="rs-section-header" style="background:${info.bg};">
+          ${info.emoji} ${info.text}
+          <span style="font-weight:400;color:var(--text3);font-size:11px;margin-left:6px;">${cnt}명</span>
+        </div>`;
+      }
+      html += renderRsRow(s);
+    });
+  } else {
+    // ── 학년별 그룹 (기존) ──
+    const typeOrder = {'초등':0,'중등':1,'고등':2};
+    const sorted = [...rsStudents].sort((a,b) => {
+      const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
+      const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
+      return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
+    });
+    sorted.forEach(s => {
+      const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
+      const typeLabel  = s.type==='초등' ? '초등' : s.type==='중등' ? `중등 ${s.grade}` : `고등 ${s.grade}`;
+      if (sectionKey!==lastKey) {
+        lastKey=sectionKey;
+        html+=`<div class="rs-section-header"><span class="type-badge tb-${s.type}">${s.type}</span>${typeLabel}</div>`;
+      }
+      html += renderRsRow(s);
+    });
+  }
+
+  grid.innerHTML = html;
+}
+
+// 보고서 현황 행 렌더 (공통)
+function renderRsRow(s) {
     const key    = `${s.name}_${s.type}_${s.grade}`;
     const status = rsStatusMap[key]?.status || '미작성';
 
-    // 상태 단계: 미작성 → 기록완료 → 생성완료 → 전송완료
     let rowCls = 'rs-row';
     if (status==='기록완료') rowCls += ' done-record';
     if (status==='생성완료') rowCls += ' done-report';
@@ -1680,8 +1759,10 @@ function renderReportStatusGrid(baseDate, reportType) {
     const sendDone = status==='전송완료';
 
     const statusColor = sendDone?'#2d8a4e':genDone?'#3a5fd9':recDone?'#92400e':'#ccc';
+    const baseDate   = document.getElementById('rs-base-date').value;
+    const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
 
-    html+=`
+    return `
       <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
         <span class="rs-row-name">${s.name}</span>
         <span class="rs-row-meta">${s.grade}</span>
@@ -1709,8 +1790,6 @@ function renderReportStatusGrid(baseDate, reportType) {
           </button>
         </div>
       </div>`;
-  });
-  grid.innerHTML = html;
 }
 
 async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType) {
