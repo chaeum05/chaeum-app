@@ -898,7 +898,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <!-- 그룹 방식 (주간=초중등 전용) -->
         <div id="rs-group-toggle" style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-left:auto;">
           <button class="rs-tab active" id="rs-group-grade" onclick="setRsGroupMode('grade')">학년별</button>
-          <button class="rs-tab"        id="rs-group-day"   onclick="setRsGroupMode('day')">📆 마지막 수업요일별</button>
+          <button class="rs-tab"        id="rs-group-day"   onclick="setRsGroupMode('day')">📆 금요일 수업 기준</button>
         </div>
       </div>
 
@@ -1687,14 +1687,16 @@ function renderReportStatusGrid(baseDate, reportType) {
   let html='', lastKey=null;
 
   if (rsGroupMode === 'day') {
-    // ── 마지막 수업 요일별 그룹 (목/금 강조, 나머지는 기타) ──
+    // ── 금요일 수업 여부로 그룹 (요일 데이터 부실 대비) ──
+    const hasFri = s => (s.days||[]).includes('금');
+    const hasThu = s => (s.days||[]).includes('목');
+
     const groupOf = s => {
-      const ld = lastDay(s);
-      if (ld === '목') return '목';
-      if (ld === '금') return '금';
+      if (hasFri(s)) return '금';
+      if (hasThu(s)) return '목';
       return '기타';
     };
-    const grpOrder = {'목':0,'금':1,'기타':2};
+    const grpOrder = {'금':0,'목':1,'기타':2};
 
     const sortedByDay = [...rsStudents].sort((a,b) => {
       const ga = grpOrder[groupOf(a)], gb = grpOrder[groupOf(b)];
@@ -1704,9 +1706,9 @@ function renderReportStatusGrid(baseDate, reportType) {
     });
 
     const grpLabel = {
-      '목': {emoji:'🌳', text:'목요일 마지막 수업', bg:'#ecfdf5'},
-      '금': {emoji:'⭐', text:'금요일 마지막 수업', bg:'#eff6ff'},
-      '기타': {emoji:'📌', text:'그 외 (월·화·수 마지막)', bg:'var(--surface2)'},
+      '금': {emoji:'⭐', text:'금요일 수업 있음', bg:'#eff6ff'},
+      '목': {emoji:'🌳', text:'목요일 수업 있음 (금요일 없음)', bg:'#ecfdf5'},
+      '기타': {emoji:'📌', text:'목·금 수업 없음 / 요일 미지정', bg:'var(--surface2)'},
     };
 
     sortedByDay.forEach(s => {
