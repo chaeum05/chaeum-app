@@ -403,9 +403,49 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
     <!-- 일일 기록 -->
     <div class="panel" id="panel-record">
-      <div class="panel-title">일일 수업 기록</div>
-      <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
-      <div class="form-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div class="panel-title">일일 수업 기록</div>
+          <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
+        </div>
+        <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
+          <button class="rs-tab active" id="rec-mode-single" onclick="setRecordMode('single')">개별 입력</button>
+          <button class="rs-tab"        id="rec-mode-batch"  onclick="setRecordMode('batch')">📋 일괄 입력</button>
+        </div>
+      </div>
+
+      <!-- 일괄 입력 모드 -->
+      <div class="form-card" id="batch-record-card" style="display:none;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="form-group" style="margin:0;">
+            <label>날짜</label>
+            <input type="date" id="batch-date" style="width:150px;">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>대상</label>
+            <select id="batch-filter" onchange="renderBatchRows()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;">
+              <option value="all">전체</option>
+              <option value="초등">초등</option>
+              <option value="중등">중등</option>
+              <option value="고등">고등</option>
+              <option value="금">금요일 수업</option>
+              <option value="목">목요일 수업</option>
+            </select>
+          </div>
+          <button class="btn-secondary" style="padding:9px 14px;font-size:12px;" onclick="loadBatchStudents()">🔄 학생 불러오기</button>
+          <button class="btn-primary" style="padding:9px 18px;font-size:13px;margin-left:auto;" id="batch-save-btn" onclick="saveBatchRecords()">💾 전체 저장</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">
+          💡 입력한 학생만 저장됩니다 · 빈 행은 건너뜁니다 · 단어/문법/독해/듣기/라이팅/메모 순
+        </div>
+        <div id="batch-rows" style="overflow-x:auto;">
+          <div class="empty" style="padding:20px;">🔄 학생 불러오기를 눌러주세요</div>
+        </div>
+        <div class="status-msg" id="batch-status"></div>
+      </div>
+
+      <!-- 개별 입력 모드 (기존) -->
+      <div class="form-card" id="single-record-card">
 
         <!-- 학생 빠른 선택 -->
         <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1.5px solid var(--border);">
@@ -1040,6 +1080,131 @@ async function api(endpoint, body) {
   const data = await res.json();
   if (!res.ok || data.error) throw new Error(data.error || '알 수 없는 오류');
   return data;
+}
+
+// ── 일괄 입력 모드 ──
+let batchStudents = [];
+
+function setRecordMode(mode) {
+  document.getElementById('rec-mode-single').classList.toggle('active', mode==='single');
+  document.getElementById('rec-mode-batch').classList.toggle('active', mode==='batch');
+  document.getElementById('single-record-card').style.display = mode==='single' ? 'block' : 'none';
+  document.getElementById('batch-record-card').style.display  = mode==='batch'  ? 'block' : 'none';
+  if (mode==='batch') {
+    const bd = document.getElementById('batch-date');
+    if (!bd.value) bd.value = localDateStr(new Date());
+    if (!batchStudents.length) loadBatchStudents();
+  }
+}
+
+async function loadBatchStudents() {
+  const wrap = document.getElementById('batch-rows');
+  wrap.innerHTML = '<div class="empty" style="padding:20px;">불러오는 중...</div>';
+  try {
+    const d = await api('get-students');
+    batchStudents = d.students || [];
+    renderBatchRows();
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty" style="padding:20px;color:var(--burgundy);">로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderBatchRows() {
+  const wrap = document.getElementById('batch-rows');
+  const filter = document.getElementById('batch-filter').value;
+
+  let list = batchStudents;
+  if (['초등','중등','고등'].includes(filter)) list = list.filter(s => s.type === filter);
+  else if (filter === '금') list = list.filter(s => (s.days||[]).includes('금'));
+  else if (filter === '목') list = list.filter(s => (s.days||[]).includes('목'));
+
+  if (!list.length) { wrap.innerHTML = '<div class="empty" style="padding:20px;">해당 학생이 없습니다</div>'; return; }
+
+  const typeOrder = {'초등':0,'중등':1,'고등':2};
+  list = [...list].sort((a,b) => (typeOrder[a.type]??3)-(typeOrder[b.type]??3) || (parseInt(a.grade)||0)-(parseInt(b.grade)||0) || a.name.localeCompare(b.name,'ko'));
+
+  let html = `
+    <table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:12px;">
+      <thead>
+        <tr style="background:#f1f5f9;position:sticky;top:0;">
+          <th style="position:sticky;left:0;background:#f1f5f9;padding:8px 10px;text-align:left;min-width:90px;z-index:2;">학생</th>
+          <th style="padding:8px;min-width:130px;">📝 단어</th>
+          <th style="padding:8px;min-width:130px;">📐 문법</th>
+          <th style="padding:8px;min-width:130px;">📖 독해</th>
+          <th style="padding:8px;min-width:120px;">🎧 듣기</th>
+          <th style="padding:8px;min-width:120px;">✍️ 라이팅</th>
+          <th style="padding:8px;min-width:200px;">💬 메모</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  let lastKey = null;
+  list.forEach(s => {
+    const sectionKey = s.type==='초등' ? '초등' : `${s.type}-${s.grade}`;
+    if (sectionKey !== lastKey) {
+      lastKey = sectionKey;
+      const label = s.type==='초등' ? '초등' : `${s.type} ${s.grade}`;
+      html += `<tr><td colspan="7" style="background:#e2e8f0;font-weight:700;font-size:11px;padding:5px 10px;color:#475569;">${label}</td></tr>`;
+    }
+    const id = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
+    const inp = (field, ph) => `<td style="padding:3px;"><input type="text" id="b-${field}-${id}" placeholder="${ph}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;"></td>`;
+    html += `<tr data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}" style="border-bottom:1px solid #f1f5f9;">
+      <td style="position:sticky;left:0;background:white;padding:6px 10px;font-weight:600;white-space:nowrap;border-right:1px solid #e5e7eb;z-index:1;">${s.name}</td>
+      ${inp('word','Day 1~5')}
+      ${inp('grammar','천일문 Ch.1')}
+      ${inp('reading','리딩마스터')}
+      ${inp('listening','수능듣기')}
+      ${inp('writing','쓰작 U1')}
+      ${inp('note','태도·특이사항')}
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+async function saveBatchRecords() {
+  const date = document.getElementById('batch-date').value;
+  if (!date) { toast('날짜를 선택하세요.'); return; }
+
+  const rows = [...document.querySelectorAll('#batch-rows tr[data-name]')];
+  const payloads = [];
+  rows.forEach(tr => {
+    const id = tr.dataset.id;
+    const get = f => (document.getElementById(`b-${f}-${id}`)?.value || '').trim();
+    const word=get('word'), grammar=get('grammar'), reading=get('reading'),
+          listening=get('listening'), writing=get('writing'), note=get('note');
+    // 하나라도 입력된 경우만 저장
+    if (word||grammar||reading||listening||writing||note) {
+      payloads.push({
+        date, name: tr.dataset.name, type: tr.dataset.type, grade: tr.dataset.grade,
+        word, grammar, reading, listening, writing, note
+      });
+    }
+  });
+
+  if (!payloads.length) { toast('입력된 내용이 없습니다.'); return; }
+
+  const btn = document.getElementById('batch-save-btn');
+  const status = document.getElementById('batch-status');
+  btn.disabled = true;
+  status.className = 'status-msg loading';
+
+  let done = 0, failed = 0;
+  for (const p of payloads) {
+    status.textContent = `⏳ 저장 중 ${done+failed+1}/${payloads.length}...`;
+    try {
+      await api('save-record', p);
+      // 저장 완료된 행 초록 표시
+      const tr = document.querySelector(`#batch-rows tr[data-name="${p.name}"][data-grade="${p.grade}"]`);
+      if (tr) tr.style.background = '#f0fdf4';
+      done++;
+    } catch(e) { failed++; }
+  }
+
+  status.className = failed ? 'status-msg error' : 'status-msg success';
+  status.textContent = `✅ ${done}명 저장 완료${failed?` · ${failed}명 실패`:''}`;
+  btn.disabled = false;
+  toast(`${done}명 저장 완료!`);
 }
 
 async function saveRecord() {
