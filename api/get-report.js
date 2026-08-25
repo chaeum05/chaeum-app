@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // CORS 헤더
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -7,107 +8,190 @@ export default async function handler(req, res) {
 
   const NOTION_TOKEN  = process.env.NOTION_TOKEN;
   const DB_LOGS       = process.env.NOTION_DB_LOGS;
-  const DB_ATTENDANCE = process.env.NOTION_DB_ATTENDANCE;
+  const DB_STUDENTS   = process.env.NOTION_DB_STUDENTS;
 
-  if (!NOTION_TOKEN || !DB_LOGS) {
+  if (!NOTION_TOKEN || !DB_LOGS || !DB_STUDENTS) {
     return res.status(500).json({ error: 'Vercel 환경변수가 설정되지 않았습니다.' });
   }
 
-  const { name, type, start, end } = req.body;
-  if (!name || !type || !start || !end) {
-    return res.status(400).json({ error: '필수 파라미터가 없습니다.' });
-  }
+  const data = req.body;
 
-  const headers = {
+  const notionHeaders = {
     'Authorization': `Bearer ${NOTION_TOKEN}`,
     'Content-Type': 'application/json',
     'Notion-Version': '2022-06-28'
   };
 
+  // ── 기간 내 학생별 기록 건수 (보고서 현황용) ──
+  if (data.action === 'get_record_counts') {
+    try {
+      let all = [], cursor;
+      do {
+        const body = {
+          filter: {
+            and: [
+              { property: '날짜', date: { on_or_after: data.start } },
+              { property: '날짜', date: { on_or_before: data.end } },
+            ]
+          },
+          page_size: 100
+        };
+        if (cursor) body.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers: notionHeaders, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+
+      const counts = {};
+      all.forEach(p => {
+        const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        if (!name) return;
+        counts[name] = (counts[name] || 0) + 1;
+      });
+      return res.status(200).json({ ok: true, counts });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── 특정 날짜의 전체 기록 조회 (일괄 입력 프리필용) ──
+  if (data.action === 'get_day_records') {
+    try {
+      let all = [], cursor;
+      do {
+        const body = {
+          filter: { property: '날짜', date: { equals: data.date } },
+          page_size: 100
+        };
+        if (cursor) body.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers: notionHeaders, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+
+      const records = {};
+      all.forEach(p => {
+        const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        if (!name) return;
+        records[name] = {
+          word:      p.properties['단어']?.rich_text?.[0]?.text?.content || '',
+          grammar:   p.properties['문법']?.rich_text?.[0]?.text?.content || '',
+          reading:   p.properties['독해']?.rich_text?.[0]?.text?.content || '',
+          listening: p.properties['듣기']?.rich_text?.[0]?.text?.content || '',
+          writing:   p.properties['라이팅']?.rich_text?.[0]?.text?.content || '',
+          note:      p.properties['특이사항']?.rich_text?.[0]?.text?.content || '',
+        };
+      });
+      return res.status(200).json({ ok: true, records });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (!data.name) return res.status(400).json({ error: '이름이 없습니다.' });
+
   try {
-    // 1. 학습 기록 조회
-    const queryRes = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
-      method: 'POST', headers,
+    // 1. 학생 페이지 찾거나 생성
+    const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_STUDENTS}/query`, {
+      method: 'POST',
+      headers: notionHeaders,
       body: JSON.stringify({
         filter: { and: [
-          { property: '이름',  rich_text: { equals: name } },
-          { property: '구분',  select: { equals: type } },
-          { property: '날짜',  date: { on_or_after: start } },
-          { property: '날짜',  date: { on_or_before: end } }
-        ]},
-        sorts: [{ property: '날짜', direction: 'ascending' }]
+          { property: '학생이름', title: { equals: data.name } },
+          { property: '구분', select: { equals: data.type } }
+        ]}
+      })
+    });
+    const searchData = await searchRes.json();
+
+    let studentPageId;
+    if (searchData.results && searchData.results.length > 0) {
+      studentPageId = searchData.results[0].id;
+    } else {
+      const emoji = data.type === '초등' ? '🌱' : data.type === '중등' ? '📖' : '🎓';
+      const newStudent = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: notionHeaders,
+        body: JSON.stringify({
+          parent: { database_id: DB_STUDENTS },
+          icon: { type: 'emoji', emoji },
+          properties: {
+            '학생이름': { title: [{ text: { content: data.name } }] },
+            '구분':     { select: { name: data.type } },
+            '학년':     { select: { name: data.grade } }
+          },
+          children: [
+            { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📋 학습 기록' } }] } },
+            { object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: '수업 기록이 자동으로 추가됩니다.' }, annotations: { color: 'gray' } }] } },
+            { object: 'block', type: 'divider', divider: {} }
+          ]
+        })
+      });
+      const newStudentData = await newStudent.json();
+      studentPageId = newStudentData.id;
+    }
+
+    // 2. 학습기록 DB에 행 추가
+    const subjects = ['word','grammar','reading','listening','writing']
+      .filter(k => data[k])
+      .map(k => ({ word:'단어', grammar:'문법', reading:'독해', listening:'듣기', writing:'라이팅' }[k]))
+      .join(' · ');
+    const title = `${data.name} — ${subjects || '수업기록'} (${data.date})`;
+
+    const logRes = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: notionHeaders,
+      body: JSON.stringify({
+        parent: { database_id: DB_LOGS },
+        properties: {
+          '':         { title: [{ text: { content: title } }] },
+          '날짜':     { date: { start: data.date } },
+          '구분':     { select: { name: data.type } },
+          '학년':     { select: { name: data.grade } },
+          '이름':     { rich_text: [{ text: { content: data.name } }] },
+          '단어':     { rich_text: [{ text: { content: data.word || '' } }] },
+          '문법':     { rich_text: [{ text: { content: data.grammar || '' } }] },
+          '독해':     { rich_text: [{ text: { content: data.reading || '' } }] },
+          '듣기':     { rich_text: [{ text: { content: data.listening || '' } }] },
+          '라이팅':   { rich_text: [{ text: { content: data.writing || '' } }] },
+          '특이사항': { rich_text: [{ text: { content: data.note || '' } }] }
+        }
+      })
+    });
+    const logData = await logRes.json();
+    if (logData.object === 'error') throw new Error(logData.message);
+
+    // 3. 학생 개별 페이지에 블록 추가
+    const lines = [
+      data.word      && `📝 단어: ${data.word}`,
+      data.grammar   && `📐 문법: ${data.grammar}`,
+      data.reading   && `📖 독해: ${data.reading}`,
+      data.listening && `🎧 듣기: ${data.listening}`,
+      data.writing   && `✍️ 라이팅: ${data.writing}`,
+      data.note      && `💬 메모: ${data.note}`
+    ].filter(Boolean);
+
+    await fetch(`https://api.notion.com/v1/blocks/${studentPageId}/children`, {
+      method: 'PATCH',
+      headers: notionHeaders,
+      body: JSON.stringify({
+        children: [
+          { object: 'block', type: 'heading_3', heading_3: { rich_text: [{ type: 'text', text: { content: `📅 ${data.date}  (${data.grade})` }, annotations: { bold: true } }] } },
+          ...lines.map(l => ({ object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: l } }] } })),
+          { object: 'block', type: 'divider', divider: {} }
+        ]
       })
     });
 
-    const queryData = await queryRes.json();
-    if (queryData.object === 'error') throw new Error(queryData.message);
-    if (!queryData.results.length) {
-      return res.status(404).json({ error: `${start} ~ ${end} 기간에 ${name} 학생 기록이 없습니다.` });
-    }
-
-    const words=[], grammars=[], readings=[], listenings=[], writings=[], notes=[];
-    let grade = '';
-    queryData.results.forEach(p => {
-      const props = p.properties;
-      grade = props['학년']?.select?.name || grade;
-      const g = k => props[k]?.rich_text?.[0]?.text?.content || '';
-      if (g('단어'))     words.push(g('단어'));
-      if (g('문법'))     grammars.push(g('문법'));
-      if (g('독해'))     readings.push(g('독해'));
-      if (g('듣기'))     listenings.push(g('듣기'));
-      if (g('라이팅'))   writings.push(g('라이팅'));
-      if (g('특이사항')) notes.push(g('특이사항'));
-    });
-
-    // 2. 출결 기록 조회 (기간 내)
-    let attendanceInfo = [];
-    if (DB_ATTENDANCE) {
-      const attRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          filter: { and: [
-            { property: '학생이름', rich_text: { equals: name } },
-            { property: '날짜', date: { on_or_after: start } },
-            { property: '날짜', date: { on_or_before: end } }
-          ]},
-          sorts: [{ property: '날짜', direction: 'ascending' }]
-        })
-      });
-      const attData = await attRes.json();
-      attendanceInfo = (attData.results || []).map(p => ({
-        date:   p.properties['날짜']?.date?.start || '',
-        status: p.properties['출결상태']?.select?.name || '',
-        memo:   p.properties['메모']?.rich_text?.[0]?.text?.content || '',
-      })).filter(a => a.date && a.status);
-
-      // 이 기간 이후 예정된 보강도 조회 (결석 후 보강날짜가 기간 밖일 수 있음)
-      const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          filter: { and: [
-            { property: '학생이름', rich_text: { equals: name } },
-            { property: '출결상태', select: { equals: '보강' } },
-            { property: '날짜', date: { on_or_after: start } }
-          ]},
-          sorts: [{ property: '날짜', direction: 'ascending' }]
-        })
-      });
-      const makeupData = await makeupRes.json();
-      const makeupScheduled = (makeupData.results || []).map(p => ({
-        date:       p.properties['날짜']?.date?.start || '',
-        status:     '보강예정',
-        absentDate: p.properties['원래날짜']?.date?.start || '',
-        memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
-      })).filter(a => a.date && !attendanceInfo.find(x => x.date === a.date && x.status === '보강'));
-
-      attendanceInfo = [...attendanceInfo, ...makeupScheduled];
-    }
-
-    return res.status(200).json({
-      ok: true, grade, words, grammars, readings, listenings, writings, notes,
-      attendanceInfo,
-      count: queryData.results.length
-    });
+    return res.status(200).json({ ok: true, message: '✅ 노션에 저장 완료!' });
 
   } catch (e) {
     return res.status(500).json({ error: e.message });
