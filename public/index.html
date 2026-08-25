@@ -1131,7 +1131,6 @@ async function renderBatchRows() {
   const filter = document.getElementById('batch-filter').value;
   const date = document.getElementById('batch-date').value;
 
-  // 스코프: 주간=초·중등, 월간=고등
   let list = batchScope==='weekly'
     ? batchStudents.filter(s => s.type==='초등' || s.type==='중등')
     : batchStudents.filter(s => s.type==='고등');
@@ -1145,7 +1144,7 @@ async function renderBatchRows() {
   const typeOrder = {'초등':0,'중등':1,'고등':2};
   list = [...list].sort((a,b) => (typeOrder[a.type]??3)-(typeOrder[b.type]??3) || (parseInt(a.grade)||0)-(parseInt(b.grade)||0) || a.name.localeCompare(b.name,'ko'));
 
-  // 그날 기존 기록 조회 (프리필용)
+  // 그날 기존 기록 조회
   let existing = {};
   if (date) {
     try {
@@ -1154,11 +1153,21 @@ async function renderBatchRows() {
     } catch(e) {}
   }
 
-  const cols = '96px 1.1fr 1.1fr 1.1fr 1fr 1fr 1.6fr';
+  const isHigh = batchScope === 'monthly';
+  const writingLabel = isHigh ? '📋 내신대비' : '✍️ 라이팅';
+  const writingPh    = isHigh ? '내신 문제풀이' : '쓰작';
+
+  // 컬럼 헤더 (한 줄, flex 비율)
   const headerRow = `
-    <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:9px 12px;
-      background:#1e293b;color:#cbd5e1;font-size:11px;font-weight:700;position:sticky;top:0;z-index:2;">
-      <span>학생</span><span>📝 단어</span><span>📐 문법</span><span>📖 독해</span><span>🎧 듣기</span><span>✍️ 라이팅</span><span>💬 메모</span>
+    <div style="display:flex;gap:6px;padding:9px 10px;background:#1e293b;color:#cbd5e1;
+      font-size:11px;font-weight:700;border-radius:8px 8px 0 0;">
+      <span style="flex:0 0 70px;">학생</span>
+      <span style="flex:1;">📝 단어</span>
+      <span style="flex:1;">📐 문법</span>
+      <span style="flex:1;">📖 독해</span>
+      <span style="flex:1;">🎧 듣기</span>
+      <span style="flex:1;">${writingLabel}</span>
+      <span style="flex:1.4;">💬 메모</span>
     </div>`;
 
   let rowsHtml = '';
@@ -1168,31 +1177,29 @@ async function renderBatchRows() {
     if (sectionKey !== lastKey) {
       lastKey = sectionKey;
       const label = s.type==='초등' ? '초등부' : `${s.type} ${s.grade}`;
-      rowsHtml += `<div style="font-size:11px;font-weight:800;color:#475569;padding:6px 12px;background:#e2e8f0;">${label}</div>`;
+      rowsHtml += `<div style="font-size:11px;font-weight:800;color:#475569;padding:6px 10px;background:#e2e8f0;">${label}</div>`;
     }
     const id = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
     const ex = existing[s.name] || {};
     const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.note;
     const val = v => (v||'').replace(/"/g,'&quot;');
-    const inp = (field, ph) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}"
-      style="padding:7px 9px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;width:100%;box-sizing:border-box;">`;
+    const inp = (field, ph, flex) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}"
+      style="flex:${flex};min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;">`;
+
     rowsHtml += `
       <div class="batch-card" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}"
-        style="display:grid;grid-template-columns:${cols};gap:8px;padding:7px 12px;
-        align-items:center;border-bottom:1px solid #f1f5f9;${hasRecord?'background:#f0fdf4;':''}">
-        <span style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${s.name}${hasRecord?'<span style="font-size:9px;color:#16a34a;display:block;">✓ 기록됨</span>':''}
-        </span>
-        ${inp('word','Day 1~5')}
-        ${inp('grammar','천일문 Ch.1')}
-        ${inp('reading','리딩마스터')}
-        ${inp('listening','수능듣기')}
-        ${inp('writing','쓰작 U1')}
-        ${inp('note','태도·특이사항')}
+        style="display:flex;gap:6px;padding:6px 10px;align-items:center;border-bottom:1px solid #f1f5f9;${hasRecord?'background:#f0fdf4;':''}">
+        <span style="flex:0 0 70px;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
+        ${inp('word','Day 1~5',1)}
+        ${inp('grammar','Ch.1',1)}
+        ${inp('reading','리딩',1)}
+        ${inp('listening','듣기',1)}
+        ${inp('writing',writingPh,1)}
+        ${inp('note','태도·특이사항',1.4)}
       </div>`;
   });
 
-  wrap.innerHTML = `<div style="overflow-x:auto;"><div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;min-width:900px;">${headerRow}${rowsHtml}</div></div>`;
+  wrap.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">${headerRow}${rowsHtml}</div>`;
 }
 
 async function saveBatchRecords() {
