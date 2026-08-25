@@ -22,6 +22,42 @@ export default async function handler(req, res) {
     'Notion-Version': '2022-06-28'
   };
 
+  // ── 기간 내 학생별 기록 건수 (보고서 현황용) ──
+  if (data.action === 'get_record_counts') {
+    try {
+      let all = [], cursor;
+      do {
+        const body = {
+          filter: {
+            and: [
+              { property: '날짜', date: { on_or_after: data.start } },
+              { property: '날짜', date: { on_or_before: data.end } },
+            ]
+          },
+          page_size: 100
+        };
+        if (cursor) body.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers: notionHeaders, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+
+      const counts = {};
+      all.forEach(p => {
+        const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        if (!name) return;
+        counts[name] = (counts[name] || 0) + 1;
+      });
+      return res.status(200).json({ ok: true, counts });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // ── 특정 날짜의 전체 기록 조회 (일괄 입력 프리필용) ──
   if (data.action === 'get_day_records') {
     try {
