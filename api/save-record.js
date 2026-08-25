@@ -15,13 +15,52 @@ export default async function handler(req, res) {
   }
 
   const data = req.body;
-  if (!data.name) return res.status(400).json({ error: '이름이 없습니다.' });
 
   const notionHeaders = {
     'Authorization': `Bearer ${NOTION_TOKEN}`,
     'Content-Type': 'application/json',
     'Notion-Version': '2022-06-28'
   };
+
+  // ── 특정 날짜의 전체 기록 조회 (일괄 입력 프리필용) ──
+  if (data.action === 'get_day_records') {
+    try {
+      let all = [], cursor;
+      do {
+        const body = {
+          filter: { property: '날짜', date: { equals: data.date } },
+          page_size: 100
+        };
+        if (cursor) body.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers: notionHeaders, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+
+      const records = {};
+      all.forEach(p => {
+        const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        if (!name) return;
+        records[name] = {
+          word:      p.properties['단어']?.rich_text?.[0]?.text?.content || '',
+          grammar:   p.properties['문법']?.rich_text?.[0]?.text?.content || '',
+          reading:   p.properties['독해']?.rich_text?.[0]?.text?.content || '',
+          listening: p.properties['듣기']?.rich_text?.[0]?.text?.content || '',
+          writing:   p.properties['라이팅']?.rich_text?.[0]?.text?.content || '',
+          note:      p.properties['특이사항']?.rich_text?.[0]?.text?.content || '',
+        };
+      });
+      return res.status(200).json({ ok: true, records });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (!data.name) return res.status(400).json({ error: '이름이 없습니다.' });
 
   try {
     // 1. 학생 페이지 찾거나 생성
