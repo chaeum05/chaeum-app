@@ -1683,6 +1683,7 @@ let rsCurrentTab  = 'weekly';
 let rsGroupMode   = 'grade';
 let rsStatusCache = {}; // 탭 전환 시 캐시 (새로고침하면 초기화 → 노션에서 다시 로드)
 let rsStatusMap   = {};
+let rsRecordCounts = {};
 let rsStudents    = [];
 let rsInitialized = false;
 
@@ -1798,6 +1799,12 @@ async function syncReportStatus() {
     const d = await api('update-report-status', { action:'get_status', baseDate, reportType });
     rsStatusCache[cacheKey] = { ...(rsStatusCache[cacheKey]||{}), ...(d.statusMap||{}) };
     rsStatusMap = rsStatusCache[cacheKey];
+    // 기록 건수도 갱신
+    const { start, end } = getScopeRange(baseDate, rsCurrentTab);
+    try {
+      const rc = await api('save-record', { action:'get_record_counts', start, end });
+      rsRecordCounts = rc.counts || {};
+    } catch(e) {}
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {}
 }
@@ -1819,9 +1826,37 @@ async function loadReportStatus() {
     rsStudents = rsCurrentTab==='weekly'
       ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
       : allStudentsCache.filter(s => s.type==='고등');
+
+    // 기록 건수 조회 (주간=그 주, 월간=그 달)
+    const { start, end } = getScopeRange(baseDate, rsCurrentTab);
+    try {
+      const rc = await api('save-record', { action:'get_record_counts', start, end });
+      rsRecordCounts = rc.counts || {};
+    } catch(e) { rsRecordCounts = {}; }
+
     renderReportStatusGrid(baseDate, reportType);
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
+  }
+}
+
+// 주간/월간 날짜 범위 계산
+function getScopeRange(baseDate, tab) {
+  const d = new Date(baseDate + 'T00:00:00');
+  if (tab === 'weekly') {
+    // 그 주 월요일 ~ 금요일
+    const day = d.getDay(); // 0=일, 1=월 ... 5=금
+    const mon = new Date(d); mon.setDate(d.getDate() - ((day+6)%7));
+    const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    return { start: localDateStr(mon), end: localDateStr(fri) };
+  } else {
+    // 그 달 1일 ~ 마지막 금요일
+    const first = new Date(d.getFullYear(), d.getMonth(), 1);
+    const last  = new Date(d.getFullYear(), d.getMonth()+1, 0); // 말일
+    // 말일부터 거슬러 올라가 가장 가까운 금요일(5) 찾기
+    const lastFri = new Date(last);
+    while (lastFri.getDay() !== 5) lastFri.setDate(lastFri.getDate() - 1);
+    return { start: localDateStr(first), end: localDateStr(lastFri) };
   }
 }
 
@@ -1970,6 +2005,11 @@ function renderRsRow(s) {
     return `
       <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
         <span class="rs-row-name">${s.name}</span>
+        ${(() => {
+          const cnt = rsRecordCounts[s.name] || 0;
+          if (cnt > 0) return `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;font-weight:700;white-space:nowrap;">📗 ${cnt}건</span>`;
+          return `<span style="font-size:10px;background:#f1f5f9;color:#cbd5e1;padding:1px 7px;border-radius:20px;font-weight:600;white-space:nowrap;">기록없음</span>`;
+        })()}
         <span class="rs-row-meta">${s.grade}</span>
         <span style="font-size:10px;flex:1;font-weight:600;color:${statusColor};">
           ${status==='미작성'?'':status}
