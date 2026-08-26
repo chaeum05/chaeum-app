@@ -486,7 +486,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <div class="subject-item"><label>📐 문법</label><input type="text" id="r-grammar" placeholder="천일문 Ch.1"></div>
           <div class="subject-item"><label>📖 독해</label><input type="text" id="r-reading" placeholder="리딩마스터 3-1"></div>
           <div class="subject-item"><label>🎧 듣기</label><input type="text" id="r-listening" placeholder="수능듣기 Day1"></div>
-          <div class="subject-item"><label>✍️ 라이팅</label><input type="text" id="r-writing" placeholder="쓰작 Unit1"></div>
+          <div class="subject-item"><label id="r-writing-label">✍️ 라이팅</label><input type="text" id="r-writing" placeholder="쓰작 Unit1"></div>
         </div>
         <div class="form-group">
           <label>수업 메모 / 특이사항</label>
@@ -1075,6 +1075,12 @@ function updateGrades() {
   sel.innerHTML = '';
   const max = type === '초등' ? 6 : 3;
   for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
+
+  // 고등부는 라이팅 → 내신대비
+  const wLabel = document.getElementById('r-writing-label');
+  const wInput = document.getElementById('r-writing');
+  if (wLabel) wLabel.textContent = type === '고등' ? '📋 내신대비' : '✍️ 라이팅';
+  if (wInput) wInput.placeholder = type === '고등' ? '내신 문제풀이' : '쓰작 Unit1';
 }
 
 async function api(endpoint, body) {
@@ -1424,12 +1430,13 @@ function renderReport({ name, grade, type, start, end, words, grammars, readings
   const isMid  = type === '중등';
   const typeTitle = isHigh ? 'Premium Monthly Report' : isMid ? 'Weekly Middle Report' : 'Weekly Elementary Report';
 
+  const writingLbl = isHigh ? '내신대비' : '라이팅';
   const contentsHTML =
     `<span class="rc-item">· 단어: ${smartRange(words)}</span>` +
     `<span class="rc-item">· 문법: ${clean(grammars)}</span>` +
     `<span class="rc-item">· 독해: ${clean(readings)}</span>` +
     `<span class="rc-item">· 듣기: ${clean(listenings)}</span>` +
-    `<span class="rc-item">· 라이팅: ${clean(writings)}</span>`;
+    `<span class="rc-item">· ${writingLbl}: ${clean(writings)}</span>`;
 
   let html = '';
 
