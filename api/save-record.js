@@ -47,9 +47,14 @@ export default async function handler(req, res) {
       } while (cursor);
 
       const counts = {};
+      const seen = new Set(); // 같은 이름+날짜 중복 제거
       all.forEach(p => {
         const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        const date = p.properties['날짜']?.date?.start || '';
         if (!name) return;
+        const key = `${name}__${date}`;
+        if (seen.has(key)) return; // 같은 날 중복은 1건으로
+        seen.add(key);
         counts[name] = (counts[name] || 0) + 1;
       });
       return res.status(200).json({ ok: true, counts });
