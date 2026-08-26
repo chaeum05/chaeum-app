@@ -1202,11 +1202,11 @@ async function renderBatchRows() {
     const ex = existing[s.name] || {};
     const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.note;
     const val = v => (v||'').replace(/"/g,'&quot;');
-    const inp = (field, ph, flex) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}"
+    const inp = (field, ph, flex) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}" data-orig="${val(ex[field])}"
       style="flex:${flex};min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;">`;
 
     rowsHtml += `
-      <div class="batch-card" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}"
+      <div class="batch-card" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}" data-prefilled="${hasRecord?'1':'0'}"
         style="display:flex;gap:6px;padding:6px 10px;align-items:center;border-bottom:1px solid #f1f5f9;${hasRecord?'background:#f0fdf4;':''}">
         <span style="flex:0 0 70px;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
         ${inp('word','Day 1~5',1)}
@@ -1229,18 +1229,29 @@ async function saveBatchRecords() {
   const payloads = [];
   cards.forEach(card => {
     const id = card.dataset.id;
-    const get = f => (document.getElementById(`b-${f}-${id}`)?.value || '').trim();
-    const word=get('word'), grammar=get('grammar'), reading=get('reading'),
-          listening=get('listening'), writing=get('writing'), note=get('note');
-    if (word||grammar||reading||listening||writing||note) {
+    const el = f => document.getElementById(`b-${f}-${id}`);
+    const get = f => (el(f)?.value || '').trim();
+    const orig = f => (el(f)?.dataset.orig || '').trim();
+
+    const fields = ['word','grammar','reading','listening','writing','note'];
+    const vals = {};
+    fields.forEach(f => vals[f] = get(f));
+
+    const anyValue  = fields.some(f => vals[f]);
+    // 원래 프리필 값과 하나라도 달라졌는지
+    const changed   = fields.some(f => get(f) !== orig(f));
+
+    // 값이 있고 + 변경된 경우만 저장 (그대로면 스킵 → 중복 방지)
+    if (anyValue && changed) {
       payloads.push({
         date, name: card.dataset.name, type: card.dataset.type, grade: card.dataset.grade,
-        word, grammar, reading, listening, writing, note, _id: id
+        word: vals.word, grammar: vals.grammar, reading: vals.reading,
+        listening: vals.listening, writing: vals.writing, note: vals.note, _id: id
       });
     }
   });
 
-  if (!payloads.length) { toast('입력된 내용이 없습니다.'); return; }
+  if (!payloads.length) { toast('변경된 내용이 없습니다.'); return; }
 
   const btn = document.getElementById('batch-save-btn');
   const status = document.getElementById('batch-status');
