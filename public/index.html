@@ -841,6 +841,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <input type="text" id="add-name" placeholder="이름" style="width:72px;">
           <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:88px;" title="예: 형곡, 본교 등">
+          <input type="text" id="add-school" placeholder="학교 (예:형곡고)" style="width:100px;" title="보고서 성적표 그룹핑용">
           <select id="add-type" onchange="updateAddGrades()" style="width:58px;">
             <option value="초등">초등</option>
             <option value="중등">중등</option>
@@ -1817,7 +1818,7 @@ function switchReportTab(tab) {
     );
     syncReportStatus();
   } else {
-    loadReportStatus();
+    loadReportStatus(false);
   }
 }
 
@@ -1840,13 +1841,14 @@ async function syncReportStatus() {
   } catch(e) {}
 }
 
-async function loadReportStatus() {
+async function loadReportStatus(forceRefresh = true) {
   const baseDate   = document.getElementById('rs-base-date').value;
   const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
   const grid       = document.getElementById('rs-grid');
   grid.innerHTML   = '<div class="loading-spinner">불러오는 중...</div>';
   try {
-    if (!allStudentsCache.length) {
+    // 불러오기 버튼으로 호출 시 학생 목록 새로고침 (새 학생 반영)
+    if (forceRefresh || !allStudentsCache.length) {
       const d = await api('get-students', {});
       allStudentsCache = d.students || [];
     }
@@ -2512,26 +2514,25 @@ async function addStudentManually() {
   const exists = attStudents.find(s => s.name === name);
   if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
 
+  const school = document.getElementById('add-school')?.value.trim() || '';
+
   // 오늘 출결 목록에 추가
   attStudents.push({ name, type, grade, isMakeup: section==='보강' });
   renderAttGrid();
 
-  // 등원 요일 노션에 저장
-  const hasDays = Object.values(days).some(Boolean);
-  if (hasDays) {
-    try {
-      await api('save-attendance', { action:'save_schedule', name, type, grade, days });
-      toast(`${name} 추가 + 등원 요일 등록 완료`);
-    } catch(e) {
-      toast(`${name} 추가됨 (요일 저장 실패: ${e.message})`);
-    }
-  } else {
-    toast(`${name} 오늘만 추가됨 (등원 요일 미등록)`);
+  // 등원 일정 노션에 항상 등록 (요일 없어도 보고서 현황에 나오도록)
+  try {
+    await api('save-attendance', { action:'save_schedule', name, type, grade, days, school });
+    const hasDays = Object.values(days).some(Boolean);
+    toast(hasDays ? `${name} 추가 + 등원 요일 등록 완료` : `${name} 등록 완료 (요일 미지정)`);
+  } catch(e) {
+    toast(`${name} 목록엔 추가됨 (등원 등록 실패: ${e.message})`);
   }
 
   // 입력 초기화
   document.getElementById('add-name').value  = '';
   document.getElementById('add-name2').value = '';
+  if (document.getElementById('add-school')) document.getElementById('add-school').value = '';
   ['add-mon','add-tue','add-wed','add-thu','add-fri'].forEach(id =>
     document.getElementById(id).checked = false
   );
