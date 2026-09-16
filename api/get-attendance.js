@@ -45,15 +45,20 @@ export default async function handler(req, res) {
     });
     const scheduleData = await scheduleRes.json();
 
-    const students = (scheduleData.results || []).map(p => ({
-      id:     p.id,
-      name:   p.properties['학생이름']?.title?.[0]?.text?.content || '',
-      type:   p.properties['구분']?.select?.name || '',
-      grade:  p.properties['학년']?.select?.name || '',
-      school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
-      teacher: p.properties['담임']?.select?.name || '',
-      isMakeup: false,
-    })).filter(s => s.name);
+    const students = (scheduleData.results || []).map(p => {
+      // 그날 요일의 담임 (담임_월 등), 없으면 기본 담임 폴백
+      const dayTeacher = p.properties[`담임_${dayName}`]?.select?.name || '';
+      const baseTeacher = p.properties['담임']?.select?.name || '';
+      return {
+        id:     p.id,
+        name:   p.properties['학생이름']?.title?.[0]?.text?.content || '',
+        type:   p.properties['구분']?.select?.name || '',
+        grade:  p.properties['학년']?.select?.name || '',
+        school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
+        teacher: dayTeacher || baseTeacher,
+        isMakeup: false,
+      };
+    }).filter(s => s.name);
 
     // 2. 오늘 날짜 출결 기록 조회 (timezone 안전하게 on_or_after + on_or_before)
     const attendRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
