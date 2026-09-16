@@ -48,6 +48,7 @@ export default async function handler(req, res) {
         type:   p.properties['구분']?.select?.name || '',
         grade:  p.properties['학년']?.select?.name || '',
         school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
+        teacher: p.properties['담임']?.select?.name || '',
         days,
       };
     }).filter(s => s.name);
