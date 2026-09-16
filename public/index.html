@@ -180,6 +180,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-date-input:focus { border-color:var(--burgundy); }
 .att-day-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; background:var(--burgundy); color:white; }
 .att-action-btn { padding:6px 14px; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; transition:0.2s; }
+.att-tt { padding:7px 16px; background:var(--surface2); border:1.5px solid var(--border); border-radius:20px; font-size:13px; font-weight:700; font-family:'Pretendard',sans-serif; cursor:pointer; transition:0.2s; color:var(--text2); }
+.att-tt.active { background:var(--burgundy); color:#fff; border-color:var(--burgundy); }
 .att-action-btn:hover { border-color:var(--burgundy); color:var(--burgundy); }
 .att-action-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
 .att-action-btn.primary:hover { background:#8e1624; }
@@ -868,6 +870,14 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <span class="att-day-badge" id="att-day-badge">-요일</span>
         <button class="att-action-btn" onclick="loadAttendance()">🔄 새로고침</button>
         <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
+      </div>
+
+      <!-- 담임 탭 -->
+      <div id="att-teacher-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="att-tt active" data-teacher="" onclick="setAttTeacher('')">전체</button>
+        <button class="att-tt" data-teacher="이유민" onclick="setAttTeacher('이유민')">이유민</button>
+        <button class="att-tt" data-teacher="성형주" onclick="setAttTeacher('성형주')">성형주</button>
+        <button class="att-tt" data-teacher="__none__" onclick="setAttTeacher('__none__')">미지정</button>
       </div>
 
       <!-- 2단 레이아웃 -->
@@ -2206,6 +2216,7 @@ function calNextMonth() {
   renderCalendar();
 }
 let attStudents = [], attRecords = [], attMakeup = [];
+let attTeacherFilter = ''; // '' = 전체, '__none__' = 미지정
 let absentTarget = null;
 let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayName } }
 
@@ -2291,6 +2302,21 @@ function getMemo(name, type, grade) {
   return r ? (r.memo||'') : '';
 }
 
+function setAttTeacher(t) {
+  attTeacherFilter = t;
+  document.querySelectorAll('.att-tt').forEach(b =>
+    b.classList.toggle('active', b.dataset.teacher === t)
+  );
+  renderAttGrid();
+}
+
+// 담임 필터 적용
+function filterByTeacher(arr) {
+  if (!attTeacherFilter) return arr;
+  if (attTeacherFilter === '__none__') return arr.filter(s => !s.teacher);
+  return arr.filter(s => s.teacher === attTeacherFilter);
+}
+
 function renderAttGrid() {
   const grid = document.getElementById('att-grid');
   const date = document.getElementById('att-date').value;
@@ -2317,9 +2343,9 @@ function renderAttGrid() {
     });
   };
 
-  const regular = attStudents.filter(s => !s.isMakeup && !isExamStudent(s));
-  const exam    = attStudents.filter(s => !s.isMakeup &&  isExamStudent(s));
-  const makeup  = attStudents.filter(s =>  s.isMakeup);
+  const regular = filterByTeacher(attStudents.filter(s => !s.isMakeup && !isExamStudent(s)));
+  const exam    = filterByTeacher(attStudents.filter(s => !s.isMakeup &&  isExamStudent(s)));
+  const makeup  = filterByTeacher(attStudents.filter(s =>  s.isMakeup));
 
   if (!regular.length && !exam.length && !makeup.length) {
     grid.innerHTML = '<div class="loading-spinner" style="padding:20px">오늘 등원 예정 학생이 없습니다</div>';
