@@ -191,6 +191,12 @@ textarea.fi{resize:vertical;min-height:72px;}
   <!-- 사이드바 -->
   <aside class="sidebar">
     <div>
+      <div class="sb-label" style="margin-bottom:6px;">학기</div>
+      <select class="sb-select" id="semesterFilter" onchange="applySemesterFilter()" style="margin-bottom:12px;">
+        <option value="2학기">2학기</option>
+        <option value="1학기">1학기</option>
+        <option value="">전체 학기</option>
+      </select>
       <div class="sb-label" style="margin-bottom:6px;">시험 선택</div>
       <select class="sb-select" id="examSel" onchange="onExamChange()">
         <option value="">-- 시험 선택 --</option>
@@ -630,14 +636,40 @@ window.onload = async () => {
   try {
     const d = await call('get_exam_list');
     examsCache = d.exams || [];
-    const sel = document.getElementById('examSel');
-    const dl  = document.getElementById('examNameList');
-    examsCache.forEach(e => {
-      sel.add(new Option(e, e));
-      const opt = document.createElement('option'); opt.value=e; dl.appendChild(opt);
-    });
+    // datalist는 전체 유지
+    const dl = document.getElementById('examNameList');
+    if (dl) examsCache.forEach(e => { const o=document.createElement('option'); o.value=e; dl.appendChild(o); });
+    applySemesterFilter(); // 학기 필터 적용해서 드롭다운 채움
   } catch(e) { toast('시험 목록 로드 실패: '+e.message); }
 };
+
+// ── 시험명에서 학기 파싱 ──
+function getExamSemester(name) {
+  // 명확한 "1학기/2학기" 텍스트만 인식 (언더바 축약형은 애매해서 제외)
+  if (name.includes('2학기')) return '2학기';
+  if (name.includes('1학기')) return '1학기';
+  return '기타'; // 학기 표기 없는 시험
+}
+
+// ── 학기 필터 적용 ──
+function applySemesterFilter() {
+  const sem = document.getElementById('semesterFilter').value;
+  const sel = document.getElementById('examSel');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- 시험 선택 --</option>';
+
+  const filtered = examsCache.filter(e => {
+    if (e.startsWith('manual_')) return false; // 수동입력 성적표용 제외
+    if (!sem) return true;
+    return getExamSemester(e) === sem;
+  });
+
+  filtered.forEach(e => sel.add(new Option(e, e)));
+
+  // 이전 선택이 필터에 남아있으면 유지
+  if (cur && filtered.includes(cur)) sel.value = cur;
+  else { sel.value = ''; currentExam=''; document.getElementById('studentList').innerHTML='<div class="empty">시험을 선택하세요</div>'; }
+}
 
 // ── 시험 선택 ──
 async function onExamChange() {
