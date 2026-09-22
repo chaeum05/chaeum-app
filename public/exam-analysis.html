@@ -191,6 +191,12 @@ textarea.fi{resize:vertical;min-height:72px;}
   <!-- 사이드바 -->
   <aside class="sidebar">
     <div>
+      <div class="sb-label" style="margin-bottom:6px;">학기</div>
+      <select class="sb-select" id="semesterFilter" onchange="applySemesterFilter()" style="margin-bottom:12px;">
+        <option value="">전체 학기</option>
+        <option value="2학기" selected>2학기</option>
+        <option value="1학기">1학기</option>
+      </select>
       <div class="sb-label" style="margin-bottom:6px;">시험 선택</div>
       <select class="sb-select" id="examSel" onchange="onExamChange()">
         <option value="">-- 시험 선택 --</option>
@@ -630,14 +636,42 @@ window.onload = async () => {
   try {
     const d = await call('get_exam_list');
     examsCache = d.exams || [];
-    const sel = document.getElementById('examSel');
     const dl  = document.getElementById('examNameList');
-    examsCache.forEach(e => {
-      sel.add(new Option(e, e));
-      if (dl) { const opt = document.createElement('option'); opt.value=e; dl.appendChild(opt); }
-    });
+    if (dl) examsCache.forEach(e => { const opt = document.createElement('option'); opt.value=e; dl.appendChild(opt); });
+    applySemesterFilter(); // 학기 필터로 드롭다운 채움
   } catch(e) { toast('시험 목록 로드 실패: '+e.message); }
 };
+
+// ── 시험명에서 학기 파싱 ──
+function getExamSemester(name) {
+  if (name.includes('2학기')) return '2학기';
+  if (name.includes('1학기')) return '1학기';
+  return '기타';
+}
+
+// ── 학기 필터 적용 (API가 최신순으로 주므로 순서 유지) ──
+function applySemesterFilter() {
+  const semSel = document.getElementById('semesterFilter');
+  let sem = semSel.value;
+  const sel = document.getElementById('examSel');
+  const cur = sel.value;
+
+  const build = (s) => examsCache.filter(e => {
+    if (e.startsWith('manual_')) return false;
+    if (!s) return true;
+    return getExamSemester(e) === s;
+  });
+
+  let filtered = build(sem);
+  // 선택 학기에 시험이 없으면 전체로 자동 전환
+  if (sem && !filtered.length) { sem=''; semSel.value=''; filtered = build(''); }
+
+  sel.innerHTML = '<option value="">-- 시험 선택 --</option>';
+  filtered.forEach(e => sel.add(new Option(e, e)));
+
+  if (cur && filtered.includes(cur)) sel.value = cur;
+  else { sel.value = ''; currentExam=''; const sl=document.getElementById('studentList'); if(sl) sl.innerHTML='<div class="empty">시험을 선택하세요</div>'; }
+}
 
 // ── 시험 선택 ──
 async function onExamChange() {
