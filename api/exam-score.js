@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
   try {
 
-    // ── 시험 목록 ──
+    // ── 시험 목록 (최신 등록순) ──
     if (action === 'get_exam_list') {
       let all = [], cursor;
       do {
@@ -58,9 +58,16 @@ export default async function handler(req, res) {
         all = all.concat(d.results || []);
         cursor = d.has_more ? d.next_cursor : undefined;
       } while (cursor);
-      const exams = [...new Set(all.map(p =>
-        p.properties['시험명']?.title?.[0]?.text?.content || ''
-      ).filter(Boolean))].sort();
+
+      // 시험명별 최신 생성일 계산 → 최근 등록 시험이 위로
+      const examTime = {};
+      all.forEach(p => {
+        const name = p.properties['시험명']?.title?.[0]?.text?.content || '';
+        if (!name) return;
+        const t = new Date(p.created_time || 0).getTime();
+        if (!examTime[name] || t > examTime[name]) examTime[name] = t;
+      });
+      const exams = Object.keys(examTime).sort((a, b) => examTime[b] - examTime[a]);
       return res.status(200).json({ ok: true, exams });
     }
 
