@@ -1,110 +1,28 @@
-
-Claude가 응답을 완료했습니다
-1790066567607_image.png
-에러메세지 보내줄게
-
-A server error가 JSON이 아닌 걸로 보아, exam-score.js가 크래시했어요. 방금 추가한 get_report_data 히스토리 로직에 문제가 있을 거예요.
-
-get_exam_list는 파일 앞부분이라 멀쩡한데도 크래시가 난다면, 파일 전체가 로드 안 되는 구문/런타임 오류예요. 방금 추가한 코드를 정밀 점검할게요.
-
-명령 실행함
-모듈은 정상 로드돼요. 그럼 문법 오류는 아니에요.
-
-A server error는 Vercel이 함수 실행 중 크래시하면 반환하는 HTML 에러 페이지예요. 런타임에서 특정 조건일 때 터지는 거죠. 방금 추가한 히스토리 로직에서 정의 안 된 변수나 비동기 처리 문제가 있는지 정밀히 볼게요.
-
-특히 get_report_data가 아니라 get_exam_list 호출 시 에러가 나는 게 이상해요. 혹시 파일 상단에 뭔가 깨졌는지, nFetch/queryDB 정의를 확인할게요.
-
-Check top of exam-score for helper definitions exam-score.js
-상단 헬퍼는 다 정상이에요. 파일 구조도 문제없어요.
-
-A server error가 나는데 모듈은 로드되고 문법도 맞다면... Vercel 배포 자체가 실패했을 가능성이 커요. 예를 들어:
-
-배포 중 빌드 에러
-함수 크기 초과
-이전 배포가 아직 안 끝남
-가장 흔한 건 아직 배포가 완료 안 된 상태예요. 방금 여러 파일을 연속 수정하셨으니, Vercel이 재배포 중일 수 있어요.
-
-확인 방법:
-
-Vercel 대시보드 → Deployments
-최신 배포가 "Ready"(초록)인지, "Error"(빨강)인지 확인
-만약 Error면 빌드 로그에 원인이 있어요. 그 로그를 보여주시면 정확히 짚을게요.
-
-그 사이, 최근 추가한 get_report_data 히스토리 로직이 유일한 대규모 변경이니, 혹시 이게 문제면 롤백할 수 있게 준비할게요. 히스토리 부분을 다시 점검할게요.
-
-Recheck history logic for runtime issues exam-score.js
-이 로직은 try/catch로 감싸여 있어서 실패해도 history=[]로 넘어가요. 크래시 원인은 아니에요.
-
-정리하면 코드는 다 정상이에요. A server error는 거의 확실히 Vercel 배포/런타임 환경 문제예요. 가장 가능성 높은 순서로:
-
-배포가 아직 안 끝남 (여러 파일 연속 커밋 → 재배포 중)
-배포 실패 (Vercel Deployments에서 Error 확인)
-함수 타임아웃 (get_exam_list이 느린 경우 — 문항 DB가 크면)
-지금 하실 것:
-
-Vercel 대시보드 → Deployments 열어서 최신 배포 상태를 확인해주세요.
-
-🟢 Ready → 잠시 후 새로고침하면 될 수 있어요
-🔴 Error → 빌드 로그 캡처해서 보여주세요
-그리고 브라우저 F12 → Network 탭에서 exam-score 요청을 클릭하면, 서버가 뭐라고 응답하는지(전체 에러 메시지) 보여요. 그걸 캡처해주시면 "A server error" 뒤에 잘린 진짜 원인을 볼 수 있어요.
-
-지금까지 확인으로는 코드 문제는 아니라서, 배포 상태나 서버 응답 원문을 봐야 정확히 짚을 수 있어요. 어느 쪽이든 알려주시면 바로 해결할게요 😊
-
-같은 오류야 다시 돌려내!!!
-
-바로 롤백할게요! 방금 추가한 히스토리 로직을 전부 빼서 이전 상태로 되돌리겠습니다.
-
-2개 파일 수정됨, 명령 실행함, 파일 공유함
-두 파일 교체 후 재배포해주세요!
-
-api/exam-score.js
-public/exam-analysis.html
-되돌린 내용 (성적 추이 기능 추가 전 상태로):
-
-점수 추이 / 상승폭 배지 → 제거
-get_report_data의 히스토리 계산 → 제거
-학기 필터 드롭다운 → 제거
-시험 선택은 원래대로 전체 시험 표시
-이제 성적 추이를 넣기 이전의 안정된 상태예요. 시험 목록도 정상 로드될 거예요.
-
-재배포 후 시험 목록이 잘 나오는지 확인해주세요. 정상 작동하면, 아까 그 "A server error"의 진짜 원인을 차분히 찾아서 (추이 기능을 다시 넣고 싶으시면) 안전하게 다시 시도할 수 있어요. 지금은 일단 원래대로 되돌리는 게 우선이니 이걸로 복구하세요 😊
-
-
-Exam score
-TXT 
-
-Exam analysis
-코드·HTML 
-
-바로 직전 학기 점수만 
-
-Claude는 AI이므로 실수를 할 수 있습니다. 응답을 다시 한번 확인해 주세요.
-Exam score · TXT
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
- 
+
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const DB_QUESTIONS = process.env.NOTION_DB_EXAM_QUESTIONS;
   const DB_RESULTS   = process.env.NOTION_DB_EXAM_RESULTS;
   const CLAUDE_KEY   = process.env.CLAUDE_API_KEY;
- 
+
   if (!NOTION_TOKEN || !DB_QUESTIONS || !DB_RESULTS) {
     return res.status(500).json({ error: '환경변수를 확인해주세요.' });
   }
- 
+
   const headers = {
     'Authorization': `Bearer ${NOTION_TOKEN}`,
     'Content-Type': 'application/json',
     'Notion-Version': '2022-06-28'
   };
- 
+
   const nFetch = (url, opts = {}) =>
     fetch(url, { headers, ...opts }).then(r => r.json());
- 
+
   const queryDB = async (dbId, filter, sorts) => {
     let all = [], cursor;
     do {
@@ -121,12 +39,12 @@ export default async function handler(req, res) {
     } while (cursor);
     return all;
   };
- 
+
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   const { action } = body;
- 
+
   try {
- 
+
     // ── 시험 목록 ──
     if (action === 'get_exam_list') {
       let all = [], cursor;
@@ -145,7 +63,7 @@ export default async function handler(req, res) {
       ).filter(Boolean))].sort();
       return res.status(200).json({ ok: true, exams });
     }
- 
+
     // ── 시험 문항 조회 ──
     if (action === 'get_exam_details') {
       const { examId } = body;
@@ -166,7 +84,7 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json({ ok: true, questions: qs });
     }
- 
+
     // ── 시험지 삭제 ──
     if (action === 'delete_exam') {
       const { examId } = body;
@@ -180,7 +98,7 @@ export default async function handler(req, res) {
       ));
       return res.status(200).json({ ok: true, message: `"${examId}" 삭제 완료 (${existing.length}문항)` });
     }
- 
+
     // ── 시험지 일괄 저장 ──
     if (action === 'bulk_save_exam') {
       const { examId, questions } = body;
@@ -217,16 +135,16 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, message: `${questions.length}문항 저장 완료` });
     }
- 
+
     // ── 학생 성적 저장 (학생 1명 = 레코드 1개) ──
     if (action === 'save_student_results') {
       const { studentName, examId, results, feedback, extraScore } = body;
- 
+
       // 정오답을 JSON 문자열로 압축
       const answersJson = JSON.stringify(
         Object.fromEntries(results.map(r => [r.num ?? r.numStr, r.result]))
       );
- 
+
       // 기존 레코드 삭제
       const existing = await queryDB(DB_RESULTS, {
         and: [
@@ -241,7 +159,7 @@ export default async function handler(req, res) {
           })
         ));
       }
- 
+
       // 새 레코드 1개 저장
       await nFetch('https://api.notion.com/v1/pages', {
         method: 'POST',
@@ -258,10 +176,10 @@ export default async function handler(req, res) {
           }
         })
       });
- 
+
       return res.status(200).json({ ok: true, message: `${studentName} 저장 완료` });
     }
- 
+
     // ── 제출 학생 목록 ──
     // ── 피드백만 저장 ──
     if (action === 'save_feedback') {
@@ -281,7 +199,7 @@ export default async function handler(req, res) {
       });
       return res.status(200).json({ ok: true });
     }
- 
+
     // ── 제출 학생 목록 (점수 + 피드백 + 미제출 대상 포함) ──
     if (action === 'get_submitted_students') {
       const { examId } = body;
@@ -291,12 +209,12 @@ export default async function handler(req, res) {
         queryDB(DB_QUESTIONS, { property: '시험명', title:     { equals: examId } }),
         DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
       ]);
- 
+
       const questions = qRows.map(p => ({
         num:   p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
         score: p.properties['배점']?.number || 0,
       }));
- 
+
       // 제출한 학생
       const submitted = rRows.map(p => {
         const name     = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
@@ -310,19 +228,19 @@ export default async function handler(req, res) {
         else questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
         return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, submitted: true };
       }).filter(s => s.name);
- 
+
       const submittedNames = new Set(submitted.map(s => s.name));
- 
+
       // 시험명에서 학교/학년/학교급 파싱 → 대상 학생 추출
       // 예: "2026 형곡고 1학년 1학기 기말고사" → 학년 1학년, 학교급 고
       const gradeMatch = examId.match(/([1-3])학년/);
       const targetGrade = gradeMatch ? gradeMatch[1] + '학년' : '';
- 
+
       // 시험명의 학교급 판별 (고 vs 중) — "형곡고", "형곡중" 구분
       // 학교명+급 패턴을 직접 추출 (예: 형곡고, 구미여중)
       const isHighExam = /[가-힣]+(고|고등학교)(\s|$|\d)/.test(examId) || examId.includes('고 ') || /[가-힣]+고\d?학년/.test(examId);
       const isMidExam  = /[가-힣]+(중|중학교)(\s|$|\d)/.test(examId) || examId.includes('중 ') || /[가-힣]+중\d?학년/.test(examId);
- 
+
       let missing = [];
       if (sRows.length && targetGrade) {
         sRows.forEach(p => {
@@ -332,23 +250,23 @@ export default async function handler(req, res) {
           const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
           if (!name || !school) return;
           if (grade !== targetGrade) return;
- 
+
           // 학교급 확인: 시험이 '고'면 학생도 고등, '중'이면 중등
           if (isHighExam && !isMidExam && type !== '고등') return;
           if (isMidExam && !isHighExam && type !== '중등') return;
- 
+
           // 학교명 매칭: 풀네임(형곡고등학교)/축약형(형곡고) 모두 대응
           const schoolShort = school.replace(/고등학교/,'고').replace(/중학교/,'중');
           if (!examId.includes(school) && !examId.includes(schoolShort)) return;
- 
+
           if (submittedNames.has(name)) return;
           missing.push({ name, score: null, hasFeedback: false, submitted: false });
         });
       }
- 
+
       submitted.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
       missing.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
- 
+
       return res.status(200).json({
         ok: true,
         students: submitted,
@@ -356,7 +274,7 @@ export default async function handler(req, res) {
         totalTarget: submitted.length + missing.length
       });
     }
- 
+
     // ── 기존 데이터 불러오기 ──
     if (action === 'get_existing_data') {
       const { studentName, examId } = body;
@@ -375,18 +293,18 @@ export default async function handler(req, res) {
       const extraScore = row.properties['추가점수']?.number || 0;
       return res.status(200).json({ ok: true, results, feedback, extraScore });
     }
- 
+
     // ── 리포트 데이터 ──
     if (action === 'get_report_data') {
       const { studentName, examId } = body;
- 
+
       // 문항 정보
       const qRows = await queryDB(DB_QUESTIONS,
         { property: '시험명', title: { equals: examId } },
         [{ property: '문항번호', direction: 'ascending' }]
       );
       if (!qRows.length) return res.status(404).json({ error: '시험 문항 없음' });
- 
+
       const questions = qRows.map(p => ({
         num:   p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
         unit:  p.properties['단원']?.rich_text?.[0]?.text?.content || '',
@@ -395,7 +313,7 @@ export default async function handler(req, res) {
         score: p.properties['배점']?.number || 0,
       }));
       const commonComment = qRows[0].properties['총평']?.rich_text?.[0]?.text?.content || '';
- 
+
       // 학생 성적
       const rRows = await queryDB(DB_RESULTS, {
         and: [
@@ -404,14 +322,14 @@ export default async function handler(req, res) {
         ]
       });
       if (!rRows.length) return res.status(404).json({ error: '데이터 없음' });
- 
+
       const row = rRows[0];
       const answersJson = row.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
       const extraScore  = row.properties['추가점수']?.number || 0;
       const teacherFeedback = row.properties['피드백']?.rich_text?.[0]?.text?.content || '';
       let answers = {};
       try { answers = JSON.parse(answersJson); } catch {}
- 
+
       let totalScore = extraScore;
       const incorrectList = [];
       questions.forEach(q => {
@@ -422,14 +340,14 @@ export default async function handler(req, res) {
           incorrectList.push({ num: q.num, unit: q.unit, area: q.area, type: q.type, score: q.score });
         }
       });
- 
+
       // 차트 데이터
       const unitCount = {}, areaCount = {};
       questions.forEach(q => {
         if (q.unit) unitCount[q.unit] = (unitCount[q.unit] || 0) + 1;
         if (q.area) areaCount[q.area] = (areaCount[q.area] || 0) + 1;
       });
- 
+
       return res.status(200).json({
         ok: true,
         studentName, examId,
@@ -444,7 +362,7 @@ export default async function handler(req, res) {
         areaValues:  Object.values(areaCount),
       });
     }
- 
+
     // ── 누적 성적표 ──
     if (action === 'get_score_matrix') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
@@ -453,7 +371,7 @@ export default async function handler(req, res) {
         queryDB(DB_QUESTIONS),
         DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
       ]);
- 
+
       // 학생 정보 맵
       const studentInfoMap = {};
       sRows.forEach(p => {
@@ -463,7 +381,7 @@ export default async function handler(req, res) {
         const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
         if (name) studentInfoMap[name] = { type, grade, school };
       });
- 
+
       // 시험별 문항 정보 맵
       const examQMap = {};
       qRows.forEach(p => {
@@ -473,28 +391,28 @@ export default async function handler(req, res) {
         if (!examQMap[exam]) examQMap[exam] = [];
         examQMap[exam].push({ num, score });
       });
- 
+
       // 시험명 목록 (생성일 순)
       const autoExams = [...new Set(
         qRows
           .sort((a,b) => new Date(a.created_time||0) - new Date(b.created_time||0))
           .map(p => p.properties['시험명']?.title?.[0]?.text?.content || '')
       )].filter(Boolean);
- 
+
       // 학생별 점수 (자동 + 수동)
       const studentMap = {};
       const manualExams = new Set();
- 
+
       rRows.forEach(p => {
         const name  = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
         const exam  = p.properties['시험명']?.rich_text?.[0]?.text?.content || '';
         const extra = p.properties['추가점수']?.number || 0;
         const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
         if (!name || !exam) return;
- 
+
         let answers = {};
         try { answers = JSON.parse(answersJson); } catch {}
- 
+
         let score, isManual = false;
         if (answers._manual) {
           score = answers._total || 0;
@@ -504,7 +422,7 @@ export default async function handler(req, res) {
           score = extra;
           (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
         }
- 
+
         if (!studentMap[name]) {
           const info = studentInfoMap[name] || {};
           studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
@@ -512,18 +430,18 @@ export default async function handler(req, res) {
         studentMap[name].scores[exam] = Number(score.toFixed(1));
         if (isManual) studentMap[name].manual[exam] = true;
       });
- 
+
       // 점수 없는 학생도 포함 (등원 일정 DB 전체 기준)
       Object.entries(studentInfoMap).forEach(([name, info]) => {
         if (!studentMap[name]) {
           studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
         }
       });
- 
+
       // 전체 시험 목록 = 수동 시험 + 자동 시험 (시간순)
       const manualExamList = [...manualExams].filter(e => !autoExams.includes(e)).sort();
       const exams = [...manualExamList, ...autoExams];
- 
+
       const rows = Object.values(studentMap).sort((a,b) => {
         const to = {'초등':0,'중등':1,'고등':2};
         const ta = to[a.type]??3, tb = to[b.type]??3;
@@ -535,7 +453,7 @@ export default async function handler(req, res) {
       });
       return res.status(200).json({ ok: true, exams, rows });
     }
- 
+
     // ── 수동 점수 저장 ──
     if (action === 'save_manual_score') {
       const { studentName, examId, score } = body;
@@ -567,7 +485,7 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true });
     }
- 
+
     // ── 시험 총평 AI 생성 (생성만, 저장은 시험지 저장 버튼으로) ──
     if (action === 'generate_common_comment') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
@@ -582,40 +500,40 @@ export default async function handler(req, res) {
       if (!text) throw new Error('Claude 응답 오류');
       return res.status(200).json({ ok: true, text });
     }
- 
+
     if (action === 'generate_ai_feedback') {
       if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
       const { studentName, examId, totalScore, incorrectList, teacherMemo, hasTeacherMemo } = body;
       const incorrectSummary = !incorrectList?.length
         ? '모든 문항 정답'
         : incorrectList.map(i => `${i.num}번(${i.area}/${i.type})`).join(', ');
- 
+
       const prompt = hasTeacherMemo
         ? `채움영어학원 선생님이 작성한 피드백을 아래 학생 성적 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 기존 피드백의 핵심 내용과 톤을 유지하면서 오답 분석 내용을 자연스럽게 녹여주세요.
- 
+
 학생: ${studentName}
 시험명: ${examId}
 점수: ${totalScore}점 / 100점
 오답 문항: ${incorrectSummary}
 기존 선생님 피드백: ${teacherMemo}
- 
+
 [작성 규칙]
 - 학부모에게 전달하는 따뜻하고 전문적인 어투
 - 기존 피드백 내용을 바탕으로 오답 영역/유형을 자연스럽게 포함
 - 마크다운 기호 없이 본문만`
         : `채움영어학원 선생님입니다. 아래 학생의 시험 결과를 바탕으로 학부모 전달용 피드백을 3~4문장으로 작성해 주세요.
- 
+
 학생: ${studentName}
 시험명: ${examId}
 점수: ${totalScore}점 / 100점
 오답 문항: ${incorrectSummary}
- 
+
 [작성 규칙]
 - 학부모에게 전달하는 따뜻하고 전문적인 어투
 - 오답 문항의 영역/유형을 구체적으로 언급
 - 잘한 점과 보완점 균형있게 서술
 - 마크다운 기호 없이 본문만`;
- 
+
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
@@ -626,35 +544,10 @@ export default async function handler(req, res) {
       if (!feedback) throw new Error('Claude 응답 오류');
       return res.status(200).json({ ok: true, feedback });
     }
- 
+
     return res.status(400).json({ error: '알 수 없는 action' });
- 
+
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
 }
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
