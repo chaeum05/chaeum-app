@@ -1,1358 +1,660 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>채움영어 성적 분석 시스템</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-:root{
-  --blue:#1a73e8;--gold:#c5a059;--dark:#1c1c2e;--burgundy:#9d1b2e;
-  --bg:#f4f6fb;--white:#fff;--border:#e2e8f0;
-  --text:#202124;--text2:#5f6368;--text3:#9aa0a6;
-  --green:#34a853;--red:#ea4335;--purple:#7c3aed;
-  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,0.08);
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-/* ── 헤더 ── */
-.hdr{background:var(--dark);color:white;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200;}
-.hdr-logo{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;}
-.hdr-logo span{color:var(--gold);}
-.hdr-nav{display:flex;gap:3px;}
-.hn{padding:5px 14px;border:none;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:transparent;color:rgba(255,255,255,.65);transition:.15s;}
-.hn.active,.hn:hover{background:rgba(255,255,255,.15);color:white;}
-.loading-bar{height:3px;background:linear-gradient(90deg,var(--blue) 40%,transparent);background-size:200%;animation:lb 1s linear infinite;display:none;}
-@keyframes lb{0%{background-position:200%}100%{background-position:-200%}}
+Claude가 응답을 완료했습니다
+1790066567607_image.png
+에러메세지 보내줄게
 
-/* ── 메인 레이아웃 ── */
-.layout{display:flex;min-height:calc(100vh - 52px);}
-.sidebar{width:240px;background:var(--white);border-right:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:12px;flex-shrink:0;}
-.content{flex:1;padding:24px 28px;overflow-y:auto;}
+A server error가 JSON이 아닌 걸로 보아, exam-score.js가 크래시했어요. 방금 추가한 get_report_data 히스토리 로직에 문제가 있을 거예요.
 
-/* ── 사이드바 ── */
-.sb-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
-.sb-select{width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;background:var(--white);}
-.sb-select:focus{border-color:var(--blue);}
-.student-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;}
-.si{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;cursor:pointer;transition:.12s;}
-.si:hover{border-color:var(--blue);}
-.si-name{font-size:12px;font-weight:700;margin-bottom:4px;}
-.si-btns{display:flex;gap:4px;}
-.sib{flex:1;padding:3px 0;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-.sib-view{background:var(--green);color:white;}
-.sib-edit{background:#fbbc05;color:#333;}
-.empty{font-size:11px;color:var(--text3);text-align:center;padding:16px 0;}
+get_exam_list는 파일 앞부분이라 멀쩡한데도 크래시가 난다면, 파일 전체가 로드 안 되는 구문/런타임 오류예요. 방금 추가한 코드를 정밀 점검할게요.
 
-/* ── 탭 페이지 ── */
-.page{display:none;}.page.active{display:block;}
+명령 실행함
+모듈은 정상 로드돼요. 그럼 문법 오류는 아니에요.
 
-/* ── 공통 카드 ── */
-.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 24px;margin-bottom:16px;}
-.card-title{font-size:14px;font-weight:700;color:var(--dark);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+A server error는 Vercel이 함수 실행 중 크래시하면 반환하는 HTML 에러 페이지예요. 런타임에서 특정 조건일 때 터지는 거죠. 방금 추가한 히스토리 로직에서 정의 안 된 변수나 비동기 처리 문제가 있는지 정밀히 볼게요.
 
-/* ── 폼 요소 ── */
-.fl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;}
-.fi{padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:.15s;width:100%;}
-.fi:focus{border-color:var(--blue);}
-textarea.fi{resize:vertical;min-height:72px;}
-.row{display:flex;gap:10px;margin-bottom:12px;}
-.fg{flex:1;display:flex;flex-direction:column;}
+특히 get_report_data가 아니라 get_exam_list 호출 시 에러가 나는 게 이상해요. 혹시 파일 상단에 뭔가 깨졌는지, nFetch/queryDB 정의를 확인할게요.
 
-/* ── 버튼 ── */
-.btn{padding:9px 18px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.15s;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:var(--blue);color:white;}
-.btn-primary:hover{background:#1557b0;}
-.btn-primary:disabled{opacity:.6;cursor:not-allowed;}
-.btn-ghost{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);}
-.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
-.btn-danger{background:#fdecea;color:var(--burgundy);}
-.btn-danger:hover{background:var(--burgundy);color:white;}
-.btn-ai{background:linear-gradient(135deg,#1c1c2e,#3a3a5c);color:white;}
-.btn-ai:hover{opacity:.9;}
-.btn-ai:disabled{opacity:.6;cursor:not-allowed;}
-.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;}
+Check top of exam-score for helper definitions exam-score.js
+상단 헬퍼는 다 정상이에요. 파일 구조도 문제없어요.
 
-/* ── 시험지 등록 테이블 ── */
-.exam-reg-header{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;}
-.exam-table-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:var(--radius);}
-.exam-table{width:auto;border-collapse:collapse;font-size:12px;}
-.exam-table th{background:#f8f9fa;padding:7px 8px;border-bottom:1.5px solid var(--border);font-weight:700;color:var(--text2);text-align:left;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.3px;}
-.exam-table td{padding:3px 4px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
-.exam-table tr:last-child td{border-bottom:none;}
-.exam-table tr:hover td{background:#fafafa;}
-.et-input{width:100%;padding:5px 7px;border:1px solid transparent;border-radius:5px;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;background:transparent;}
-.et-input:focus{border-color:var(--blue);background:white;}
-.et-del{padding:3px 7px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;border-radius:4px;}
-.et-del:hover{background:#fdecea;color:var(--burgundy);}
-.add-row-btn{width:100%;padding:7px;border:1px dashed var(--border);background:none;border-radius:0 0 8px 8px;cursor:pointer;color:var(--text3);font-size:12px;transition:.12s;}
-.add-row-btn:hover{border-color:var(--blue);color:var(--blue);}
+A server error가 나는데 모듈은 로드되고 문법도 맞다면... Vercel 배포 자체가 실패했을 가능성이 커요. 예를 들어:
 
-/* ── 성적 입력 문항 리스트 ── */
-.q-wrap{border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.q-head{display:grid;grid-template-columns:38px 180px 42px 74px;gap:0;background:#f8f9fa;padding:5px 10px;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;border-bottom:1.5px solid var(--border);}
-.q-row{display:grid;grid-template-columns:38px 180px 42px 74px;gap:0;padding:5px 10px;border-bottom:1px solid #f5f5f5;align-items:center;}
-.q-row:last-child{border-bottom:none;}
-.q-row:hover{background:#fafafa;}
-.q-num{font-weight:700;color:var(--blue);font-size:12px;}
-.q-type{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px;}
-.q-score{font-size:11px;color:var(--text2);font-weight:600;text-align:center;}
-.ox-btns{display:flex;gap:3px;}
-.ox-btn{padding:3px 10px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.12s;background:var(--bg);}
-.ox-btn.o-on{background:#e8f7ee;border-color:var(--green);color:var(--green);}
-.ox-btn.x-on{background:#fdecea;border-color:var(--red);color:var(--red);}
-.ox-btn:hover{border-color:var(--blue);}
-.ox-btns{display:flex;gap:6px;}
-.ox-btn{padding:4px 12px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.12s;background:var(--bg);}
-.ox-btn.o-on{background:#e8f7ee;border-color:var(--green);color:var(--green);}
-.ox-btn.x-on{background:#fdecea;border-color:var(--red);color:var(--red);}
-.ox-btn:hover{border-color:var(--blue);}
-.score-preview{font-size:11px;font-weight:700;color:var(--blue);padding:3px 8px;background:#e8f0fe;border-radius:12px;margin-left:auto;}
+배포 중 빌드 에러
+함수 크기 초과
+이전 배포가 아직 안 끝남
+가장 흔한 건 아직 배포가 완료 안 된 상태예요. 방금 여러 파일을 연속 수정하셨으니, Vercel이 재배포 중일 수 있어요.
 
-/* ── 리포트 ── */
-#report-page{background:#d1d5db;padding:24px;min-height:calc(100vh - 52px);}
-#capture-area{width:800px;background:white;padding:40px 50px;margin:0 auto 20px;box-shadow:0 15px 35px rgba(0,0,0,.15);}
-.rpt-header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:4px solid var(--blue);padding-bottom:14px;margin-bottom:22px;}
-.rpt-title{font-family:'Poppins',sans-serif;font-size:25px;font-weight:700;color:var(--blue);margin:0 0 5px;}
-.rpt-notice{display:inline-block;background:#fff4e5;color:#d97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-bottom:8px;border:1px solid #fde68a;}
-.rpt-info{font-size:14px;color:var(--text);}
-.rpt-info div{margin-bottom:2px;}
-.score-row{display:flex;align-items:baseline;justify-content:flex-end;gap:5px;white-space:nowrap;}
-.score-val{font-family:'Poppins',sans-serif;font-size:52px;font-weight:700;color:var(--blue);line-height:1;}
-.score-max{font-size:16px;color:var(--text3);}
-.exam-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.weak-area-card{border-radius:10px;padding:12px 13px;position:relative;overflow:hidden;}
-.weak-area-card.sev-1{background:linear-gradient(135deg,#fef2f2,#fecaca);border:1.5px solid #ef4444;}
-.weak-area-card.sev-2{background:linear-gradient(135deg,#fff7ed,#fed7aa);border:1.5px solid #f97316;}
-.weak-area-card.sev-3{background:linear-gradient(135deg,#fffbeb,#fef08a);border:1.5px solid #eab308;}
-.weak-area-card.sev-default{background:#f8f9fa;border:1.5px solid var(--border);}
-.weak-area-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-.weak-area-name{font-size:13px;font-weight:800;color:var(--text);}
-.weak-area-count{font-size:11px;font-weight:700;color:var(--text2);background:rgba(255,255,255,.6);padding:2px 8px;border-radius:20px;}
-.weak-area-type{font-size:11px;color:var(--text2);}
-.weak-area-type b{color:var(--text);font-weight:700;}
-.exam-summary-box{border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;background:#fafafa;}
-.esb-title{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px;margin-bottom:10px;padding-bottom:7px;border-bottom:2px solid var(--border);}
-.esb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
-.esb-row:last-child{border-bottom:none;}
-.esb-label{color:var(--text2);}
-.esb-val{font-weight:700;color:var(--text);}
-.esb-bar-wrap{display:flex;align-items:center;gap:6px;flex:1;margin-left:8px;}
-.esb-bar{height:6px;border-radius:3px;background:var(--blue);min-width:2px;}
-.esb-pct{font-size:10px;color:var(--text3);white-space:nowrap;}
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
-.chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:220px;display:flex;flex-direction:column;}
-.chart-tag{font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;color:var(--text);}
-.chart-wrap{flex:1;position:relative;}
-.sec-title{font-size:17px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;color:var(--text);}
-.sec-title::before{content:'';width:5px;height:18px;background:var(--gold);margin-right:9px;border-radius:2px;}
-.err-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;}
-.err-table th{background:#f8f9fa;padding:8px;color:var(--text2);border-bottom:2px solid #eee;font-size:11px;}
-.err-table td{padding:8px;border-bottom:1px solid #f1f1f1;text-align:center;}
-.memo-wrap{display:flex;flex-direction:column;gap:12px;margin-bottom:24px;}
-.memo-box{padding:16px 18px;border-radius:9px;font-size:13px;line-height:1.7;}
-.box-blue{background:#f0f7ff;border-left:5px solid var(--blue);}
-.box-gold{background:#fffdf0;border-left:5px solid var(--gold);}
-.box-ai{background:#f5f3ff;border-left:5px solid var(--purple);}
-.rpt-footer{text-align:center;border-top:1px solid #eee;padding-top:16px;font-size:16px;font-weight:700;color:#222;}
-.rpt-footer span{color:var(--blue);margin-left:8px;font-family:'Poppins';}
-.rpt-btns{width:800px;margin:0 auto;display:flex;gap:10px;padding-bottom:36px;}
-.rb{flex:1;padding:13px;border:none;border-radius:7px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.12s;}
-.rb:hover{opacity:.88;}
-.rb-black{background:#222;color:white;}
-.rb-blue{background:var(--blue);color:white;}
-.rb-ai{background:var(--purple);color:white;}
-.rb-back{background:#e8f0fe;color:var(--blue);}
+확인 방법:
 
-/* ── 토스트 ── */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:white;padding:9px 20px;border-radius:18px;font-size:12px;font-weight:600;opacity:0;transition:.28s;pointer-events:none;z-index:9999;white-space:nowrap;}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-</style>
-</head>
-<body>
+Vercel 대시보드 → Deployments
+최신 배포가 "Ready"(초록)인지, "Error"(빨강)인지 확인
+만약 Error면 빌드 로그에 원인이 있어요. 그 로그를 보여주시면 정확히 짚을게요.
 
-<header class="hdr">
-  <div class="hdr-logo">CHAEUM <span>ENGLISH</span> · 성적 분석</div>
-  <nav class="hdr-nav">
-    <button class="hn active" id="hn-exam" onclick="switchPage('exam')">📋 시험지 등록</button>
-    <button class="hn" id="hn-score" onclick="switchPage('score')">✏️ 성적 입력</button>
-    <button class="hn" id="hn-matrix" onclick="switchPage('matrix')">📊 성적표</button>
-  </nav>
-</header>
-<div class="loading-bar" id="lbar"></div>
+그 사이, 최근 추가한 get_report_data 히스토리 로직이 유일한 대규모 변경이니, 혹시 이게 문제면 롤백할 수 있게 준비할게요. 히스토리 부분을 다시 점검할게요.
 
-<!-- 메인 (시험지 등록 + 성적 입력) -->
-<div id="main-wrap">
-<div class="layout">
+Recheck history logic for runtime issues exam-score.js
+이 로직은 try/catch로 감싸여 있어서 실패해도 history=[]로 넘어가요. 크래시 원인은 아니에요.
 
-  <!-- 사이드바 -->
-  <aside class="sidebar">
-    <div>
-      <div class="sb-label" style="margin-bottom:6px;">학기</div>
-      <select class="sb-select" id="semesterFilter" onchange="applySemesterFilter()" style="margin-bottom:12px;">
-        <option value="2학기">2학기</option>
-        <option value="1학기">1학기</option>
-        <option value="">전체 학기</option>
-      </select>
-      <div class="sb-label" style="margin-bottom:6px;">시험 선택</div>
-      <select class="sb-select" id="examSel" onchange="onExamChange()">
-        <option value="">-- 시험 선택 --</option>
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;gap:6px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div class="sb-label" style="margin:0;">제출 학생</div>
-        <button id="batchSaveBtn" onclick="saveAllImages()"
-          style="font-size:11px;padding:4px 9px;background:#0f172a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:'Noto Sans KR',sans-serif;">
-          📸 전체 저장
-        </button>
-      </div>
-      <div class="student-list" id="studentList"><div class="empty">시험을 선택하세요</div></div>
-    </div>
-  </aside>
+정리하면 코드는 다 정상이에요. A server error는 거의 확실히 Vercel 배포/런타임 환경 문제예요. 가장 가능성 높은 순서로:
 
-  <!-- 콘텐츠 -->
-  <main class="content">
+배포가 아직 안 끝남 (여러 파일 연속 커밋 → 재배포 중)
+배포 실패 (Vercel Deployments에서 Error 확인)
+함수 타임아웃 (get_exam_list이 느린 경우 — 문항 DB가 크면)
+지금 하실 것:
 
-    <!-- ① 시험지 등록 페이지 -->
-    <div class="page active" id="page-exam">
+Vercel 대시보드 → Deployments 열어서 최신 배포 상태를 확인해주세요.
 
-      <div class="card">
-        <div class="card-title">📋 시험지 등록 / 수정</div>
-        <div class="exam-reg-header">
-          <div class="fg" style="max-width:320px;">
-            <label class="fl">시험명 (ID)</label>
-            <input class="fi" id="examName" placeholder="예: 2026_형곡고_2_1_중간" list="examNameList">
-            <datalist id="examNameList"></datalist>
-          </div>
-          <button class="btn btn-ghost" onclick="loadExamForEdit()" title="기존 시험 불러오기">📂 불러오기</button>
-          <button class="btn btn-danger" onclick="deleteExamSetup()" title="시험지 삭제">🗑️ 삭제</button>
-          <button class="btn btn-primary" onclick="saveExamSetup()">💾 시험지 저장</button>
-        </div>
+🟢 Ready → 잠시 후 새로고침하면 될 수 있어요
+🔴 Error → 빌드 로그 캡처해서 보여주세요
+그리고 브라우저 F12 → Network 탭에서 exam-score 요청을 클릭하면, 서버가 뭐라고 응답하는지(전체 에러 메시지) 보여요. 그걸 캡처해주시면 "A server error" 뒤에 잘린 진짜 원인을 볼 수 있어요.
 
-        <!-- 문항 테이블 -->
-        <div class="exam-table-wrap">
-          <table class="exam-table">
-            <thead>
-              <tr>
-                <th style="width:24px"></th>
-                <th style="width:64px">번호</th>
-                <th style="width:100px">출제단원</th>
-                <th style="width:104px">출제영역</th>
-                <th style="width:240px;">문제유형</th>
-                <th style="width:58px">배점</th>
-                <th style="width:30px"></th>
-              </tr>
-            </thead>
-            <tbody id="examTbody"></tbody>
-          </table>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="add-row-btn" onclick="addExamRow()">＋ 문항 추가</button>
-            <button class="add-row-btn" style="background:#eef2ff;color:#3730a3;" onclick="sortExamRows()">↕️ 번호순 정렬</button>
-          </div>
-        </div>
+지금까지 확인으로는 코드 문제는 아니라서, 배포 상태나 서버 응답 원문을 봐야 정확히 짚을 수 있어요. 어느 쪽이든 알려주시면 바로 해결할게요 😊
 
-        <div style="margin-top:14px;">
-          <label class="fl">시험 총평 (리포트 공통 문구)</label>
-          <div style="display:flex;gap:8px;align-items:flex-start;">
-            <textarea class="fi" id="examCommon" placeholder="이번 시험 전체 총평을 입력하세요. 리포트에 공통 출력됩니다." style="flex:1;"></textarea>
-            <button class="btn btn-ghost" id="aiCommonBtn" onclick="genCommonDraft()"
-              style="white-space:nowrap;margin-top:2px;">✨ AI 초안</button>
-          </div>
-        </div>
-      </div>
+같은 오류야 다시 돌려내!!!
 
-      <!-- 빠른 안내 -->
-      <div class="card" style="background:#fffdf0;border:1px solid #fde68a;">
-        <div class="card-title" style="color:#92400e;">💡 출제단원 / 영역 예시</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px;color:var(--text2);">
-          <div><b style="color:var(--text);">출제단원</b><br>1과, 2과, SL, 교과서, 모의고사, 부교재, print, 외부지문, 26모고, 25모고</div>
-          <div><b style="color:var(--text);">출제영역</b><br>문법, 어휘, 지문 이해, 본문, 대화문, 본문 변형, 내용 이해</div>
-          <div><b style="color:var(--text);">번호 형식</b><br>1, 2 … / 서답형1 / 서술형1 / 서술형 추가점수</div>
-        </div>
-      </div>
-    </div>
+바로 롤백할게요! 방금 추가한 히스토리 로직을 전부 빼서 이전 상태로 되돌리겠습니다.
 
-    <!-- ② 성적 입력 페이지 -->
-    <div class="page" id="page-score">
+2개 파일 수정됨, 명령 실행함, 파일 공유함
+두 파일 교체 후 재배포해주세요!
 
-      <div class="card">
-        <div class="card-title">🎓 학생 정보</div>
-        <div class="row">
-          <div class="fg">
-            <label class="fl">학생 이름</label>
-            <input class="fi" id="studentName" placeholder="이름 입력">
-          </div>
-          <div class="fg" style="max-width:140px;">
-            <label class="fl">추가점수 (서술형 등)</label>
-            <input class="fi" type="number" id="extraScore" value="0" step="0.1">
-          </div>
-          <div class="fg" style="max-width:120px;justify-content:flex-end;">
-            <label class="fl">현재 점수</label>
-            <div id="scorePreview" style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--blue);padding:6px 0;">0점</div>
-          </div>
-        </div>
-      </div>
+api/exam-score.js
+public/exam-analysis.html
+되돌린 내용 (성적 추이 기능 추가 전 상태로):
 
-      <div class="card">
-        <div class="card-title">📝 문항별 O/X
-          <button class="btn btn-ghost" style="margin-left:auto;font-size:11px;padding:4px 10px;" onclick="setAllO()">전체 O</button>
-        </div>
-        <div id="qWrap"><div class="empty" style="padding:30px 0;">시험을 선택하면 문항이 표시됩니다</div></div>
-      </div>
+점수 추이 / 상승폭 배지 → 제거
+get_report_data의 히스토리 계산 → 제거
+학기 필터 드롭다운 → 제거
+시험 선택은 원래대로 전체 시험 표시
+이제 성적 추이를 넣기 이전의 안정된 상태예요. 시험 목록도 정상 로드될 거예요.
 
-      <div class="card">
-        <div class="card-title">✍️ 선생님 메모</div>
-        <textarea class="fi" id="teacherMemo" placeholder="학생 개별 메모 (AI 피드백 생성에 반영됩니다)"></textarea>
-      </div>
+재배포 후 시험 목록이 잘 나오는지 확인해주세요. 정상 작동하면, 아까 그 "A server error"의 진짜 원인을 차분히 찾아서 (추이 기능을 다시 넣고 싶으시면) 안전하게 다시 시도할 수 있어요. 지금은 일단 원래대로 되돌리는 게 우선이니 이걸로 복구하세요 😊
 
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="resetScoreForm()">🔄 초기화</button>
-        <button class="btn btn-primary" id="saveBtn" onclick="saveScore()">💾 성적 저장</button>
-      </div>
-    </div>
 
-    <!-- ③ 성적표 페이지 -->
-    <div class="page" id="page-matrix">
-      <div class="card" style="overflow-x:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <div class="card-title" style="margin:0;">📊 누적 성적표</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <input id="matrix-filter" placeholder="이름 검색" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Noto Sans KR',sans-serif;width:120px;" oninput="filterMatrix()">
-            <button class="btn btn-ghost" onclick="loadMatrix()" style="font-size:12px;">🔄 새로고침</button>
-          </div>
-        </div>
+Exam score
+TXT 
 
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;display:flex;gap:14px;">
-          <span><span style="background:#dcfce7;padding:1px 7px;border-radius:4px;">●</span> 80점 이상</span>
-          <span><span style="background:#fef9c3;padding:1px 7px;border-radius:4px;">●</span> 60~79점</span>
-          <span><span style="background:#fee2e2;padding:1px 7px;border-radius:4px;">●</span> 60점 미만</span>
-          <span style="color:#16a34a;font-weight:700;">▲</span> 상승 &nbsp; <span style="color:#dc2626;font-weight:700;">▼</span> 하락
-        </div>
+Exam analysis
+코드·HTML 
 
-        <div id="matrix-wrap">
-          <div class="empty">성적표 탭을 처음 열면 자동으로 불러와요</div>
-        </div>
-      </div>
-    </div>
+바로 직전 학기 점수만 
 
-  </main>
-</div>
-</div>
-
-<!-- 리포트 전체화면 -->
-<div id="report-page" style="display:none;">
-  <div id="capture-area">
-    <header class="rpt-header">
-      <div>
-        <div class="rpt-title">[ 채움영어 성적 분석 리포트 ]</div>
-        <div class="rpt-notice">※ 본 리포트는 가채점 및 추가 점수를 바탕으로 분석되었습니다.</div>
-        <div class="rpt-info">
-          <div>시험명: <b id="r-exam"></b></div>
-          <div>이름: <b id="r-student"></b></div>
-        </div>
-      </div>
-      <div>
-        <div class="score-row">
-          <span class="score-val" id="r-score">0</span>
-          <span class="score-max">/ <span id="r-max">100</span>점</span>
-        </div>
-        <div id="r-trend" style="text-align:right;margin-top:4px;"></div>
-      </div>
-    </header>
-
-    <!-- 시험 구성 분석 요약 -->
-    <div id="r-exam-summary" style="margin-bottom:20px;">
-      <div class="sec-title">시험 구성 분석</div>
-      <div class="exam-summary-grid">
-        <div class="exam-summary-box">
-          <div class="esb-title">📚 출제 단원별 분포</div>
-          <div id="r-unit-summary"></div>
-        </div>
-        <div class="exam-summary-box">
-          <div class="esb-title">📝 출제 영역별 분포</div>
-          <div id="r-area-summary"></div>
-        </div>
-        <div class="exam-summary-box" style="grid-column:1/-1;">
-          <div class="esb-title">❌ 취약 영역 분석</div>
-          <div id="r-wrong-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:6px;"></div>
-        </div>
-      </div>
-      <!-- 총평 -->
-      <div class="memo-box box-blue" style="margin-top:0;">
-        <strong>📌 시험 총평</strong>
-        <div id="r-common" contenteditable="true" style="margin-top:5px;white-space:pre-line;"></div>
-      </div>
-    </div>
-
-    <div class="sec-title"><span id="r-name2"></span> 학생 오답 상세 분석</div>
-    <table class="err-table">
-      <thead><tr><th style="width:18%">문항</th><th style="width:18%">단원</th><th style="width:26%">영역</th><th>문제 유형</th><th style="width:14%">배점</th></tr></thead>
-      <tbody id="r-errors"></tbody>
-    </table>
-
-    <div class="memo-wrap">
-      <div class="memo-box box-gold">
-        <strong>✍️ 선생님 피드백</strong>
-        <div id="r-teacher" contenteditable="true" style="margin-top:5px;"></div>
-      </div>
-      <div class="memo-box box-ai" id="r-ai-box" style="display:none;">
-        <strong>✨ AI 분석 피드백</strong>
-        <div id="r-ai" contenteditable="true" style="margin-top:5px;"></div>
-      </div>
-    </div>
-
-    <footer class="rpt-footer">프리미엄 채움영어학원<span>054.715.7773</span></footer>
-  </div>
-
-  <div class="rpt-btns">
-    <button class="rb rb-black" onclick="saveImg()">📸 카톡 이미지</button>
-    <button class="rb rb-blue" onclick="window.print()">📄 PDF</button>
-    <button class="rb rb-ai" id="aiBtn" onclick="genAI()">✨ AI 피드백</button>
-    <button class="rb" id="saveFbBtn" onclick="saveFeedback()"
-      style="background:#16a34a;color:white;">💾 피드백 저장</button>
-    <button class="rb rb-back" onclick="closeReport()">← 목록</button>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-const API = '/api/exam-score';
-let currentExam = '';
-let currentQs   = [];   // {num, unit, area, type, score}
-let examsCache  = [];
-let chartU = null, chartA = null;
-let reportData  = null;
-
-// ── 유틸 ──
-async function call(action, body={}) {
-  document.getElementById('lbar').style.display='block';
-  try {
-    const r = await fetch(API, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action,...body})
-    });
-    const d = await r.json();
-    if(!r.ok || d.error) throw new Error(d.error||'서버 오류');
-    return d;
-  } finally { document.getElementById('lbar').style.display='none'; }
-}
-function toast(msg, ms=2500) {
-  const t = document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), ms);
-}
-function switchPage(tab) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+tab).classList.add('active');
-  document.querySelectorAll('.hn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('hn-'+tab).classList.add('active');
-  if (tab === 'matrix') loadMatrix();
-}
-
-// ── 누적 성적표 ──
-let matrixData = null;
-
-async function loadMatrix() {
-  const wrap = document.getElementById('matrix-wrap');
-  wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
-  try {
-    const d = await call('get_score_matrix');
-    matrixData = d;
-    renderMatrix(d);
-  } catch(e) { wrap.innerHTML = `<div class="empty" style="color:var(--burgundy);">오류: ${e.message}</div>`; }
-}
-
-function filterMatrix() {
-  if (!matrixData) return;
-  const q = document.getElementById('matrix-filter').value.trim().toLowerCase();
-  const filtered = {
-    ...matrixData,
-    rows: matrixData.rows.filter(r => r.name.toLowerCase().includes(q))
+Claude는 AI이므로 실수를 할 수 있습니다. 응답을 다시 한번 확인해 주세요.
+Exam score · TXT
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+ 
+  const NOTION_TOKEN = process.env.NOTION_TOKEN;
+  const DB_QUESTIONS = process.env.NOTION_DB_EXAM_QUESTIONS;
+  const DB_RESULTS   = process.env.NOTION_DB_EXAM_RESULTS;
+  const CLAUDE_KEY   = process.env.CLAUDE_API_KEY;
+ 
+  if (!NOTION_TOKEN || !DB_QUESTIONS || !DB_RESULTS) {
+    return res.status(500).json({ error: '환경변수를 확인해주세요.' });
+  }
+ 
+  const headers = {
+    'Authorization': `Bearer ${NOTION_TOKEN}`,
+    'Content-Type': 'application/json',
+    'Notion-Version': '2022-06-28'
   };
-  renderMatrix(filtered);
-}
-
-// ── 시험명 → 4개 고정 컬럼 매핑 ──
-const PERIODS = ['1학기 중간', '1학기 기말', '2학기 중간', '2학기 기말'];
-
-function examToPeriod(examName) {
-  const s = (examName||'').replace(/_/g,' ').replace(/^manual /,'');
-  if (s.includes('1학기') && s.includes('중간')) return '1학기 중간';
-  if (s.includes('1학기') && (s.includes('기말')||s.includes('final'))) return '1학기 기말';
-  if (s.includes('2학기') && s.includes('중간')) return '2학기 중간';
-  if (s.includes('2학기') && (s.includes('기말')||s.includes('final'))) return '2학기 기말';
-  return null;
-}
-
-function renderMatrix(d) {
-  const wrap = document.getElementById('matrix-wrap');
-  const exams = d.exams || [];
-  const rows  = (d.rows || []).filter(r => r.type !== '초등' && r.type !== '기타' && r.type !== '');
-  if (!rows.length) { wrap.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-
-  const autoCell = (score, prev) => {
-    const bg    = score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2';
-    const color = score>=80?'#15803d':score>=60?'#854d0e':'#dc2626';
-    let arrow = '';
-    if (prev !== null) {
-      const diff = +(score-prev).toFixed(1);
-      if (diff>0.05)       arrow = `<span style="color:#16a34a;font-size:10px;font-weight:800;"> ▲${diff}</span>`;
-      else if (diff<-0.05) arrow = `<span style="color:#dc2626;font-size:10px;font-weight:800;"> ▼${Math.abs(diff)}</span>`;
-    }
-    return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;padding:7px 10px;font-size:13px;">${score}${arrow}</td>`;
-  };
-
-  const inputCell = (score, isManual, name, period, school, grade) => {
-    const eN=encodeURIComponent(name), eP=encodeURIComponent(period),
-          eS=encodeURIComponent(school), eG=encodeURIComponent(grade);
-    if (score !== null) {
-      const bg    = isManual?(score>=80?'#dbeafe':score>=60?'#e0e7ff':'#ede9fe'):(score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2');
-      const color = isManual?(score>=80?'#1d4ed8':score>=60?'#4338ca':'#7c3aed'):(score>=80?'#15803d':score>=60?'#854d0e':'#dc2626');
-      return `<td style="background:${bg};color:${color};font-weight:700;text-align:center;padding:7px 10px;font-size:13px;cursor:pointer;"
-        onclick="editMatrixCell(this,'${eN}','${eP}','${eS}','${eG}')">
-        ${score}${isManual?'<span style="font-size:9px;display:block;opacity:.6;">✏️</span>':''}</td>`;
-    }
-    return `<td style="text-align:center;padding:5px 8px;cursor:pointer;color:#cbd5e1;font-size:11px;"
-      onclick="editMatrixCell(this,'${eN}','${eP}','${eS}','${eG}')">클릭 입력</td>`;
-  };
-
-  const typeOrder = {'중등':0,'고등':1};
-  const typeEmoji = {'중등':'📚','고등':'🎓'};
-  const groups = {};
-  rows.forEach(r => {
-    const key = `${r.type||'기타'}_${r.grade||''}`;
-    const sc  = r.school||'미입력';
-    if (!groups[key]) groups[key]={type:r.type||'',grade:r.grade||'',schools:{}};
-    if (!groups[key].schools[sc]) groups[key].schools[sc]=[];
-    groups[key].schools[sc].push(r);
-  });
-
-  const sortedKeys = Object.keys(groups).sort((a,b)=>{
-    const [ta,ga]=a.split('_'), [tb,gb]=b.split('_');
-    const d=(typeOrder[ta]??9)-(typeOrder[tb]??9);
-    return d!==0?d:(parseInt(ga)||0)-(parseInt(gb)||0);
-  });
-
-  const colHeader = () => `<tr style="background:#1e293b;">
-    <th style="position:sticky;left:0;background:#1e293b;color:#94a3b8;padding:7px 14px;
-      font-size:11px;min-width:110px;text-align:left;z-index:3;font-weight:600;">이름</th>
-    ${PERIODS.map(p=>`<th style="padding:7px 18px;font-size:11px;color:#94a3b8;min-width:110px;font-weight:600;text-align:center;">${p}</th>`).join('')}
-  </tr>`;
-
-  const getStudentPeriodScores = r => {
-    const ps={};
-    exams.forEach(e=>{
-      const period=examToPeriod(e);
-      if (!period) return;
-      const score=r.scores[e];
-      if (score===undefined) return;
-      const isManual=!!(r.manual&&r.manual[e]);
-      if (!ps[period]||(ps[period].isManual&&!isManual)) ps[period]={score,isManual};
-    });
-    return ps;
-  };
-
-  let html = '<div style="overflow-x:auto;">';
-  sortedKeys.forEach(key=>{
-    const {type,grade,schools}=groups[key];
-    const emoji=typeEmoji[type]||'📌';
-    html += `<table style="border-collapse:collapse;width:max-content;min-width:100%;margin-bottom:20px;">
-      <thead>
-        <tr><td colspan="5" style="background:#0f172a;color:white;font-weight:800;font-size:13px;
-          padding:10px 14px;letter-spacing:.5px;">${emoji} ${type}부 ${grade}</td></tr>
-        ${colHeader()}
-      </thead><tbody>`;
-
-    Object.keys(schools).sort((a,b)=>a.localeCompare(b,'ko')).forEach(school=>{
-      html+=`<tr><td colspan="5" style="background:#334155;color:#e2e8f0;font-size:11px;
-        font-weight:700;padding:5px 14px;border-top:1px solid #475569;">🏫 ${school}</td></tr>`;
-
-      schools[school].forEach((r,idx)=>{
-        const ps=getStudentPeriodScores(r);
-        let prev=null;
-        const cells=PERIODS.map(p=>{
-          const entry=ps[p];
-          const prevScore=prev;
-          if (entry) { prev=entry.score; return entry.isManual?inputCell(entry.score,true,r.name,p,r.school,r.grade):autoCell(entry.score,prevScore); }
-          prev=null;
-          return inputCell(null,false,r.name,p,r.school,r.grade);
-        }).join('');
-
-        html+=`<tr style="border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-          <td style="position:sticky;left:0;background:white;z-index:1;padding:8px 14px;
-            font-size:13px;white-space:nowrap;border-right:1px solid #e5e7eb;">
-            <span style="color:#94a3b8;font-size:11px;margin-right:4px;">${idx+1}.</span>${r.name}
-          </td>${cells}</tr>`;
+ 
+  const nFetch = (url, opts = {}) =>
+    fetch(url, { headers, ...opts }).then(r => r.json());
+ 
+  const queryDB = async (dbId, filter, sorts) => {
+    let all = [], cursor;
+    do {
+      const body = { page_size: 100 };
+      if (filter) body.filter = filter;
+      if (sorts)  body.sorts  = sorts;
+      if (cursor) body.start_cursor = cursor;
+      const d = await nFetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+        method: 'POST', body: JSON.stringify(body)
       });
-    });
-    html+='</tbody></table>';
-  });
-
-  html+=`</div><div style="font-size:11px;color:var(--text3);margin-top:10px;">
-    💡 빈 셀 또는 <b style="color:#4338ca;">✏️ 파란 셀</b> 클릭 → 점수 입력/수정 가능
-  </div>`;
-  wrap.innerHTML=html;
-}
-
-function editMatrixCell(td, encName, encPeriod, encSchool, encGrade) {
-  const cur = td.innerText.trim().split('\n')[0] || '';
-  const prevScore = parseFloat(cur) || '';
-  td.innerHTML = `<div style="display:flex;gap:4px;align-items:center;justify-content:center;padding:4px;">
-    <input type="number" value="${prevScore}" step="0.1" min="0" max="100"
-      style="width:60px;padding:3px 6px;border:1.5px solid var(--blue);border-radius:5px;font-size:12px;text-align:center;"
-      id="cell-inp" onkeydown="if(event.key==='Enter') saveMatrixCell(this,'${encName}','${encPeriod}','${encSchool}','${encGrade}',this.closest('td'))">
-    <button onclick="saveMatrixCell(document.getElementById('cell-inp'),'${encName}','${encPeriod}','${encSchool}','${encGrade}',this.closest('td'))"
-      style="padding:3px 8px;background:var(--blue);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">저장</button>
-    <button onclick="loadMatrix()" style="padding:3px 6px;background:#f1f5f9;color:#64748b;border:none;border-radius:5px;font-size:11px;cursor:pointer;">✕</button>
-  </div>`;
-  document.getElementById('cell-inp').focus();
-}
-
-async function saveMatrixCell(input, encName, encPeriod, encSchool, encGrade, td) {
-  const name   = decodeURIComponent(encName);
-  const period = decodeURIComponent(encPeriod);
-  const school = decodeURIComponent(encSchool);
-  const grade  = decodeURIComponent(encGrade);
-  const score  = parseFloat(input.value);
-  if (isNaN(score)) { toast('올바른 점수를 입력하세요.'); return; }
-  const examId = `manual_${school}_${grade}_${period.replace(/ /g,'')}`;
-  td.innerHTML = '<span style="font-size:11px;color:var(--text3);">저장 중...</span>';
+      if (d.object === 'error') throw new Error(d.message);
+      all = all.concat(d.results || []);
+      cursor = d.has_more ? d.next_cursor : undefined;
+    } while (cursor);
+    return all;
+  };
+ 
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  const { action } = body;
+ 
   try {
-    await call('save_manual_score', { studentName: name, examId, score });
-    toast(`${name} · ${period} 저장 완료!`);
-    loadMatrix();
-  } catch(e) { toast('저장 실패: '+e.message); loadMatrix(); }
-}
-
-
-// ── 초기화 ──
-window.onload = async () => {
-  // 초기 문항 행 추가
-  for(let i=1;i<=28;i++) addExamRow(i,'','','',3.5);
-  try {
-    const d = await call('get_exam_list');
-    examsCache = d.exams || [];
-    // datalist는 전체 유지
-    const dl = document.getElementById('examNameList');
-    if (dl) examsCache.forEach(e => { const o=document.createElement('option'); o.value=e; dl.appendChild(o); });
-    applySemesterFilter(); // 학기 필터 적용해서 드롭다운 채움
-  } catch(e) { toast('시험 목록 로드 실패: '+e.message); }
-};
-
-// ── 시험명에서 학기 파싱 ──
-function getExamSemester(name) {
-  // 명확한 "1학기/2학기" 텍스트만 인식 (언더바 축약형은 애매해서 제외)
-  if (name.includes('2학기')) return '2학기';
-  if (name.includes('1학기')) return '1학기';
-  return '기타'; // 학기 표기 없는 시험
-}
-
-// ── 학기 필터 적용 ──
-function applySemesterFilter() {
-  const sem = document.getElementById('semesterFilter').value;
-  const sel = document.getElementById('examSel');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- 시험 선택 --</option>';
-
-  const filtered = examsCache.filter(e => {
-    if (e.startsWith('manual_')) return false; // 수동입력 성적표용 제외
-    if (!sem) return true;
-    return getExamSemester(e) === sem;
-  });
-
-  filtered.forEach(e => sel.add(new Option(e, e)));
-
-  // 이전 선택이 필터에 남아있으면 유지
-  if (cur && filtered.includes(cur)) sel.value = cur;
-  else { sel.value = ''; currentExam=''; document.getElementById('studentList').innerHTML='<div class="empty">시험을 선택하세요</div>'; }
-}
-
-// ── 시험 선택 ──
-async function onExamChange() {
-  currentExam = document.getElementById('examSel').value;
-  if (!currentExam) { currentQs=[]; return; }
-  try {
-    const d = await call('get_exam_details', { examId: currentExam });
-    currentQs = d.questions || [];
-    renderQList();
-    loadStudentList();
-
-    // 시험지 등록/수정 탭에도 자동 반영
-    document.getElementById('examTbody').innerHTML = '';
-    currentQs.forEach(q => addExamRow(
-      q.numStr || q.num || '', q.unit||'', q.area||'', q.type||'', q.score||0
-    ));
-    document.getElementById('examName').value   = currentExam;
-    document.getElementById('examCommon').value = currentQs[0]?.common || '';
-  } catch(e) { toast('문항 로드 실패: '+e.message); }
-}
-
-// ── 시험지 등록 ──
-function addExamRow(num='', unit='', area='', type='', score=3.5) {
-  const tr = document.createElement('tr');
-  tr.draggable = true;
-  tr.innerHTML = `
-    <td class="drag-handle" style="cursor:grab;text-align:center;color:var(--text3);font-size:14px;user-select:none;">⠿</td>
-    <td><input class="et-input" value="${num}" placeholder="번호" style="width:56px;"></td>
-    <td><input class="et-input" value="${unit}" placeholder="1과, 교과서…" list="unitList" style="width:92px;"></td>
-    <td><input class="et-input" value="${area}" placeholder="문법, 어휘…" list="areaList" style="width:96px;"></td>
-    <td><input class="et-input" value="${type}" placeholder="문제 유형 입력" style="width:230px;"></td>
-    <td><input class="et-input" type="number" value="${score}" step="0.1" min="0" style="width:50px;"></td>
-    <td><button class="et-del" onclick="this.closest('tr').remove()" title="삭제">✕</button></td>`;
-  document.getElementById('examTbody').appendChild(tr);
-  attachDragEvents(tr);
-}
-
-let dragSrcRow = null;
-function attachDragEvents(tr) {
-  tr.addEventListener('dragstart', (e) => {
-    dragSrcRow = tr;
-    tr.style.opacity = '0.4';
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  tr.addEventListener('dragend', () => {
-    tr.style.opacity = '1';
-    dragSrcRow = null;
-  });
-  tr.addEventListener('dragover', (e) => { e.preventDefault(); });
-  tr.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (!dragSrcRow || dragSrcRow === tr) return;
-    const tbody = document.getElementById('examTbody');
-    const rows  = [...tbody.rows];
-    const srcIdx  = rows.indexOf(dragSrcRow);
-    const destIdx = rows.indexOf(tr);
-    if (srcIdx < destIdx) tbody.insertBefore(dragSrcRow, tr.nextSibling);
-    else tbody.insertBefore(dragSrcRow, tr);
-  });
-}
-
-// 번호순 정렬 (숫자 우선, 서술형/서답형 등 텍스트는 뒤로)
-function sortExamRows() {
-  const tbody = document.getElementById('examTbody');
-  const rows  = [...tbody.rows];
-  rows.sort((a, b) => {
-    const na = a.querySelector('input').value.trim();
-    const nb = b.querySelector('input').value.trim();
-    const fa = parseFloat(na), fb = parseFloat(nb);
-    const isNumA = !isNaN(fa) && /^\d+$/.test(na);
-    const isNumB = !isNaN(fb) && /^\d+$/.test(nb);
-    if (isNumA && isNumB) return fa - fb;
-    if (isNumA) return -1;
-    if (isNumB) return 1;
-    return na.localeCompare(nb, 'ko');
-  });
-  rows.forEach(r => tbody.appendChild(r));
-  toast('번호순으로 정렬했어요!');
-}
-
-// 자동완성 데이터리스트
-document.addEventListener('DOMContentLoaded', ()=>{
-  const units = ['1과','2과','3과','SL','교과서','모의고사','부교재','print','외부지문','26모고','25모고'];
-  const areas = ['문법','어휘','지문 이해','본문','대화문','본문 변형','내용 이해'];
-  ['unitList','areaList'].forEach((id,i) => {
-    const dl = document.createElement('datalist'); dl.id=id;
-    (i===0?units:areas).forEach(v=>{ const o=document.createElement('option'); o.value=v; dl.appendChild(o); });
-    document.body.appendChild(dl);
-  });
-});
-
-function getExamRows() {
-  const rows = [];
-  document.querySelectorAll('#examTbody tr').forEach(tr => {
-    const inputs = tr.querySelectorAll('input');
-    const num   = inputs[0].value.trim();
-    const unit  = inputs[1].value.trim();
-    const area  = inputs[2].value.trim();
-    const type  = inputs[3].value.trim();
-    const score = parseFloat(inputs[4].value) || 0;
-    if (num) rows.push({num, unit, area, type, score, common:''});
-  });
-  return rows;
-}
-
-async function saveExamSetup() {
-  sortExamRows(); // 저장 전 자동 정렬
-  const examId = document.getElementById('examName').value.trim();
-  const common = document.getElementById('examCommon').value.trim();
-  if (!examId) { toast('시험명을 입력해주세요.'); return; }
-  const questions = getExamRows();
-  if (!questions.length) { toast('문항을 입력해주세요.'); return; }
-  // 총평을 첫 문항에 포함
-  questions[0].common = common;
-  if (!confirm(`"${examId}" 시험지를 ${questions.length}문항으로 저장합니다.\n기존 데이터가 있으면 덮어씁니다.`)) return;
-  try {
-    const d = await call('bulk_save_exam', {examId, questions});
-    toast(d.message||'저장 완료!');
-    // 드롭다운에 없으면 추가
-    const sel = document.getElementById('examSel');
-    const dl  = document.getElementById('examNameList');
-    if(![...sel.options].some(o=>o.value===examId)) {
-      sel.add(new Option(examId, examId));
-      const opt=document.createElement('option'); opt.value=examId; dl.appendChild(opt);
+ 
+    // ── 시험 목록 ──
+    if (action === 'get_exam_list') {
+      let all = [], cursor;
+      do {
+        const b = { page_size: 100 };
+        if (cursor) b.start_cursor = cursor;
+        const d = await nFetch(`https://api.notion.com/v1/databases/${DB_QUESTIONS}/query`, {
+          method: 'POST', body: JSON.stringify(b)
+        });
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+      const exams = [...new Set(all.map(p =>
+        p.properties['시험명']?.title?.[0]?.text?.content || ''
+      ).filter(Boolean))].sort();
+      return res.status(200).json({ ok: true, exams });
     }
-    examsCache = [...new Set([...examsCache, examId])].sort();
-  } catch(e) { toast('저장 실패: '+e.message); }
-}
-
-async function deleteExamSetup() {
-  const examId = document.getElementById('examSel').value || document.getElementById('examName').value.trim();
-  if (!examId) { toast('삭제할 시험을 선택하거나 시험명을 입력하세요.'); return; }
-  if (!confirm(`"${examId}" 시험지를 삭제할까요?\n문항 데이터가 모두 삭제됩니다.`)) return;
-  try {
-    const d = await call('delete_exam', { examId });
-    toast(d.message || '삭제 완료!');
-    // 드롭다운에서도 제거
-    const sel = document.getElementById('examSel');
-    const opt = [...sel.options].find(o => o.value === examId);
-    if (opt) sel.removeChild(opt);
-    document.getElementById('examName').value = '';
-    document.getElementById('examTbody').innerHTML = '';
-    document.getElementById('examCommon').value = '';
-    examsCache = examsCache.filter(e => e !== examId);
-  } catch(e) { toast('삭제 실패: ' + e.message); }
-}
-
-async function loadExamForEdit() {
-  const examId = document.getElementById('examSel').value || document.getElementById('examName').value.trim();
-  if (!examId) { toast('시험을 선택하거나 시험명을 입력하세요.'); return; }
-  try {
-    const d = await call('get_exam_details', { examId });
-    const qs = d.questions || [];
-    if (!qs.length) { toast('등록된 문항 없음'); return; }
-    document.getElementById('examTbody').innerHTML = '';
-    qs.forEach(q => addExamRow(
-      q.numStr || q.num || '',   // ← 실제 표시 번호 (서술형1 등 포함)
-      q.unit  || '',
-      q.area  || '',
-      q.type  || '',
-      q.score || 0
-    ));
-    document.getElementById('examName').value   = examId;
-    document.getElementById('examCommon').value = qs[0]?.common || '';
-    toast(`"${examId}" 불러오기 완료 (${qs.length}문항)`);
-  } catch(e) { toast('불러오기 실패: ' + e.message); }
-}
-
-// ── 성적 입력 ──
-function renderQList() {
-  const wrap = document.getElementById('qWrap');
-  if (!currentQs.length) {
-    wrap.innerHTML = '<div class="empty" style="padding:20px 0;">문항 없음</div>'; return;
-  }
-  wrap.innerHTML = `
-    <div class="q-head">
-      <span>번호</span><span>유형</span><span>배점</span><span>정오답</span>
-    </div>
-    ${currentQs.map(q=>{
-      const key = q.numStr || String(q.num ?? '');
-      const safeKey = encodeURIComponent(key);
-      return `
-      <div class="q-row" id="qr-${safeKey}">
-        <span class="q-num">${key}</span>
-        <span class="q-type" title="${q.type||''}">${q.type||'-'}</span>
-        <span class="q-score">${q.score}점</span>
-        <div class="ox-btns">
-          <button class="ox-btn o-on" id="o-${safeKey}" onclick="setOX('${safeKey}','O')">O</button>
-          <button class="ox-btn"     id="x-${safeKey}" onclick="setOX('${safeKey}','X')">X</button>
-        </div>
-      </div>`;
-    }).join('')}`;
-  updateScorePreview();
-}
-
-function setOX(safeKey, val) {
-  const ob = document.getElementById('o-'+safeKey);
-  const xb = document.getElementById('x-'+safeKey);
-  if(!ob||!xb) return;
-  ob.className = 'ox-btn' + (val==='O'?' o-on':'');
-  xb.className = 'ox-btn' + (val==='X'?' x-on':'');
-  updateScorePreview();
-}
-
-function setAllO() {
-  currentQs.forEach(q => setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
-}
-
-function getOX(safeKey) {
-  const ob = document.getElementById('o-'+safeKey);
-  if(!ob) return 'O';
-  return ob.classList.contains('o-on') ? 'O' : 'X';
-}
-
-function updateScorePreview() {
-  const extra = parseFloat(document.getElementById('extraScore')?.value)||0;
-  let total = extra;
-  currentQs.forEach(q => {
-    const key = encodeURIComponent(q.numStr||String(q.num??''));
-    if(getOX(key)==='O') total += (parseFloat(q.score)||0);
-  });
-  const el = document.getElementById('scorePreview');
-  if(el) el.textContent = total.toFixed(1)+'점';
-}
-document.addEventListener('input', e=>{
-  if(e.target.id==='extraScore') updateScorePreview();
-});
-
-function resetScoreForm() {
-  document.getElementById('studentName').value='';
-  document.getElementById('extraScore').value='0';
-  document.getElementById('teacherMemo').value='';
-  currentQs.forEach(q=>setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
-  updateScorePreview();
-}
-
-async function saveScore() {
-  const name = document.getElementById('studentName').value.trim();
-  const memo = document.getElementById('teacherMemo').value;
-  const extra= parseFloat(document.getElementById('extraScore').value)||0;
-  if(!name||!currentExam) { toast('학생 이름과 시험을 선택하세요.'); return; }
-  if(!currentQs.length) { toast('시험 문항이 없습니다.'); return; }
-  const btn = document.getElementById('saveBtn');
-  btn.disabled=true; btn.textContent='저장 중...';
-  const results = currentQs.map(q=>({
-    ...q,
-    num: q.numStr || String(q.num ?? ''),   // 저장 키를 numStr 기준으로
-    result: getOX(encodeURIComponent(q.numStr||String(q.num??'')))
-  }));
-  try {
-    await call('save_student_results', {
-      studentName:name, examId:currentExam,
-      results, feedback:memo, extraScore:extra
-    });
-    // Notion 인덱싱 대기 후 목록 갱신
-    setTimeout(()=>loadStudentList(), 1200);
-    showSaveSuccess(name);
-    resetScoreForm();
-  } catch(e) { toast('저장 실패: '+e.message); }
-  finally { btn.disabled=false; btn.textContent='💾 성적 저장'; }
-}
-
-function showSaveSuccess(name) {
-  // 기존 배너 제거
-  document.getElementById('save-banner')?.remove();
-  const banner = document.createElement('div');
-  banner.id = 'save-banner';
-  banner.style.cssText = `
-    position:fixed;bottom:0;left:0;right:0;background:var(--dark);color:white;
-    padding:16px 28px;display:flex;align-items:center;justify-content:space-between;
-    z-index:500;box-shadow:0 -4px 20px rgba(0,0,0,0.2);animation:slideUp .3s ease;`;
-  banner.innerHTML = `
-    <style>@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
-    <span style="font-size:14px;">✅ <b>${name}</b> 성적 저장 완료!</span>
-    <div style="display:flex;gap:8px;">
-      <button onclick="openReport('${name}')" style="padding:8px 18px;background:var(--blue);color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">📊 리포트 보기</button>
-      <button onclick="document.getElementById('save-banner').remove()" style="padding:8px 14px;background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer;">✕</button>
-    </div>`;
-  document.body.appendChild(banner);
-  // 5초 후 자동 닫힘
-  setTimeout(()=>banner.remove(), 6000);
-}
-
-// ── 학생 목록 ──
-async function loadStudentList() {
-  if(!currentExam) return;
-  const list = document.getElementById('studentList');
-  list.innerHTML='<div class="empty">불러오는 중...</div>';
-  try {
-    const d = await call('get_submitted_students', {examId:currentExam});
-    const ss = d.students||[];
-    const missing = d.missing||[];
-    const total = d.totalTarget || ss.length;
-
-    if(!ss.length && !missing.length){list.innerHTML='<div class="empty">제출 없음</div>';return;}
-
-    const pct = total ? Math.round(ss.length/total*100) : 0;
-
-    // 상단 진행률 요약
-    let html = `
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:12px;font-weight:700;color:var(--text);">제출 현황</span>
-          <span style="font-size:12px;font-weight:800;color:${pct===100?'#16a34a':'var(--blue)'};">
-            ${ss.length} / ${total}명 (${pct}%)
-          </span>
-        </div>
-        <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${pct===100?'#16a34a':'var(--blue)'};transition:.3s;"></div>
-        </div>
-      </div>`;
-
-    // 제출 완료
-    const submittedCards = ss.map(s=>{
-      const name = s.name;
-      const score = s.score!==undefined&&s.score!==null ? `<span style="font-size:13px;font-weight:800;color:var(--blue);margin-left:6px;">${s.score}점</span>` : '';
-      const fbBadge = s.hasFeedback
-        ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:6px;">💬 피드백</span>`
-        : `<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;">미작성</span>`;
-      return `
-        <div class="si">
-          <div class="si-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
-            ${name}${score}${fbBadge}
-          </div>
-          <div class="si-btns">
-            <button class="sib sib-view" onclick="openReport('${name}')">📊 보기</button>
-            <button class="sib sib-edit" onclick="editStudent('${name}')">✏️ 수정</button>
-          </div>
-        </div>`;
-    }).join('');
-
-    html += submittedCards;
-
-    // 미제출 섹션
-    if (missing.length) {
-      html += `<div style="font-size:11px;font-weight:800;color:#dc2626;margin:14px 0 8px;padding:5px 10px;background:#fef2f2;border-radius:6px;">
-        ⚠️ 미제출 ${missing.length}명
-      </div>`;
-      html += missing.map(s=>`
-        <div class="si" style="opacity:.75;">
-          <div class="si-name" style="color:#94a3b8;">${s.name}</div>
-          <div class="si-btns">
-            <button class="sib sib-edit" style="background:#fee2e2;color:#dc2626;" onclick="startInputFor('${s.name}')">+ 성적 입력</button>
-          </div>
-        </div>`).join('');
+ 
+    // ── 시험 문항 조회 ──
+    if (action === 'get_exam_details') {
+      const { examId } = body;
+      const rows = await queryDB(DB_QUESTIONS,
+        { property: '시험명', title: { equals: examId } },
+        [{ property: '문항번호', direction: 'ascending' }]
+      );
+      // 문항번호 숫자인 것 먼저, 서답형/서술형 나중에
+      const qs = rows.map(p => ({
+        id:     p.id,
+        num:    p.properties['문항번호']?.number,
+        numStr: p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
+        unit:   p.properties['단원']?.rich_text?.[0]?.text?.content || '',
+        area:   p.properties['영역']?.rich_text?.[0]?.text?.content || '',
+        type:   p.properties['유형']?.rich_text?.[0]?.text?.content || '',
+        score:  p.properties['배점']?.number || 0,
+        common: p.properties['총평']?.rich_text?.[0]?.text?.content || '',
+      }));
+      return res.status(200).json({ ok: true, questions: qs });
     }
-
-    list.innerHTML = html;
-  } catch(e){list.innerHTML='<div class="empty">로드 실패</div>';}
-}
-
-// 미제출 학생 → 성적 입력 화면으로 이동
-function startInputFor(name) {
-  switchPage('score');
-  document.getElementById('studentName').value = name;
-  currentQs.forEach(q=>setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
-  updateScorePreview();
-  document.getElementById('studentName').scrollIntoView({behavior:'smooth', block:'center'});
-  toast(`${name} 성적 입력을 시작하세요`);
-}
-
-async function editStudent(name) {
-  if(!confirm(`${name} 학생 데이터를 불러와 수정하시겠습니까?`)) return;
-  try {
-    const d = await call('get_existing_data', {studentName:name, examId:currentExam});
-    document.getElementById('studentName').value=name;
-    document.getElementById('extraScore').value=d.extraScore||0;
-    document.getElementById('teacherMemo').value=d.feedback||'';
-    for(const [num, result] of Object.entries(d.results||{})) {
-      setOX(encodeURIComponent(num), result);
+ 
+    // ── 시험지 삭제 ──
+    if (action === 'delete_exam') {
+      const { examId } = body;
+      const existing = await queryDB(DB_QUESTIONS,
+        { property: '시험명', title: { equals: examId } }
+      );
+      await Promise.all(existing.map(p =>
+        nFetch(`https://api.notion.com/v1/pages/${p.id}`, {
+          method: 'PATCH', body: JSON.stringify({ archived: true })
+        })
+      ));
+      return res.status(200).json({ ok: true, message: `"${examId}" 삭제 완료 (${existing.length}문항)` });
     }
-    updateScorePreview();
-    switchPage('score');
-    toast(`${name} 데이터 불러오기 완료`);
-  } catch(e){toast('불러오기 실패: '+e.message);}
-}
-
-// ── 리포트 ──
-async function openReport(name) {
-  try {
-    const d = await call('get_report_data', {studentName:name, examId:currentExam});
-    reportData = d;
-    renderReport(d);
-    document.getElementById('main-wrap').style.display='none';
-    document.getElementById('report-page').style.display='block';
-    window.scrollTo(0,0);
-  } catch(e){toast('리포트 로드 실패: '+e.message);}
-}
-
-function renderReport(d) {
-  document.getElementById('r-exam').textContent    = d.examId;
-  document.getElementById('r-student').textContent = d.studentName;
-  document.getElementById('r-name2').textContent   = d.studentName;
-  document.getElementById('r-score').textContent   = d.totalScore;
-  document.getElementById('r-max').textContent     = d.maxScore;
-  document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
-  document.getElementById('r-ai-box').style.display='none';
-
-  // ── 성적 추이 (직전 시험 대비만) ──
-  const history = d.history || [];
-  const trendEl = document.getElementById('r-trend');
-  const boxEl   = document.getElementById('r-history-box');
-  const rowsEl  = document.getElementById('r-history-rows');
-
-  const curIdx = history.findIndex(h => Math.abs(h.score - d.totalScore) < 0.01);
-
-  // 직전 대비 상승폭 배지
-  if (curIdx > 0) {
-    const prevItem = history[curIdx-1];
-    const diff = +(d.totalScore - prevItem.score).toFixed(1);
-    let arrow;
-    if (diff > 0)      arrow = `<span style="font-size:16px;font-weight:800;color:#16a34a;">▲ ${diff}점 상승</span>`;
-    else if (diff < 0) arrow = `<span style="font-size:16px;font-weight:800;color:#dc2626;">▼ ${Math.abs(diff)}점 하락</span>`;
-    else               arrow = `<span style="font-size:15px;font-weight:700;color:#64748b;">— 유지</span>`;
-    trendEl.innerHTML = arrow +
-      `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">직전 (${prevItem.label} ${prevItem.score}점) 대비</div>`;
-  } else {
-    trendEl.innerHTML = '';
-  }
-
-  // 추이 박스는 사용 안 함
-  if (boxEl) boxEl.style.display = 'none';
-
-  // 피드백 저장 버튼 상태 초기화
-  const saveFbBtn = document.getElementById('saveFbBtn');
-  if (saveFbBtn) {
-    saveFbBtn.textContent = d.teacherFeedback ? '✅ 저장됨' : '💾 피드백 저장';
-    saveFbBtn.style.background = d.teacherFeedback ? '#15803d' : '#16a34a';
-    saveFbBtn.disabled = false;
-  }
-
-  // 총평 — DB에 저장된 것만 표시
-  const rCommon = document.getElementById('r-common');
-  rCommon.textContent = d.commonComment || '(총평이 작성되지 않았습니다. 시험지 등록 탭에서 작성해주세요.)';
-  rCommon.style.color = d.commonComment ? '' : 'var(--text3)';
-
-  // 단원별 분포 요약 테이블
-  const totalQ = (d.unitValues||[]).reduce((a,b)=>a+b,0)||1;
-  document.getElementById('r-unit-summary').innerHTML =
-    (d.unitLabels||[]).map((l,i)=>{
-      const v = d.unitValues[i];
-      const pct = Math.round(v/totalQ*100);
-      return `<div class="esb-row">
-        <span class="esb-label">${l}</span>
-        <div class="esb-bar-wrap">
-          <div class="esb-bar" style="width:${pct*1.2}px;"></div>
-          <span class="esb-pct">${v}문항 (${pct}%)</span>
-        </div>
-      </div>`;
-    }).join('');
-
-  // 영역별 분포 요약 테이블
-  const totalA = (d.areaValues||[]).reduce((a,b)=>a+b,0)||1;
-  const aColors = ['#4285F4','#EA4335','#FBBC05','#34A853','#9C27B0','#00BCD4','#FF6D00'];
-  document.getElementById('r-area-summary').innerHTML =
-    (d.areaLabels||[]).map((l,i)=>{
-      const v = d.areaValues[i];
-      const pct = Math.round(v/totalA*100);
-      return `<div class="esb-row">
-        <span class="esb-label">${l}</span>
-        <div class="esb-bar-wrap">
-          <div class="esb-bar" style="width:${pct*1.2}px;background:${aColors[i%aColors.length]};"></div>
-          <span class="esb-pct">${v}문항 (${pct}%)</span>
-        </div>
-      </div>`;
-    }).join('');
-
-  // 오답 테이블
-  const tbody = document.getElementById('r-errors');
-  if(!(d.incorrectList||[]).length){
-    tbody.innerHTML='<tr><td colspan="5" style="color:var(--blue);font-weight:700;padding:16px;text-align:center;">🎉 Perfect! 모든 문항 정답!</td></tr>';
-    document.getElementById('r-wrong-summary').innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">오답 없음 🎉</div>';
-  } else {
-    tbody.innerHTML = d.incorrectList.map(i=>
-      `<tr><td>${i.num}</td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td>${i.type||'-'}</td><td>${i.score}점</td></tr>`
-    ).join('');
-
-    // 영역별 오답 집계 + 영역별 대표 유형 계산
-    const areaStat = {};
-    d.incorrectList.forEach(i => {
-      const area = i.area || '기타';
-      const type = i.type || '미분류';
-      if (!areaStat[area]) areaStat[area] = { count: 0, types: {} };
-      areaStat[area].count++;
-      areaStat[area].types[type] = (areaStat[area].types[type] || 0) + 1;
-    });
-
-    const sortedAreas = Object.entries(areaStat).sort((a,b)=>b[1].count-a[1].count);
-
-    document.getElementById('r-wrong-summary').innerHTML = sortedAreas.map(([area, stat], i) => {
-      const sevClass = i===0?'sev-1':i===1?'sev-2':i===2?'sev-3':'sev-default';
-      const topType = Object.entries(stat.types).sort((a,b)=>b[1]-a[1])[0];
-      return `<div class="weak-area-card ${sevClass}">
-        <div class="weak-area-top">
-          <span class="weak-area-name">${area}</span>
-          <span class="weak-area-count">오답 ${stat.count}문항</span>
-        </div>
-        <div class="weak-area-type">그 중 <b>${topType[0]}</b> 유형 ${topType[1]}문항으로 가장 많음</div>
-      </div>`;
-    }).join('');
-  }
-
-}
-
-function closeReport(){
-  document.getElementById('report-page').style.display='none';
-  document.getElementById('main-wrap').style.display='block';
-}
-
-// ── 시험지 등록 탭: 총평 AI 초안 생성 ──
-async function genCommonDraft() {
-  const btn = document.getElementById('aiCommonBtn');
-  btn.disabled = true; btn.textContent = '생성 중...';
-
-  // 현재 입력된 문항 데이터 수집
-  const rows = [...document.getElementById('examTbody').rows];
-  const unitCount = {}, areaCount = {};
-  rows.forEach(r => {
-    const cells = r.querySelectorAll('input');
-    const unit = cells[2]?.value.trim();
-    const area = cells[3]?.value.trim();
-    if (unit) unitCount[unit] = (unitCount[unit]||0) + 1;
-    if (area) areaCount[area] = (areaCount[area]||0) + 1;
-  });
-
-  const examId  = document.getElementById('examName').value.trim() || '이번 시험';
-  const totalQ  = rows.length;
-  const unitStr = Object.entries(unitCount).map(([u,c])=>`${u} ${c}문항`).join(', ') || '미입력';
-  const areaStr = Object.entries(areaCount).map(([a,c])=>`${a} ${c}문항`).join(', ') || '미입력';
-  const teacherMemo = document.getElementById('examCommon').value.trim();
-
-  const prompt = teacherMemo
-    ? `채움영어학원 선생님이 작성한 시험 총평을 아래 시험 구성 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 선생님 글의 핵심 내용과 톤을 유지하면서 출제 데이터를 자연스럽게 녹여주세요.
-
+ 
+    // ── 시험지 일괄 저장 ──
+    if (action === 'bulk_save_exam') {
+      const { examId, questions } = body;
+      // 기존 삭제
+      const existing = await queryDB(DB_QUESTIONS,
+        { property: '시험명', title: { equals: examId } }
+      );
+      await Promise.all(existing.map(p =>
+        nFetch(`https://api.notion.com/v1/pages/${p.id}`, {
+          method: 'PATCH', body: JSON.stringify({ archived: true })
+        })
+      ));
+      // 새로 저장 (5개씩 병렬)
+      for (let i = 0; i < questions.length; i += 5) {
+        const batch = questions.slice(i, i + 5);
+        await Promise.all(batch.map((q, idx) =>
+          nFetch('https://api.notion.com/v1/pages', {
+            method: 'POST',
+            body: JSON.stringify({
+              parent: { database_id: DB_QUESTIONS },
+              properties: {
+                '시험명':   { title:     [{ text: { content: examId } }] },
+                '문항번호': { number:    i + idx + 1 },
+                '번호':     { rich_text: [{ text: { content: String(q.num || '') } }] },
+                '단원':     { rich_text: [{ text: { content: q.unit   || '' } }] },
+                '영역':     { rich_text: [{ text: { content: q.area   || '' } }] },
+                '유형':     { rich_text: [{ text: { content: q.type   || '' } }] },
+                '배점':     { number:    Number(q.score) || 0 },
+                '총평':     { rich_text: [{ text: { content: q.common || '' } }] },
+              }
+            })
+          })
+        ));
+      }
+      return res.status(200).json({ ok: true, message: `${questions.length}문항 저장 완료` });
+    }
+ 
+    // ── 학생 성적 저장 (학생 1명 = 레코드 1개) ──
+    if (action === 'save_student_results') {
+      const { studentName, examId, results, feedback, extraScore } = body;
+ 
+      // 정오답을 JSON 문자열로 압축
+      const answersJson = JSON.stringify(
+        Object.fromEntries(results.map(r => [r.num ?? r.numStr, r.result]))
+      );
+ 
+      // 기존 레코드 삭제
+      const existing = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (existing.length) {
+        await Promise.all(existing.map(p =>
+          nFetch(`https://api.notion.com/v1/pages/${p.id}`, {
+            method: 'PATCH', body: JSON.stringify({ archived: true })
+          })
+        ));
+      }
+ 
+      // 새 레코드 1개 저장
+      await nFetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        body: JSON.stringify({
+          parent: { database_id: DB_RESULTS },
+          properties: {
+            '기록ID':    { title:     [{ text: { content: `${studentName}_${examId}` } }] },
+            '학생이름':  { rich_text: [{ text: { content: studentName } }] },
+            '시험명':    { rich_text: [{ text: { content: examId } }] },
+            '정오답':    { select:    { name: 'O' } }, // 더미 (스키마 호환)
+            '피드백':    { rich_text: [{ text: { content: feedback   || '' } }] },
+            '유형':      { rich_text: [{ text: { content: answersJson } }] }, // 정오답 JSON 저장
+            '추가점수':  { number:    Number(extraScore) || 0 },
+          }
+        })
+      });
+ 
+      return res.status(200).json({ ok: true, message: `${studentName} 저장 완료` });
+    }
+ 
+    // ── 제출 학생 목록 ──
+    // ── 피드백만 저장 ──
+    if (action === 'save_feedback') {
+      const { studentName, examId, feedback } = body;
+      const rows = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (!rows.length) return res.status(404).json({ error: '성적 데이터 없음 — 먼저 성적을 저장해주세요.' });
+      await nFetch(`https://api.notion.com/v1/pages/${rows[0].id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          properties: { '피드백': { rich_text: [{ text: { content: feedback || '' } }] } }
+        })
+      });
+      return res.status(200).json({ ok: true });
+    }
+ 
+    // ── 제출 학생 목록 (점수 + 피드백 + 미제출 대상 포함) ──
+    if (action === 'get_submitted_students') {
+      const { examId } = body;
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const [rRows, qRows, sRows] = await Promise.all([
+        queryDB(DB_RESULTS,   { property: '시험명', rich_text: { equals: examId } }),
+        queryDB(DB_QUESTIONS, { property: '시험명', title:     { equals: examId } }),
+        DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
+      ]);
+ 
+      const questions = qRows.map(p => ({
+        num:   p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
+        score: p.properties['배점']?.number || 0,
+      }));
+ 
+      // 제출한 학생
+      const submitted = rRows.map(p => {
+        const name     = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+        const feedback = p.properties['피드백']?.rich_text?.[0]?.text?.content || '';
+        const extra    = p.properties['추가점수']?.number || 0;
+        const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+        let answers = {};
+        try { answers = JSON.parse(answersJson); } catch {}
+        let score = extra;
+        if (answers._manual) score = answers._total || 0;
+        else questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
+        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, submitted: true };
+      }).filter(s => s.name);
+ 
+      const submittedNames = new Set(submitted.map(s => s.name));
+ 
+      // 시험명에서 학교/학년/학교급 파싱 → 대상 학생 추출
+      // 예: "2026 형곡고 1학년 1학기 기말고사" → 학년 1학년, 학교급 고
+      const gradeMatch = examId.match(/([1-3])학년/);
+      const targetGrade = gradeMatch ? gradeMatch[1] + '학년' : '';
+ 
+      // 시험명의 학교급 판별 (고 vs 중) — "형곡고", "형곡중" 구분
+      // 학교명+급 패턴을 직접 추출 (예: 형곡고, 구미여중)
+      const isHighExam = /[가-힣]+(고|고등학교)(\s|$|\d)/.test(examId) || examId.includes('고 ') || /[가-힣]+고\d?학년/.test(examId);
+      const isMidExam  = /[가-힣]+(중|중학교)(\s|$|\d)/.test(examId) || examId.includes('중 ') || /[가-힣]+중\d?학년/.test(examId);
+ 
+      let missing = [];
+      if (sRows.length && targetGrade) {
+        sRows.forEach(p => {
+          const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
+          const grade  = p.properties['학년']?.select?.name || '';
+          const type   = p.properties['구분']?.select?.name || '';
+          const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
+          if (!name || !school) return;
+          if (grade !== targetGrade) return;
+ 
+          // 학교급 확인: 시험이 '고'면 학생도 고등, '중'이면 중등
+          if (isHighExam && !isMidExam && type !== '고등') return;
+          if (isMidExam && !isHighExam && type !== '중등') return;
+ 
+          // 학교명 매칭: 풀네임(형곡고등학교)/축약형(형곡고) 모두 대응
+          const schoolShort = school.replace(/고등학교/,'고').replace(/중학교/,'중');
+          if (!examId.includes(school) && !examId.includes(schoolShort)) return;
+ 
+          if (submittedNames.has(name)) return;
+          missing.push({ name, score: null, hasFeedback: false, submitted: false });
+        });
+      }
+ 
+      submitted.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      missing.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+ 
+      return res.status(200).json({
+        ok: true,
+        students: submitted,
+        missing,
+        totalTarget: submitted.length + missing.length
+      });
+    }
+ 
+    // ── 기존 데이터 불러오기 ──
+    if (action === 'get_existing_data') {
+      const { studentName, examId } = body;
+      const rows = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (!rows.length) return res.status(200).json({ ok: true, results: {}, feedback: '', extraScore: 0 });
+      const row = rows[0];
+      const answersJson = row.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+      let results = {};
+      try { results = JSON.parse(answersJson); } catch {}
+      const feedback   = row.properties['피드백']?.rich_text?.[0]?.text?.content || '';
+      const extraScore = row.properties['추가점수']?.number || 0;
+      return res.status(200).json({ ok: true, results, feedback, extraScore });
+    }
+ 
+    // ── 리포트 데이터 ──
+    if (action === 'get_report_data') {
+      const { studentName, examId } = body;
+ 
+      // 문항 정보
+      const qRows = await queryDB(DB_QUESTIONS,
+        { property: '시험명', title: { equals: examId } },
+        [{ property: '문항번호', direction: 'ascending' }]
+      );
+      if (!qRows.length) return res.status(404).json({ error: '시험 문항 없음' });
+ 
+      const questions = qRows.map(p => ({
+        num:   p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || ''),
+        unit:  p.properties['단원']?.rich_text?.[0]?.text?.content || '',
+        area:  p.properties['영역']?.rich_text?.[0]?.text?.content || '',
+        type:  p.properties['유형']?.rich_text?.[0]?.text?.content || '',
+        score: p.properties['배점']?.number || 0,
+      }));
+      const commonComment = qRows[0].properties['총평']?.rich_text?.[0]?.text?.content || '';
+ 
+      // 학생 성적
+      const rRows = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (!rRows.length) return res.status(404).json({ error: '데이터 없음' });
+ 
+      const row = rRows[0];
+      const answersJson = row.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+      const extraScore  = row.properties['추가점수']?.number || 0;
+      const teacherFeedback = row.properties['피드백']?.rich_text?.[0]?.text?.content || '';
+      let answers = {};
+      try { answers = JSON.parse(answersJson); } catch {}
+ 
+      let totalScore = extraScore;
+      const incorrectList = [];
+      questions.forEach(q => {
+        const result = answers[q.num] || 'O';
+        if (result === 'O') {
+          totalScore += (q.score || 0);
+        } else {
+          incorrectList.push({ num: q.num, unit: q.unit, area: q.area, type: q.type, score: q.score });
+        }
+      });
+ 
+      // 차트 데이터
+      const unitCount = {}, areaCount = {};
+      questions.forEach(q => {
+        if (q.unit) unitCount[q.unit] = (unitCount[q.unit] || 0) + 1;
+        if (q.area) areaCount[q.area] = (areaCount[q.area] || 0) + 1;
+      });
+ 
+      return res.status(200).json({
+        ok: true,
+        studentName, examId,
+        totalScore:    Number(totalScore.toFixed(1)),
+        maxScore:      100,
+        incorrectList,
+        commonComment,
+        teacherFeedback,
+        unitLabels:  Object.keys(unitCount),
+        unitValues:  Object.values(unitCount),
+        areaLabels:  Object.keys(areaCount),
+        areaValues:  Object.values(areaCount),
+      });
+    }
+ 
+    // ── 누적 성적표 ──
+    if (action === 'get_score_matrix') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const [rRows, qRows, sRows] = await Promise.all([
+        queryDB(DB_RESULTS),
+        queryDB(DB_QUESTIONS),
+        DB_SCHEDULE ? queryDB(DB_SCHEDULE) : Promise.resolve([])
+      ]);
+ 
+      // 학생 정보 맵
+      const studentInfoMap = {};
+      sRows.forEach(p => {
+        const name   = p.properties['학생이름']?.title?.[0]?.text?.content?.trim() || '';
+        const type   = p.properties['구분']?.select?.name || '';
+        const grade  = p.properties['학년']?.select?.name || '';
+        const school = p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '';
+        if (name) studentInfoMap[name] = { type, grade, school };
+      });
+ 
+      // 시험별 문항 정보 맵
+      const examQMap = {};
+      qRows.forEach(p => {
+        const exam  = p.properties['시험명']?.title?.[0]?.text?.content || '';
+        const num   = p.properties['번호']?.rich_text?.[0]?.text?.content || String(p.properties['문항번호']?.number || '');
+        const score = p.properties['배점']?.number || 0;
+        if (!examQMap[exam]) examQMap[exam] = [];
+        examQMap[exam].push({ num, score });
+      });
+ 
+      // 시험명 목록 (생성일 순)
+      const autoExams = [...new Set(
+        qRows
+          .sort((a,b) => new Date(a.created_time||0) - new Date(b.created_time||0))
+          .map(p => p.properties['시험명']?.title?.[0]?.text?.content || '')
+      )].filter(Boolean);
+ 
+      // 학생별 점수 (자동 + 수동)
+      const studentMap = {};
+      const manualExams = new Set();
+ 
+      rRows.forEach(p => {
+        const name  = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+        const exam  = p.properties['시험명']?.rich_text?.[0]?.text?.content || '';
+        const extra = p.properties['추가점수']?.number || 0;
+        const answersJson = p.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+        if (!name || !exam) return;
+ 
+        let answers = {};
+        try { answers = JSON.parse(answersJson); } catch {}
+ 
+        let score, isManual = false;
+        if (answers._manual) {
+          score = answers._total || 0;
+          isManual = true;
+          manualExams.add(exam);
+        } else {
+          score = extra;
+          (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
+        }
+ 
+        if (!studentMap[name]) {
+          const info = studentInfoMap[name] || {};
+          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
+        }
+        studentMap[name].scores[exam] = Number(score.toFixed(1));
+        if (isManual) studentMap[name].manual[exam] = true;
+      });
+ 
+      // 점수 없는 학생도 포함 (등원 일정 DB 전체 기준)
+      Object.entries(studentInfoMap).forEach(([name, info]) => {
+        if (!studentMap[name]) {
+          studentMap[name] = { name, type: info.type||'', grade: info.grade||'', school: info.school||'', scores: {}, manual: {} };
+        }
+      });
+ 
+      // 전체 시험 목록 = 수동 시험 + 자동 시험 (시간순)
+      const manualExamList = [...manualExams].filter(e => !autoExams.includes(e)).sort();
+      const exams = [...manualExamList, ...autoExams];
+ 
+      const rows = Object.values(studentMap).sort((a,b) => {
+        const to = {'초등':0,'중등':1,'고등':2};
+        const ta = to[a.type]??3, tb = to[b.type]??3;
+        if (ta !== tb) return ta - tb;
+        const ga = parseInt(a.grade)||0, gb = parseInt(b.grade)||0;
+        if (ga !== gb) return ga - gb;
+        if (a.school !== b.school) return a.school.localeCompare(b.school,'ko');
+        return a.name.localeCompare(b.name,'ko');
+      });
+      return res.status(200).json({ ok: true, exams, rows });
+    }
+ 
+    // ── 수동 점수 저장 ──
+    if (action === 'save_manual_score') {
+      const { studentName, examId, score } = body;
+      const existing = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (existing.length) {
+        await nFetch(`https://api.notion.com/v1/pages/${existing[0].id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ properties: {
+            '유형': { rich_text: [{ text: { content: JSON.stringify({ _manual: true, _total: Number(score) }) } }] },
+            '추가점수': { number: 0 }
+          }})
+        });
+      } else {
+        await nFetch('https://api.notion.com/v1/pages', {
+          method: 'POST',
+          body: JSON.stringify({ parent: { database_id: DB_RESULTS }, properties: {
+            '기록ID':   { title:     [{ text: { content: `${studentName}_${examId}_manual` } }] },
+            '학생이름': { rich_text: [{ text: { content: studentName } }] },
+            '시험명':   { rich_text: [{ text: { content: examId } }] },
+            '유형':     { rich_text: [{ text: { content: JSON.stringify({ _manual: true, _total: Number(score) }) } }] },
+            '추가점수': { number: 0 },
+          }})
+        });
+      }
+      return res.status(200).json({ ok: true });
+    }
+ 
+    // ── 시험 총평 AI 생성 (생성만, 저장은 시험지 저장 버튼으로) ──
+    if (action === 'generate_common_comment') {
+      if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
+      const { prompt } = body;
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:400, messages:[{role:'user',content:prompt}] })
+      });
+      const data = await r.json();
+      const text = data.content?.[0]?.text?.trim();
+      if (!text) throw new Error('Claude 응답 오류');
+      return res.status(200).json({ ok: true, text });
+    }
+ 
+    if (action === 'generate_ai_feedback') {
+      if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키 없음' });
+      const { studentName, examId, totalScore, incorrectList, teacherMemo, hasTeacherMemo } = body;
+      const incorrectSummary = !incorrectList?.length
+        ? '모든 문항 정답'
+        : incorrectList.map(i => `${i.num}번(${i.area}/${i.type})`).join(', ');
+ 
+      const prompt = hasTeacherMemo
+        ? `채움영어학원 선생님이 작성한 피드백을 아래 학생 성적 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 기존 피드백의 핵심 내용과 톤을 유지하면서 오답 분석 내용을 자연스럽게 녹여주세요.
+ 
+학생: ${studentName}
 시험명: ${examId}
-전체 문항: ${totalQ}문항
-단원별: ${unitStr}
-영역별: ${areaStr}
-선생님 작성 메모: ${teacherMemo}
-
-[규칙]
-- 시험명, 학교명, 학년 등을 서두에 나열하지 말 것
-- 단원 배분·영역 비중·학습 포인트 중심으로 3~4문장
-- 학부모가 읽기 좋은 따뜻하고 전문적인 어투
-- 마크다운 없이 본문만`
-    : `채움영어학원 아래 시험의 전체 총평을 3~4문장으로 작성해 주세요.
-
+점수: ${totalScore}점 / 100점
+오답 문항: ${incorrectSummary}
+기존 선생님 피드백: ${teacherMemo}
+ 
+[작성 규칙]
+- 학부모에게 전달하는 따뜻하고 전문적인 어투
+- 기존 피드백 내용을 바탕으로 오답 영역/유형을 자연스럽게 포함
+- 마크다운 기호 없이 본문만`
+        : `채움영어학원 선생님입니다. 아래 학생의 시험 결과를 바탕으로 학부모 전달용 피드백을 3~4문장으로 작성해 주세요.
+ 
+학생: ${studentName}
 시험명: ${examId}
-전체 문항: ${totalQ}문항
-단원별 출제: ${unitStr}
-영역별 출제: ${areaStr}
-
-[규칙]
-- "이번 시험은~", "○○고 ○학년~" 같은 서두 문장 금지
-- 단원 배분·영역 비중·눈여겨볼 출제 포인트 중심으로 바로 시작
-- 학부모 공통 전달용, 따뜻하고 전문적인 어투
-- 마크다운 없이 본문만`;
-
-  try {
-    const d = await call('generate_common_comment', { prompt });
-    document.getElementById('examCommon').value = d.text || '';
-    toast('AI 초안 생성 완료! 확인 후 시험지 저장해주세요 😊');
-  } catch(e) {
-    toast('AI 오류: ' + e.message);
-  } finally {
-    btn.disabled = false; btn.textContent = '✨ AI 초안';
-  }
-}
-
-// ── 피드백 저장 ──
-async function saveFeedback() {
-  if (!reportData) return;
-  const btn = document.getElementById('saveFbBtn');
-  const feedback = document.getElementById('r-teacher').textContent.trim();
-  btn.disabled = true; btn.textContent = '저장 중...';
-  try {
-    await call('save_feedback', {
-      studentName: reportData.studentName,
-      examId:      reportData.examId,
-      feedback,
-    });
-    btn.textContent = '✅ 저장됨';
-    btn.style.background = '#15803d';
-    toast(`${reportData.studentName} 피드백 저장 완료!`);
-    setTimeout(() => { btn.disabled=false; btn.textContent='💾 피드백 저장'; loadStudentList(); }, 2000);
-  } catch(e) {
-    toast('저장 실패: ' + e.message);
-    btn.disabled=false; btn.textContent='💾 피드백 저장';
-  }
-}
-
-// ── AI 피드백 (선생님 피드백 칸에 통합) ──
-async function genAI() {
-  if(!reportData) return;
-  const btn = document.getElementById('aiBtn');
-  btn.disabled=true; btn.textContent='✨ 생성 중...';
-  const existingFeedback = document.getElementById('r-teacher').textContent.trim();
-  try {
-    const d = await call('generate_ai_feedback', {
-      studentName:     reportData.studentName,
-      examId:          reportData.examId,
-      totalScore:      reportData.totalScore,
-      incorrectList:   reportData.incorrectList,
-      teacherMemo:     existingFeedback,
-      hasTeacherMemo:  existingFeedback.length > 0,
-    });
-    document.getElementById('r-teacher').textContent = d.feedback;
-    toast('AI 피드백 생성 완료!');
-  } catch(e){toast('AI 오류: '+e.message);}
-  finally{btn.disabled=false;btn.textContent='✨ AI 피드백';}
-}
-
-// ── 이미지 저장 ──
-function saveImg(){
-  window.scrollTo(0,0);
-  const name = document.getElementById('r-student').textContent;
-  const exam = document.getElementById('r-exam').textContent;
-  html2canvas(document.getElementById('capture-area'),{scale:2,useCORS:true,backgroundColor:'#fff'})
-    .then(c=>{
-      const a=document.createElement('a');
-      a.download=`채움영어_${exam}_${name}.png`;
-      a.href=c.toDataURL('image/png'); a.click();
-    });
-}
-
-// ── 피드백 저장된 학생 전체 이미지 저장 ──
-async function saveAllImages() {
-  if (!currentExam) { toast('먼저 시험을 선택하세요.'); return; }
-  const btn = document.getElementById('batchSaveBtn');
-
-  // 피드백 저장된 학생만 대상
-  let targets = [];
-  try {
-    const d = await call('get_submitted_students', { examId: currentExam });
-    targets = (d.students || []).filter(s => s.hasFeedback).map(s => s.name);
-  } catch(e) { toast('학생 목록 로드 실패'); return; }
-
-  if (!targets.length) { toast('피드백이 저장된 학생이 없습니다.'); return; }
-  if (!confirm(`피드백 저장된 ${targets.length}명의 리포트를 이미지로 저장할까요?\n(브라우저가 여러 파일 다운로드를 허용해야 합니다)`)) return;
-
-  btn.disabled = true;
-  const wasReport = document.getElementById('report-page').style.display === 'block';
-
-  for (let i = 0; i < targets.length; i++) {
-    const name = targets[i];
-    btn.textContent = `저장 중 ${i+1}/${targets.length}`;
-    try {
-      // 리포트 로드 & 렌더
-      const d = await call('get_report_data', { studentName: name, examId: currentExam });
-      reportData = d;
-      renderReport(d);
-      document.getElementById('main-wrap').style.display = 'none';
-      document.getElementById('report-page').style.display = 'block';
-      window.scrollTo(0,0);
-
-      // 렌더 안정화 대기
-      await new Promise(r => setTimeout(r, 600));
-
-      // 캡처 & 저장
-      const canvas = await html2canvas(document.getElementById('capture-area'), {scale:2, useCORS:true, backgroundColor:'#fff'});
-      const a = document.createElement('a');
-      a.download = `채움영어_${currentExam}_${name}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-
-      // 다운로드 간격 (브라우저 차단 방지)
-      await new Promise(r => setTimeout(r, 800));
-    } catch(e) {
-      console.error(`${name} 저장 실패`, e);
+점수: ${totalScore}점 / 100점
+오답 문항: ${incorrectSummary}
+ 
+[작성 규칙]
+- 학부모에게 전달하는 따뜻하고 전문적인 어투
+- 오답 문항의 영역/유형을 구체적으로 언급
+- 잘한 점과 보완점 균형있게 서술
+- 마크다운 기호 없이 본문만`;
+ 
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:500, messages:[{role:'user',content:prompt}] })
+      });
+      const claudeData = await claudeRes.json();
+      const feedback = claudeData.content?.[0]?.text?.trim();
+      if (!feedback) throw new Error('Claude 응답 오류');
+      return res.status(200).json({ ok: true, feedback });
     }
+ 
+    return res.status(400).json({ error: '알 수 없는 action' });
+ 
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
   }
-
-  // 원상 복구
-  if (!wasReport) {
-    document.getElementById('report-page').style.display = 'none';
-    document.getElementById('main-wrap').style.display = '';
-  }
-  btn.disabled = false;
-  btn.textContent = '📸 전체 저장';
-  toast(`${targets.length}명 이미지 저장 완료!`);
 }
+ 
 
-</script>
-</body>
-</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
