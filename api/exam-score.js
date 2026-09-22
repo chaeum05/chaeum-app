@@ -348,6 +348,51 @@ export default async function handler(req, res) {
         if (q.area) areaCount[q.area] = (areaCount[q.area] || 0) + 1;
       });
 
+      // ── 이 학생의 과거 시험 점수 이력 (추이용) ──
+      const periodOf = (ex) => {
+        const s = (ex||'').replace(/_/g,' ').replace(/^manual /,'');
+        if (s.includes('1학기') && s.includes('중간')) return { label:'1학기 중간', order:1 };
+        if (s.includes('1학기') && (s.includes('기말')||s.includes('final'))) return { label:'1학기 기말', order:2 };
+        if (s.includes('2학기') && s.includes('중간')) return { label:'2학기 중간', order:3 };
+        if (s.includes('2학기') && (s.includes('기말')||s.includes('final'))) return { label:'2학기 기말', order:4 };
+        return null;
+      };
+
+      let history = [];
+      try {
+        const allMyRows = await queryDB(DB_RESULTS, { property: '학생이름', rich_text: { equals: studentName } });
+        // 시험명별 배점 맵 (자동채점용) — 전체 문항 조회는 무거우니, manual은 저장값, 일반은 이 시험만 정확 계산
+        const histMap = {}; // period label → score
+        for (const r of allMyRows) {
+          const ex = r.properties['시험명']?.rich_text?.[0]?.text?.content || '';
+          const per = periodOf(ex);
+          if (!per) continue;
+          const aJson = r.properties['유형']?.rich_text?.[0]?.text?.content || '{}';
+          let a = {}; try { a = JSON.parse(aJson); } catch {}
+          let sc;
+          if (a._manual) {
+            sc = a._total || 0;
+          } else if (ex === examId) {
+            sc = totalScore; // 현재 시험은 이미 계산됨
+          } else {
+            // 다른 시험은 해당 문항 배점을 조회해 계산
+            const exQs = await queryDB(DB_QUESTIONS, { property: '시험명', title: { equals: ex } });
+            let s2 = r.properties['추가점수']?.number || 0;
+            exQs.forEach(q => {
+              const n = q.properties['번호']?.rich_text?.[0]?.text?.content || String(q.properties['문항번호']?.number || '');
+              const bScore = q.properties['배점']?.number || 0;
+              if ((a[n] || 'O') === 'O') s2 += bScore;
+            });
+            sc = s2;
+          }
+          // 같은 학기라벨에 여러 개면 자동채점(현재/일반) 우선, 없으면 저장
+          if (histMap[per.label] === undefined) histMap[per.label] = { score: Number(sc.toFixed(1)), order: per.order };
+        }
+        history = Object.entries(histMap)
+          .map(([label, v]) => ({ label, score: v.score, order: v.order }))
+          .sort((a,b) => a.order - b.order);
+      } catch(e) { history = []; }
+
       return res.status(200).json({
         ok: true,
         studentName, examId,
@@ -360,6 +405,7 @@ export default async function handler(req, res) {
         unitValues:  Object.values(unitCount),
         areaLabels:  Object.keys(areaCount),
         areaValues:  Object.values(areaCount),
+        history,
       });
     }
 
