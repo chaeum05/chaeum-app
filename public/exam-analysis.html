@@ -360,8 +360,17 @@ textarea.fi{resize:vertical;min-height:72px;}
           <span class="score-val" id="r-score">0</span>
           <span class="score-max">/ <span id="r-max">100</span>점</span>
         </div>
+        <div id="r-trend" style="text-align:right;margin-top:4px;"></div>
       </div>
     </header>
+
+    <!-- 성적 추이 -->
+    <div id="r-history-box" style="display:none;margin-bottom:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;">
+      <div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        📊 성적 추이
+      </div>
+      <div id="r-history-rows"></div>
+    </div>
 
     <!-- 시험 구성 분석 요약 -->
     <div id="r-exam-summary" style="margin-bottom:20px;">
@@ -1067,6 +1076,48 @@ function renderReport(d) {
   document.getElementById('r-max').textContent     = d.maxScore;
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
+
+  // ── 성적 추이 ──
+  const history = d.history || [];
+  const trendEl = document.getElementById('r-trend');
+  const boxEl   = document.getElementById('r-history-box');
+  const rowsEl  = document.getElementById('r-history-rows');
+
+  // 현재 시험의 순서(order) 찾기
+  const curIdx = history.findIndex(h => Math.abs(h.score - d.totalScore) < 0.01);
+
+  // 직전 대비 상승폭 배지
+  if (curIdx > 0) {
+    const prev = history[curIdx-1].score;
+    const diff = +(d.totalScore - prev).toFixed(1);
+    if (diff > 0)      trendEl.innerHTML = `<span style="font-size:15px;font-weight:800;color:#16a34a;">▲ ${diff}점 상승</span>`;
+    else if (diff < 0) trendEl.innerHTML = `<span style="font-size:15px;font-weight:800;color:#dc2626;">▼ ${Math.abs(diff)}점 하락</span>`;
+    else               trendEl.innerHTML = `<span style="font-size:14px;font-weight:700;color:#64748b;">— 유지</span>`;
+  } else {
+    trendEl.innerHTML = '';
+  }
+
+  // 추이 박스 (2개 이상일 때만)
+  if (history.length >= 2) {
+    boxEl.style.display = 'block';
+    rowsEl.innerHTML = history.map((h, i) => {
+      const isCur = i === curIdx;
+      let delta = '';
+      if (i > 0) {
+        const df = +(h.score - history[i-1].score).toFixed(1);
+        if (df > 0)      delta = `<span style="color:#16a34a;font-weight:700;font-size:12px;">▲${df}</span>`;
+        else if (df < 0) delta = `<span style="color:#dc2626;font-weight:700;font-size:12px;">▼${Math.abs(df)}</span>`;
+      }
+      return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;${isCur?'background:#eff6ff;border-radius:6px;padding-left:8px;':''}">
+        <span style="width:80px;font-size:12px;color:#64748b;font-weight:${isCur?'800':'600'};">${h.label}</span>
+        <span style="font-size:15px;font-weight:800;color:${isCur?'#2563eb':'#334155'};">${h.score}점</span>
+        ${delta}
+        ${isCur?'<span style="font-size:10px;background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:20px;font-weight:700;margin-left:auto;">이번 시험</span>':''}
+      </div>`;
+    }).join('');
+  } else {
+    boxEl.style.display = 'none';
+  }
 
   // 피드백 저장 버튼 상태 초기화
   const saveFbBtn = document.getElementById('saveFbBtn');
