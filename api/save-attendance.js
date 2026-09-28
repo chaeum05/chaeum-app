@@ -131,7 +131,7 @@ export default async function handler(req, res) {
     // 등원 일정 저장 (학생 스케줄 등록)
     if (action === 'save_schedule') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
-      const { days } = req.body; // { 월: true, 화: false, ... }
+      const { days, school, teacher } = req.body; // { 월: true, ... }, 학교명, 담임
 
       // 기존 스케줄 찾기
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
@@ -146,6 +146,7 @@ export default async function handler(req, res) {
         })
       });
       const searchData = await searchRes.json();
+      if (searchData.object === 'error') throw new Error('등원일정 조회 실패: ' + searchData.message);
 
       const props = {
         '학생이름': { title: [{ text: { content: name } }] },
@@ -158,18 +159,33 @@ export default async function handler(req, res) {
         '금': { checkbox: days['금'] || false },
         '메모': { rich_text: [{ text: { content: memo || '' } }] }
       };
+      // 학교는 입력됐을 때만 (기존 값 안 지우도록)
+      if (school) props['학교'] = { rich_text: [{ text: { content: school } }] };
+      // 담임도 선택됐을 때만 (기본 담임 + 요일별 담임 모두 세팅)
+      if (teacher) {
+        props['담임']   = { select: { name: teacher } };
+        props['담임_월'] = { select: { name: teacher } };
+        props['담임_화'] = { select: { name: teacher } };
+        props['담임_수'] = { select: { name: teacher } };
+        props['담임_목'] = { select: { name: teacher } };
+        props['담임_금'] = { select: { name: teacher } };
+      }
 
+      let saveRes;
       if (searchData.results && searchData.results.length > 0) {
-        await fetch(`https://api.notion.com/v1/pages/${searchData.results[0].id}`, {
+        saveRes = await fetch(`https://api.notion.com/v1/pages/${searchData.results[0].id}`, {
           method: 'PATCH', headers,
           body: JSON.stringify({ properties: props })
         });
       } else {
-        await fetch('https://api.notion.com/v1/pages', {
+        saveRes = await fetch('https://api.notion.com/v1/pages', {
           method: 'POST', headers,
           body: JSON.stringify({ parent: { database_id: DB_SCHEDULE }, properties: props })
         });
       }
+      const saveData = await saveRes.json();
+      if (saveData.object === 'error') throw new Error('등원일정 저장 실패: ' + saveData.message);
+
       return res.status(200).json({ ok: true, message: '등원 일정 저장 완료' });
     }
 
