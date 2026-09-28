@@ -857,6 +857,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <option value="정규">정규</option>
             <option value="보강">보강</option>
           </select>
+          <select id="add-teacher" style="width:82px;" title="담임 선생님">
+            <option value="">담임 미정</option>
+            <option value="이유민">이유민</option>
+            <option value="성형주">성형주</option>
+          </select>
           <span style="font-size:11px;font-weight:600;color:var(--text2);margin-left:4px;">요일:</span>
           <label style="font-size:12px;display:flex;align-items:center;gap:2px;cursor:pointer;"><input type="checkbox" id="add-mon" style="accent-color:var(--burgundy)"> 월</label>
           <label style="font-size:12px;display:flex;align-items:center;gap:2px;cursor:pointer;"><input type="checkbox" id="add-tue" style="accent-color:var(--burgundy)"> 화</label>
@@ -2545,17 +2550,19 @@ async function addStudentManually() {
   const exists = attStudents.find(s => s.name === name);
   if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
 
-  const school = document.getElementById('add-school')?.value.trim() || '';
+  const school  = document.getElementById('add-school')?.value.trim() || '';
+  const teacher = document.getElementById('add-teacher')?.value || '';
 
   // 오늘 출결 목록에 추가
-  attStudents.push({ name, type, grade, isMakeup: section==='보강' });
+  attStudents.push({ name, type, grade, teacher, isMakeup: section==='보강' });
   renderAttGrid();
 
   // 등원 일정 노션에 항상 등록 (요일 없어도 보고서 현황에 나오도록)
   try {
-    await api('save-attendance', { action:'save_schedule', name, type, grade, days, school });
+    await api('save-attendance', { action:'save_schedule', name, type, grade, days, school, teacher });
     const hasDays = Object.values(days).some(Boolean);
-    toast(hasDays ? `${name} 추가 + 등원 요일 등록 완료` : `${name} 등록 완료 (요일 미지정)`);
+    const tMsg = teacher ? ` · 담임 ${teacher}` : '';
+    toast(hasDays ? `${name} 추가 + 등원 요일 등록 완료${tMsg}` : `${name} 등록 완료 (요일 미지정)${tMsg}`);
   } catch(e) {
     toast(`${name} 목록엔 추가됨 (등원 등록 실패: ${e.message})`);
   }
@@ -2563,7 +2570,8 @@ async function addStudentManually() {
   // 입력 초기화
   document.getElementById('add-name').value  = '';
   document.getElementById('add-name2').value = '';
-  if (document.getElementById('add-school')) document.getElementById('add-school').value = '';
+  if (document.getElementById('add-school'))  document.getElementById('add-school').value = '';
+  if (document.getElementById('add-teacher')) document.getElementById('add-teacher').value = '';
   ['add-mon','add-tue','add-wed','add-thu','add-fri'].forEach(id =>
     document.getElementById(id).checked = false
   );
