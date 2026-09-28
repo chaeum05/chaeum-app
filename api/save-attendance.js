@@ -18,7 +18,8 @@ export default async function handler(req, res) {
     'Notion-Version': '2022-06-28'
   };
 
-  const { action, name, type, grade, date, status, memo, recordId, absentDate } = req.body;
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  const { action, name, type, grade, date, status, memo, recordId, absentDate } = body;
 
   try {
     if (action === 'upsert') {
@@ -131,7 +132,7 @@ export default async function handler(req, res) {
     // 등원 일정 저장 (학생 스케줄 등록)
     if (action === 'save_schedule') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
-      const { days, school, teacher } = req.body; // { 월: true, ... }, 학교명, 담임
+      const { days, school, teacher } = body; // { 월: true, ... }, 학교명, 담임
 
       // 기존 스케줄 찾기
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
@@ -186,6 +187,33 @@ export default async function handler(req, res) {
       if (saveData.object === 'error') throw new Error('등원일정 저장 실패: ' + saveData.message);
 
       return res.status(200).json({ ok: true, message: '등원 일정 저장 완료' });
+    }
+
+    // 학부모 카톡 이름 저장 (등원일정 DB)
+    if (action === 'set_parent_kakao') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const parentKakao = String(body.parentKakao || '').trim();
+      const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          filter: { and: [
+            { property: '학생이름', title: { equals: name } },
+            { property: '구분', select: { equals: type } }
+          ]}
+        })
+      });
+      const searchData = await searchRes.json();
+      if (searchData.object === 'error') throw new Error(searchData.message);
+      if (!searchData.results?.length) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      const r = await fetch(`https://api.notion.com/v1/pages/${searchData.results[0].id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ properties: {
+          '학부모카톡명': { rich_text: parentKakao ? [{ text: { content: parentKakao } }] : [] }
+        }})
+      });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true });
     }
 
     return res.status(400).json({ error: '알 수 없는 action' });
