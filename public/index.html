@@ -438,6 +438,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
               <option value="1학년">1학년</option>
               <option value="2학년">2학년</option>
               <option value="3학년">3학년</option>
+              <option value="t:이유민">담임 · 이유민</option>
+              <option value="t:성형주">담임 · 성형주</option>
+              <option value="t:__none__">담임 · 미지정</option>
             </select>
           </div>
           <button class="btn-secondary" style="padding:9px 14px;font-size:12px;" onclick="loadBatchStudents()">🔄 학생 불러오기</button>
@@ -1160,6 +1163,8 @@ async function renderBatchRows() {
   if (filter === '금') list = list.filter(s => (s.days||[]).includes('금'));
   else if (filter === '목') list = list.filter(s => (s.days||[]).includes('목'));
   else if (['1학년','2학년','3학년'].includes(filter)) list = list.filter(s => s.grade === filter);
+  else if (filter === 't:__none__') list = list.filter(s => !s.teacher);
+  else if (filter.startsWith('t:')) { const tn = filter.slice(2); list = list.filter(s => s.teacher === tn); }
 
   if (!list.length) { wrap.innerHTML = '<div class="empty" style="padding:20px;">해당 학생이 없습니다</div>'; return; }
 
