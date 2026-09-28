@@ -49,6 +49,7 @@ export default async function handler(req, res) {
         grade:  p.properties['학년']?.select?.name || '',
         school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
         teacher: p.properties['담임']?.select?.name || '',
+        parentKakao: (p.properties['학부모카톡명']?.rich_text || []).map(t => t.plain_text || t.text?.content || '').join('').trim(),
         teachers: {
           '월': p.properties['담임_월']?.select?.name || '',
           '화': p.properties['담임_화']?.select?.name || '',
