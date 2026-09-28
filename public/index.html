@@ -91,6 +91,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-kakao { margin-top: 8px; font-size: 13px; background: #fffbe6; border: 1px solid #fde68a; border-radius: 8px; padding: 7px 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sm-kakao input { flex: 1; min-width: 120px; padding: 5px 8px; border: 1.5px solid #fde68a; border-radius: 6px; font-size: 13px; font-family: 'Pretendard', sans-serif; }
 .sm-kakao button { padding: 4px 10px; border: 1px solid #e5c100; background: #fff; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Pretendard', sans-serif; }
+.sm-greet { margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+.sm-greet-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-weight: 700; color: var(--text2, #555); margin-bottom: 4px; }
+.sm-greet-text { white-space: pre-wrap; line-height: 1.6; color: var(--text, #222); font-size: 12.5px; }
+.sm-greet textarea { width: 100%; box-sizing: border-box; padding: 7px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; line-height: 1.6; font-family: 'Pretendard', sans-serif; resize: vertical; }
+.sm-greet button { padding: 3px 10px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; font-size: 11.5px; cursor: pointer; font-family: 'Pretendard', sans-serif; }
 .sm-card-wrap { background: #f1f5f9; padding: 12px; margin: 10px 16px; border-radius: 12px; }
 .rc-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #eee; max-width: 560px; margin: 0 auto; font-family: 'Noto Serif KR', serif; }
 #sm-capture { position: fixed; top: 0; left: -10000px; width: 560px; }
@@ -3859,12 +3864,14 @@ function smShow(it) {
       <div class="sm-name"></div>
       <div class="sm-meta"></div>
       <div class="sm-kakao" id="sm-kakao"></div>
+      <div class="sm-greet" id="sm-greet"></div>
     </div>
     <div class="sm-card-wrap"><div class="rc-card" id="sm-card"></div></div>`;
   body.querySelector('.sm-name').textContent = `${it.name} 학생`;
   body.querySelector('.sm-meta').textContent =
     `${it.type} ${it.grade} · ${it.reportType} 보고서 (${smFmtDate(it)})${st?.teacher ? ' · 담임 ' + st.teacher : ''}`;
   smRenderKakao(kakao);
+  smRenderGreet();
 
   const card = document.getElementById('sm-card');
   card.innerHTML = it.html || '';
@@ -3875,10 +3882,11 @@ function smShow(it) {
   const canShareFiles = !!(navigator.canShare && window.File);
   document.getElementById('sm-share').style.display = canShareFiles ? '' : 'none';
   document.getElementById('sm-copy').style.gridColumn = canShareFiles ? '' : '1 / -1';
-  ['sm-share', 'sm-copy', 'sm-save'].forEach(id => {
+  ['sm-share', 'sm-save'].forEach(id => {
     const b = document.getElementById(id); b.disabled = true;
   });
   document.getElementById('sm-share').textContent = '⏳ 이미지 준비 중...';
+  smCopyStep = 0; smSetCopyLabel();
   document.getElementById('sm-done').classList.remove('pulse');
   smPrepareImage(it);
 }
@@ -3915,8 +3923,11 @@ async function smShare() {
     toast('이 기기는 이미지 공유를 지원하지 않아요. 이미지 복사를 써주세요.');
     return;
   }
+  const greet = smGreeting(smCur);
+  // 인사말을 같이 넘기고, 카톡이 글을 빼먹는 기기를 대비해 클립보드에도 복사
+  if (greet && navigator.clipboard?.writeText) navigator.clipboard.writeText(greet).catch(() => {});
   try {
-    await navigator.share({ files: [file] });
+    await navigator.share(greet ? { files: [file], text: greet } : { files: [file] });
     await smMarkSent();
   } catch(e) {
     if (e.name === 'AbortError') {
@@ -3927,16 +3938,98 @@ async function smShare() {
   }
 }
 
-// 💻 PC: 이미지 복사 → 카톡 채팅방에 Ctrl+V
+// 💻 PC: ① 인사말 복사 → Ctrl+V·Enter → ② 이미지 복사 → Ctrl+V
+let smCopyStep = 0;
+function smSetCopyLabel() {
+  const b = document.getElementById('sm-copy');
+  if (!b) return;
+  const hasGreet = !!smGreeting(smCur);
+  if (!hasGreet) smCopyStep = 1;
+  b.textContent = !hasGreet ? '💻 이미지 복사' : smCopyStep === 0 ? '💻 ① 인사말 복사' : '💻 ② 이미지 복사';
+}
 async function smCopy() {
+  if (!smCur) return;
+  const hint = document.getElementById('sm-hint');
+  if (smCopyStep === 0) {
+    try {
+      await navigator.clipboard.writeText(smGreeting(smCur));
+      smCopyStep = 1; smSetCopyLabel();
+      hint.textContent = '✉️ 인사말 복사됐어요! 카톡 채팅방에 Ctrl+V → Enter로 보낸 뒤 "② 이미지 복사"를 눌러주세요.';
+    } catch(e) {
+      toast('인사말 복사가 안 돼요: ' + e.message);
+    }
+    return;
+  }
   if (!smBlob) return;
   try {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': smBlob })]);
-    document.getElementById('sm-hint').textContent = '📋 복사됐어요! 카톡 채팅방에 Ctrl+V로 붙여넣고 보낸 뒤 "보냈어요"를 눌러주세요.';
+    hint.textContent = '📋 이미지 복사됐어요! 채팅방에 Ctrl+V로 붙여넣어 보낸 뒤 "보냈어요"를 눌러주세요.';
     document.getElementById('sm-done').classList.add('pulse');
+    smCopyStep = 0; smSetCopyLabel();
+    document.getElementById('sm-copy').textContent += ' (다시)';
   } catch(e) {
     toast('복사가 안 돼요. 💾 저장을 눌러 파일로 받아주세요.');
   }
+}
+
+// ✉️ 인사말 (보고서 종류별, 이 기기에 저장)
+const SM_GREET_DEFAULT = {
+  '주간': '[채움영어 주간 학습 리포트]\n\n안녕하세요, 학부모님! 우리 아이의 주간 학습 현황 리포트를 보내드립니다. 세부 내용은 아래 이미지를 통해 확인해 주세요. 항상 믿고 맡겨주셔서 감사합니다! 📝',
+  '월간': '[채움영어 월간 학습 리포트]\n\n안녕하세요, 학부모님! 우리 아이의 월간 학습 현황 리포트를 보내드립니다. 세부 내용은 아래 이미지를 통해 확인해 주세요. 항상 믿고 맡겨주셔서 감사합니다! 📝',
+  '신규': '[채움영어 첫 수업 리포트]\n\n안녕하세요, 학부모님! 우리 아이의 첫 수업 리포트를 보내드립니다. 세부 내용은 아래 이미지를 통해 확인해 주세요. 앞으로 잘 부탁드립니다! 📝',
+};
+function smGreetTemplate(rt) {
+  try {
+    const v = localStorage.getItem('chaeum-greet-' + rt);
+    if (v !== null) return v;
+  } catch(e) {}
+  return SM_GREET_DEFAULT[rt] ?? SM_GREET_DEFAULT['주간'];
+}
+function smGreeting(it) {
+  if (!it) return '';
+  return smGreetTemplate(it.reportType).replace(/\{이름\}/g, it.name).trim();
+}
+function smRenderGreet() {
+  const box = document.getElementById('sm-greet');
+  if (!box || !smCur) return;
+  const g = smGreeting(smCur);
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'sm-greet-head';
+  head.textContent = `✉️ 함께 보낼 인사말 (${smCur.reportType})`;
+  const edit = document.createElement('button');
+  edit.textContent = '✏️ 수정';
+  edit.onclick = smEditGreet;
+  head.appendChild(edit);
+  const text = document.createElement('div');
+  text.className = 'sm-greet-text';
+  text.textContent = g || '(인사말 없이 이미지만 보내요)';
+  box.append(head, text);
+}
+function smEditGreet() {
+  const box = document.getElementById('sm-greet');
+  const rt = smCur.reportType;
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'sm-greet-head';
+  head.textContent = `✉️ ${rt} 보고서 인사말 수정 — {이름} 을 쓰면 학생 이름으로 바뀌어요`;
+  const ta = document.createElement('textarea');
+  ta.value = smGreetTemplate(rt);
+  ta.rows = 5;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-top:6px;';
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; return b; };
+  row.append(
+    mk('저장', () => {
+      try { localStorage.setItem('chaeum-greet-' + rt, ta.value); } catch(e) {}
+      smRenderGreet(); smCopyStep = 0; smSetCopyLabel();
+      toast(`${rt} 보고서 인사말 저장됨`);
+    }),
+    mk('기본으로', () => { ta.value = SM_GREET_DEFAULT[rt] || ''; }),
+    mk('취소', smRenderGreet),
+  );
+  box.append(head, ta, row);
+  ta.focus();
 }
 
 function smDownload() {
