@@ -104,6 +104,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 발송함에서 빼기: 저장된 보고서 지우고 기록완료로 되돌림 ──
+    if (action === 'remove_draft') {
+      const { id } = body;
+      const props = {
+        '보고서상태':   { select: { name: '기록완료' } },
+        '보고서데이터': { rich_text: [] },
+        '피드백':       { rich_text: [] },
+      };
+      if (id) await notion(`https://api.notion.com/v1/pages/${id}`, 'PATCH', { properties: props });
+      else    await upsertRow(props);
+      return res.status(200).json({ ok: true });
+    }
+
     // ── 발송함 조회: 생성완료 + 보고서 저장된 것 전부 ──
     if (action === 'get_outbox') {
       const rows = await queryAll({
