@@ -3972,6 +3972,31 @@ async function smMarkSent() {
   }
 }
 
+// 🗑 발송함에서 빼기 (보내지 않고 목록에서 제거 → 기록완료로 되돌림)
+async function smRemove() {
+  if (!smCur || smBusy) return;
+  const it = smCur;
+  if (!confirm(`${it.name} 학생 보고서를 발송함에서 뺄까요?\n(보고서현황에서는 '기록완료'로 돌아가요. 다시 만들어 담으면 돼요.)`)) return;
+  smBusy = true;
+  const btn = document.getElementById('sm-remove');
+  btn.disabled = true; btn.textContent = '⏳ 빼는 중...';
+  try {
+    await api('update-report-status', { action: 'remove_draft', id: it.id,
+      name: it.name, type: it.type, grade: it.grade, baseDate: it.baseDate, reportType: it.reportType });
+    rsLocalSet(it, '기록완료', false);
+    smQueue = smQueue.filter(x => x !== it);
+    const idx = smList.indexOf(it);
+    smList = smList.filter(x => x !== it);
+    toast(`🗑 ${it.name} — 발송함에서 뺐어요`);
+    smShow(smList[Math.min(idx, smList.length - 1)] || null);
+  } catch(e) {
+    toast('빼기 실패: ' + e.message);
+  } finally {
+    smBusy = false;
+    btn.disabled = false; btn.textContent = '🗑 발송함에서 빼기';
+  }
+}
+
 // ⏭ 나중에: 맨 뒤로 보내기
 function smSkip() {
   if (!smCur || smList.length < 2) { toast('남은 보고서가 이것 하나예요.'); return; }
@@ -4061,8 +4086,11 @@ function toast(msg) {
       <button class="sm-btn-share" id="sm-share" onclick="smShare()">📱 카톡으로 보내기</button>
       <button class="sm-btn-copy"  id="sm-copy"  onclick="smCopy()">💻 이미지 복사</button>
       <button class="sm-btn-done"  id="sm-done"  onclick="smMarkSent()">✅ 보냈어요 · 다음</button>
-      <button class="sm-btn-sub"   onclick="smSkip()">⏭ 나중에 보내기</button>
-      <button class="sm-btn-sub"   id="sm-save" onclick="smDownload()">💾 이미지로 저장</button>
+      <div style="grid-column:1 / -1;display:flex;gap:8px;">
+        <button class="sm-btn-sub" style="flex:1;" onclick="smSkip()">⏭ 나중에 보내기</button>
+        <button class="sm-btn-sub" style="flex:1;" id="sm-save" onclick="smDownload()">💾 이미지로 저장</button>
+        <button class="sm-btn-sub" style="flex:1;color:#b91c1c !important;" id="sm-remove" onclick="smRemove()">🗑 발송함에서 빼기</button>
+      </div>
     </div>
   </div>
 </div>
