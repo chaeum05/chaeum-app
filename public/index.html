@@ -73,6 +73,44 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .btn-copy-text { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border); }
 .btn-copy-text:hover { border-color: var(--text2); color: var(--text); }
 
+.btn-outbox { background: #3a5fd9; color: #fff; }
+.btn-outbox:hover { background: #2c4bb5; }
+.btn-sendnow { background: #FEE500; color: #191919; }
+.btn-sendnow:hover { background: #f5d800; }
+
+/* ── 발송 모드 ── */
+.sm-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 9000; display: none; align-items: center; justify-content: center; padding: 16px; }
+.sm-overlay.open { display: flex; }
+.sm-box { background: var(--surface, #fff); width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); font-family: 'Pretendard', sans-serif; }
+.sm-top { position: sticky; top: 0; z-index: 2; background: #1e293b; color: #fff; padding: 12px 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-radius: 16px 16px 0 0; }
+.sm-top select { width: auto !important; flex: 0 0 auto; margin: 0; padding: 5px 8px; border-radius: 7px; border: none; font-size: 12px; font-family: 'Pretendard', sans-serif; }
+.sm-close { margin-left: auto; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.sm-info { padding: 12px 16px 4px; }
+.sm-name { font-size: 17px; font-weight: 800; color: var(--text, #111); }
+.sm-meta { font-size: 12px; color: var(--text2, #666); margin-top: 2px; }
+.sm-kakao { margin-top: 8px; font-size: 13px; background: #fffbe6; border: 1px solid #fde68a; border-radius: 8px; padding: 7px 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sm-kakao input { flex: 1; min-width: 120px; padding: 5px 8px; border: 1.5px solid #fde68a; border-radius: 6px; font-size: 13px; font-family: 'Pretendard', sans-serif; }
+.sm-kakao button { padding: 4px 10px; border: 1px solid #e5c100; background: #fff; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Pretendard', sans-serif; }
+.sm-card-wrap { background: #f1f5f9; padding: 12px; margin: 10px 16px; border-radius: 12px; }
+.rc-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #eee; max-width: 560px; margin: 0 auto; font-family: 'Noto Serif KR', serif; }
+#sm-capture { position: fixed; top: 0; left: -10000px; width: 560px; }
+.sm-actions { position: sticky; bottom: 0; background: var(--surface, #fff); padding: 10px 16px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--border, #eee); }
+.sm-actions button { padding: 13px 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
+.sm-actions button:disabled { opacity: 0.45; cursor: default; }
+.sm-btn-share { background: #FEE500; color: #191919; }
+.sm-btn-copy  { background: #1e293b; color: #fff; }
+.sm-btn-done  { background: #16a34a; color: #fff; grid-column: 1 / -1; }
+.sm-btn-done.pulse { box-shadow: 0 0 0 4px rgba(22,163,74,0.3); }
+.sm-btn-sub   { background: var(--surface2, #f1f5f9); color: var(--text2, #555); font-size: 12px !important; padding: 9px !important; }
+.sm-hint { font-size: 12px; color: var(--text2, #666); text-align: center; padding: 0 16px 6px; min-height: 16px; }
+.sm-empty { padding: 50px 20px; text-align: center; font-size: 15px; color: var(--text2, #666); line-height: 1.8; }
+@media (max-width: 600px) {
+  .sm-overlay { padding: 0; }
+  .sm-box { max-height: 100vh; height: 100vh; border-radius: 0; }
+  .sm-top { border-radius: 0; }
+  .sm-card-wrap { margin: 8px 10px; padding: 8px; }
+}
+
 /* ── 리포트 카드 공통 ── */
 #reportCard {
   background: white;
@@ -581,6 +619,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
 
       <div class="report-actions" id="report-actions">
+        <button class="btn-action btn-outbox"    onclick="saveToOutbox()">📥 발송함에 담기</button>
+        <button class="btn-action btn-sendnow"   onclick="saveAndSendNow()">📤 바로 보내기</button>
         <button class="btn-action btn-save-img"  onclick="saveReportImage()">📸 이미지 저장</button>
         <button class="btn-action btn-regen"     onclick="regenFeedback()">🔄 피드백 재생성</button>
         <button class="btn-action btn-copy-text" onclick="copyReportText()">📋 카톡용 복사</button>
@@ -959,6 +999,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         </div>
         <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
         <button onclick="resetReportStatus()" style="padding:7px 14px;background:#fdecea;color:var(--burgundy);border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔁 전체 초기화</button>
+        <button id="rs-waiting-btn" onclick="toggleRsWaiting()" title="기록은 들어왔는데 아직 보고서를 안 만든 학생만 보기" style="padding:7px 14px;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;cursor:pointer;">⏳ 생성 대기만</button>
+        <button onclick="openSendMode()" style="padding:7px 14px;background:#FEE500;color:#191919;border:1.5px solid #f5d800;border-radius:8px;font-size:12px;font-weight:800;font-family:'Pretendard',sans-serif;cursor:pointer;">📤 발송함 <span id="outbox-count" style="background:#191919;color:#FEE500;border-radius:20px;padding:0 7px;margin-left:2px;font-size:11px;">0</span></button>
 
         <!-- 그룹 방식 (주간=초중등 전용) -->
         <div id="rs-group-toggle" style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-left:auto;">
@@ -1738,6 +1780,18 @@ let rsStatusMap   = {};
 let rsRecordCounts = {};
 let rsStudents    = [];
 let rsInitialized = false;
+let rsWaitingOnly = false;
+
+function toggleRsWaiting() {
+  rsWaitingOnly = !rsWaitingOnly;
+  const b = document.getElementById('rs-waiting-btn');
+  if (b) {
+    b.style.background = rsWaitingOnly ? '#ea580c' : '#fff7ed';
+    b.style.color      = rsWaitingOnly ? '#fff'    : '#c2410c';
+    b.textContent      = rsWaitingOnly ? '⏳ 생성 대기만 ✓' : '⏳ 생성 대기만';
+  }
+  renderReportStatusGrid(document.getElementById('rs-base-date').value, rsCurrentTab==='weekly' ? '주간' : '월간');
+}
 
 // ── 날짜 유틸 (로컬 시간 기준, timezone 오류 없음) ──
 function localDateStr(d) {
@@ -1858,6 +1912,7 @@ async function syncReportStatus() {
       rsRecordCounts = rc.counts || {};
     } catch(e) {}
     renderReportStatusGrid(baseDate, reportType);
+    refreshOutboxCount();
   } catch(e) {}
 }
 
@@ -1888,6 +1943,7 @@ async function loadReportStatus(forceRefresh = true) {
     } catch(e) { rsRecordCounts = {}; }
 
     renderReportStatusGrid(baseDate, reportType);
+    refreshOutboxCount();
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
@@ -1977,6 +2033,23 @@ function renderReportStatusGrid(baseDate, reportType) {
 
   let html='', lastKey=null;
 
+  // ⏳ 생성 대기만: 기록은 있는데 아직 보고서 안 만든 학생
+  const view = rsWaitingOnly
+    ? rsStudents.filter(s => {
+        const st = rsStatusMap[`${s.name}_${s.type}_${s.grade}`]?.status;
+        return (rsRecordCounts[s.name] || 0) > 0 && !['생성완료','전송완료'].includes(st);
+      })
+    : rsStudents;
+
+  if (rsWaitingOnly) {
+    html += `<div class="rs-section-header" style="background:#fff7ed;color:#c2410c;">
+      ⏳ 생성 대기 — 기록이 들어왔고 아직 보고서를 안 만든 학생 <span style="font-weight:400;font-size:11px;margin-left:6px;">${view.length}명</span></div>`;
+    if (!view.length) {
+      grid.innerHTML = html + '<div class="loading-spinner">지금 만들 보고서가 없어요 👍</div>';
+      return;
+    }
+  }
+
   if (rsGroupMode === 'day') {
     // ── 금요일 수업 여부로 그룹 (요일 데이터 부실 대비) ──
     const hasFri = s => (s.days||[]).includes('금');
@@ -1989,7 +2062,7 @@ function renderReportStatusGrid(baseDate, reportType) {
     };
     const grpOrder = {'금':0,'목':1,'기타':2};
 
-    const sortedByDay = [...rsStudents].sort((a,b) => {
+    const sortedByDay = [...view].sort((a,b) => {
       const ga = grpOrder[groupOf(a)], gb = grpOrder[groupOf(b)];
       if (ga !== gb) return ga - gb;
       const to={'초등':0,'중등':1,'고등':2};
@@ -2018,7 +2091,7 @@ function renderReportStatusGrid(baseDate, reportType) {
   } else {
     // ── 학년별 그룹 (기존) ──
     const typeOrder = {'초등':0,'중등':1,'고등':2};
-    const sorted = [...rsStudents].sort((a,b) => {
+    const sorted = [...view].sort((a,b) => {
       const ta=typeOrder[a.type]??3, tb=typeOrder[b.type]??3;
       const ga=parseInt(a.grade)||0, gb=parseInt(b.grade)||0;
       return ta-tb||ga-gb||a.name.localeCompare(b.name,'ko');
@@ -2065,7 +2138,7 @@ function renderRsRow(s) {
         })()}
         <span class="rs-row-meta">${s.grade}</span>
         <span style="font-size:10px;flex:1;font-weight:600;color:${statusColor};">
-          ${status==='미작성'?'':status}
+          ${status==='미작성' ? '' : (status==='생성완료' && rsStatusMap[key]?.hasDraft) ? '📥 발송대기' : status}
         </span>
         <div class="rs-row-btns">
           <button class="rs-btn write"
@@ -3620,11 +3693,379 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
+// ════════════════════════════════════════════
+// 📥 발송함 · 📤 발송 모드
+// ════════════════════════════════════════════
+let smQueue = [];        // 발송함 전체
+let smList  = [];        // 필터 적용된 목록
+let smCur   = null;      // 지금 보고 있는 보고서
+let smBlob  = null;      // 지금 보고서 이미지
+let smBusy  = false;
+
+async function ensureStudentsCache() {
+  if (allStudentsCache.length) return;
+  try { const d = await api('get-students', {}); allStudentsCache = d.students || []; } catch(e) {}
+}
+function findStudent(name, type) {
+  return allStudentsCache.find(s => s.name === name && s.type === type);
+}
+
+// 지금 보고서 탭에 떠 있는 보고서의 학생·기간 정보
+async function getReportCtx() {
+  if (!lastData) throw new Error('먼저 보고서를 생성해주세요.');
+  await ensureStudentsCache();
+  const name = lastData.name, type = lastData.type;
+  const st = findStudent(name, type);
+  const grade = st?.grade || (/학년$/.test(lastData.grade || '') ? lastData.grade : '');
+  if (!grade) throw new Error(`${name} 학생의 학년을 찾지 못했어요. 등원일정에 등록돼 있는지 확인해주세요.`);
+  let reportType, baseDate;
+  if (lastData.isNewbie) {
+    reportType = '신규';
+    baseDate = localDateStr(new Date());
+  } else if (type === '고등') {
+    reportType = '월간';
+    baseDate = getMonthFirst(lastData.start);
+  } else {
+    reportType = '주간';
+    baseDate = getWeekMonday(lastData.start);
+  }
+  return { name, type, grade, reportType, baseDate };
+}
+
+// 보고서현황 화면 상태도 같이 갱신
+function rsLocalSet(it, status, hasDraft) {
+  const tab = it.reportType === '주간' ? 'weekly' : it.reportType === '월간' ? 'monthly' : null;
+  if (!tab) return;
+  const ck  = `${tab}_${it.baseDate}`;
+  const key = `${it.name}_${it.type}_${it.grade}`;
+  const patch = m => { m[key] = { ...(m[key] || {}), status, ...(hasDraft !== undefined ? { hasDraft } : {}) }; };
+  if (rsStatusCache[ck]) patch(rsStatusCache[ck]);
+  if (getRsCacheKey() === ck) {
+    if (rsStatusMap !== rsStatusCache[ck]) patch(rsStatusMap);
+    if (rsStudents.length) renderReportStatusGrid(it.baseDate, it.reportType);
+  }
+}
+
+async function refreshOutboxCount() {
+  try {
+    const d = await api('update-report-status', { action: 'get_outbox', summary: true });
+    const el = document.getElementById('outbox-count');
+    if (el) el.textContent = (d.items || []).length;
+  } catch(e) {}
+}
+
+// 📥 발송함에 담기
+async function saveToOutbox(silent = false) {
+  const card = document.getElementById('reportCard');
+  if (!card || card.style.display === 'none' || !card.innerHTML.trim()) { toast('먼저 보고서를 생성해주세요.'); return null; }
+  try {
+    const ctx = await getReportCtx();
+    const html = card.innerHTML;
+    const feedback = card.querySelector('.rc-feedback-high, .rc-feedback-mid')?.innerText || '';
+    await api('update-report-status', { action: 'save_draft', ...ctx, html, feedback });
+    rsLocalSet(ctx, '생성완료', true);
+    refreshOutboxCount();
+    if (!silent) toast(`📥 ${ctx.name} — 발송함에 담았어요`);
+    return { ...ctx, html };
+  } catch(e) {
+    toast('발송함 저장 실패: ' + e.message);
+    return null;
+  }
+}
+
+// 📤 바로 보내기: 담고 나서 이 학생만 발송 모드로
+async function saveAndSendNow() {
+  const item = await saveToOutbox(true);
+  if (!item) return;
+  openSendMode([item]);
+}
+
+// 발송 모드 열기 (items 주면 그것만, 없으면 발송함 전체)
+async function openSendMode(items) {
+  document.getElementById('send-mode').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const body = document.getElementById('sm-body');
+  body.innerHTML = '<div class="sm-empty">발송함 불러오는 중...</div>';
+  document.getElementById('sm-actions').style.display = 'none';
+  await ensureStudentsCache();
+  try {
+    if (items) {
+      smQueue = items;
+    } else {
+      const d = await api('update-report-status', { action: 'get_outbox' });
+      smQueue = d.items || [];
+    }
+  } catch(e) {
+    body.innerHTML = `<div class="sm-empty">불러오기 실패: ${e.message}</div>`;
+    return;
+  }
+  const rtOrder = { '주간': 0, '월간': 1, '신규': 2 };
+  const tOrder  = { '초등': 0, '중등': 1, '고등': 2 };
+  smQueue.sort((a, b) =>
+    (rtOrder[a.reportType] ?? 3) - (rtOrder[b.reportType] ?? 3) ||
+    (tOrder[a.type] ?? 3) - (tOrder[b.type] ?? 3) ||
+    (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) ||
+    a.name.localeCompare(b.name, 'ko'));
+  smApplyFilter();
+}
+
+function closeSendMode() {
+  document.getElementById('send-mode').classList.remove('open');
+  document.body.style.overflow = '';
+  smCur = null; smBlob = null;
+  refreshOutboxCount();
+}
+
+function smApplyFilter() {
+  const rt = document.getElementById('sm-filter-type').value;
+  const tc = document.getElementById('sm-filter-teacher').value;
+  smList = smQueue.filter(it => {
+    if (rt && it.reportType !== rt) return false;
+    if (tc) {
+      const t = findStudent(it.name, it.type)?.teacher || '';
+      if (tc === '__none__' ? t : t !== tc) return false;
+    }
+    return true;
+  });
+  smShow(smList[0] || null);
+}
+
+function smFmtDate(it) {
+  if (it.reportType === '월간') return `${parseInt(it.baseDate.slice(5, 7))}월`;
+  if (it.reportType === '주간') return `${it.baseDate.slice(5).replace('-', '/')} 주`;
+  return it.baseDate.slice(5).replace('-', '/');
+}
+
+function smShow(it) {
+  smCur = it; smBlob = null;
+  const body = document.getElementById('sm-body');
+  const actions = document.getElementById('sm-actions');
+  const prog = document.getElementById('sm-progress');
+  prog.textContent = smList.length ? `남은 ${smList.length}명` : '';
+  document.getElementById('sm-hint').textContent = '';
+
+  if (!it) {
+    actions.style.display = 'none';
+    body.innerHTML = smQueue.length
+      ? '<div class="sm-empty">이 조건에 해당하는 보고서가 없어요.<br>위에서 필터를 바꿔보세요.</div>'
+      : '<div class="sm-empty">🎉 발송함이 비었어요!<br>보낼 보고서를 모두 보냈습니다.</div>';
+    return;
+  }
+
+  const st = findStudent(it.name, it.type);
+  const kakao = st?.parentKakao || '';
+  body.innerHTML = `
+    <div class="sm-info">
+      <div class="sm-name"></div>
+      <div class="sm-meta"></div>
+      <div class="sm-kakao" id="sm-kakao"></div>
+    </div>
+    <div class="sm-card-wrap"><div class="rc-card" id="sm-card"></div></div>`;
+  body.querySelector('.sm-name').textContent = `${it.name} 학생`;
+  body.querySelector('.sm-meta').textContent =
+    `${it.type} ${it.grade} · ${it.reportType} 보고서 (${smFmtDate(it)})${st?.teacher ? ' · 담임 ' + st.teacher : ''}`;
+  smRenderKakao(kakao);
+
+  const card = document.getElementById('sm-card');
+  card.innerHTML = it.html || '';
+  card.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
+
+  // 버튼 초기화
+  actions.style.display = 'grid';
+  const canShareFiles = !!(navigator.canShare && window.File);
+  document.getElementById('sm-share').style.display = canShareFiles ? '' : 'none';
+  document.getElementById('sm-copy').style.gridColumn = canShareFiles ? '' : '1 / -1';
+  ['sm-share', 'sm-copy', 'sm-save'].forEach(id => {
+    const b = document.getElementById(id); b.disabled = true;
+  });
+  document.getElementById('sm-share').textContent = '⏳ 이미지 준비 중...';
+  document.getElementById('sm-done').classList.remove('pulse');
+  smPrepareImage(it);
+}
+
+// 이미지 미리 만들어두기 (공유 버튼 누를 때 바로 넘어가도록)
+async function smPrepareImage(it) {
+  const cap = document.getElementById('sm-capture');
+  cap.innerHTML = `<div class="rc-card" style="max-width:none;">${it.html || ''}</div>`;
+  cap.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
+  try {
+    const canvas = await html2canvas(cap.firstElementChild, { scale: 3, useCORS: true, backgroundColor: '#fff' });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (smCur !== it) return; // 그 사이 다음 학생으로 넘어감
+    smBlob = blob;
+    ['sm-share', 'sm-copy', 'sm-save'].forEach(id => document.getElementById(id).disabled = false);
+    document.getElementById('sm-share').textContent = '📱 카톡으로 보내기';
+  } catch(e) {
+    if (smCur !== it) return;
+    document.getElementById('sm-hint').textContent = '이미지 만들기 실패: ' + e.message;
+  } finally {
+    if (smCur === it) cap.innerHTML = '';
+  }
+}
+
+function smFileName(it) {
+  return `${it.baseDate}_${it.name}_채움${it.type}리포트.png`;
+}
+
+// 📱 휴대폰: 공유창 → 카카오톡
+async function smShare() {
+  if (!smBlob || !smCur) return;
+  const file = new File([smBlob], smFileName(smCur), { type: 'image/png' });
+  if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+    toast('이 기기는 이미지 공유를 지원하지 않아요. 이미지 복사를 써주세요.');
+    return;
+  }
+  try {
+    await navigator.share({ files: [file] });
+    await smMarkSent();
+  } catch(e) {
+    if (e.name === 'AbortError') {
+      document.getElementById('sm-hint').textContent = '공유를 취소했어요. 보냈다면 "보냈어요"를 눌러주세요.';
+    } else {
+      toast('공유 실패: ' + e.message);
+    }
+  }
+}
+
+// 💻 PC: 이미지 복사 → 카톡 채팅방에 Ctrl+V
+async function smCopy() {
+  if (!smBlob) return;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': smBlob })]);
+    document.getElementById('sm-hint').textContent = '📋 복사됐어요! 카톡 채팅방에 Ctrl+V로 붙여넣고 보낸 뒤 "보냈어요"를 눌러주세요.';
+    document.getElementById('sm-done').classList.add('pulse');
+  } catch(e) {
+    toast('복사가 안 돼요. 💾 저장을 눌러 파일로 받아주세요.');
+  }
+}
+
+function smDownload() {
+  if (!smBlob || !smCur) return;
+  const url = URL.createObjectURL(smBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = smFileName(smCur); a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ✅ 전송완료 처리 → 다음 학생
+async function smMarkSent() {
+  if (!smCur || smBusy) return;
+  smBusy = true;
+  const it = smCur;
+  const btn = document.getElementById('sm-done');
+  btn.disabled = true; btn.textContent = '⏳ 처리 중...';
+  try {
+    await api('update-report-status', { action: 'update_status',
+      name: it.name, type: it.type, grade: it.grade, status: '전송완료',
+      baseDate: it.baseDate, reportType: it.reportType });
+    rsLocalSet(it, '전송완료');
+    smQueue = smQueue.filter(x => x !== it);
+    const idx = smList.indexOf(it);
+    smList = smList.filter(x => x !== it);
+    toast(`📲 ${it.name} 전송완료`);
+    smShow(smList[Math.min(idx, smList.length - 1)] || null);
+  } catch(e) {
+    toast('전송완료 처리 실패: ' + e.message);
+  } finally {
+    smBusy = false;
+    btn.disabled = false; btn.textContent = '✅ 보냈어요 · 다음';
+  }
+}
+
+// ⏭ 나중에: 맨 뒤로 보내기
+function smSkip() {
+  if (!smCur || smList.length < 2) { toast('남은 보고서가 이것 하나예요.'); return; }
+  smList = smList.filter(x => x !== smCur).concat([smCur]);
+  smShow(smList[0]);
+}
+
+// 💬 학부모 카톡 이름
+function smRenderKakao(kakao) {
+  const box = document.getElementById('sm-kakao');
+  if (!box) return;
+  box.innerHTML = '';
+  const label = document.createElement('span');
+  if (kakao) {
+    label.innerHTML = '💬 카톡에서 찾기: ';
+    const b = document.createElement('b'); b.textContent = kakao; label.appendChild(b);
+  } else {
+    label.textContent = '💬 학부모 카톡 이름이 아직 없어요';
+  }
+  const edit = document.createElement('button');
+  edit.textContent = kakao ? '✏️ 수정' : '＋ 등록';
+  edit.onclick = () => smEditKakao(kakao);
+  box.append(label, edit);
+}
+
+function smEditKakao(current) {
+  const box = document.getElementById('sm-kakao');
+  box.innerHTML = '';
+  const input = document.createElement('input');
+  input.placeholder = '예: 민재맘, 김민재 어머니';
+  input.value = current || '';
+  const save = document.createElement('button');
+  save.textContent = '저장';
+  const cancel = document.createElement('button');
+  cancel.textContent = '취소';
+  cancel.onclick = () => smRenderKakao(current);
+  save.onclick = async () => {
+    const it = smCur; if (!it) return;
+    const v = input.value.trim();
+    save.disabled = true; save.textContent = '⏳';
+    try {
+      await api('save-attendance', { action: 'set_parent_kakao', name: it.name, type: it.type, parentKakao: v });
+      const st = findStudent(it.name, it.type);
+      if (st) st.parentKakao = v;
+      if (smCur === it) smRenderKakao(v);
+      toast('학부모 카톡 이름 저장됨');
+    } catch(e) {
+      toast('저장 실패: ' + e.message);
+      save.disabled = false; save.textContent = '저장';
+    }
+  };
+  input.onkeydown = e => { if (e.key === 'Enter') save.click(); if (e.key === 'Escape') cancel.click(); };
+  box.append('💬 ', input, save, cancel);
+  input.focus();
+}
+
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
+
+<!-- 📤 발송 모드 -->
+<div class="sm-overlay" id="send-mode">
+  <div class="sm-box">
+    <div class="sm-top">
+      <b style="font-size:15px;">📤 발송 모드</b>
+      <span id="sm-progress" style="font-size:12px;color:#FEE500;font-weight:700;"></span>
+      <select id="sm-filter-type" onchange="smApplyFilter()">
+        <option value="">전체 보고서</option>
+        <option value="주간">주간 (초·중등)</option>
+        <option value="월간">월간 (고등)</option>
+        <option value="신규">신규생</option>
+      </select>
+      <select id="sm-filter-teacher" onchange="smApplyFilter()">
+        <option value="">담임 전체</option>
+        <option value="이유민">이유민</option>
+        <option value="성형주">성형주</option>
+        <option value="__none__">담임 미지정</option>
+      </select>
+      <button class="sm-close" onclick="closeSendMode()">✕ 닫기</button>
+    </div>
+    <div id="sm-body"></div>
+    <div class="sm-hint" id="sm-hint"></div>
+    <div class="sm-actions" id="sm-actions" style="display:none;">
+      <button class="sm-btn-share" id="sm-share" onclick="smShare()">📱 카톡으로 보내기</button>
+      <button class="sm-btn-copy"  id="sm-copy"  onclick="smCopy()">💻 이미지 복사</button>
+      <button class="sm-btn-done"  id="sm-done"  onclick="smMarkSent()">✅ 보냈어요 · 다음</button>
+      <button class="sm-btn-sub"   onclick="smSkip()">⏭ 나중에 보내기</button>
+      <button class="sm-btn-sub"   id="sm-save" onclick="smDownload()">💾 이미지로 저장</button>
+    </div>
+  </div>
+</div>
+<div id="sm-capture"></div>
 </body>
 </html>
