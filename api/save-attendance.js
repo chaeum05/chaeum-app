@@ -161,14 +161,13 @@ export default async function handler(req, res) {
       };
       // 학교는 입력됐을 때만 (기존 값 안 지우도록)
       if (school) props['학교'] = { rich_text: [{ text: { content: school } }] };
-      // 담임도 선택됐을 때만 (기본 담임 + 요일별 담임 모두 세팅)
+      // 담임도 선택됐을 때만: 기본 담임 + 등원하는 요일에만 담임 세팅
       if (teacher) {
-        props['담임']   = { select: { name: teacher } };
-        props['담임_월'] = { select: { name: teacher } };
-        props['담임_화'] = { select: { name: teacher } };
-        props['담임_수'] = { select: { name: teacher } };
-        props['담임_목'] = { select: { name: teacher } };
-        props['담임_금'] = { select: { name: teacher } };
+        props['담임'] = { select: { name: teacher } };
+        ['월','화','수','목','금'].forEach(d => {
+          // 등원 요일이면 담임 지정, 아니면 비움(기존 값 제거)
+          props[`담임_${d}`] = days[d] ? { select: { name: teacher } } : { select: null };
+        });
       }
 
       let saveRes;
