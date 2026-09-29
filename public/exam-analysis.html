@@ -170,6 +170,44 @@ textarea.fi{resize:vertical;min-height:72px;}
 /* ── 토스트 ── */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:white;padding:9px 20px;border-radius:18px;font-size:12px;font-weight:600;opacity:0;transition:.28s;pointer-events:none;z-index:9999;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── 📤 발송 모드 ── */
+.sm-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px;}
+.sm-overlay.open{display:flex;}
+.sm-box{background:#fff;width:min(640px,100%);max-height:calc(100vh - 32px);overflow-y:auto;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:'Noto Sans KR',sans-serif;}
+.sm-top{position:sticky;top:0;z-index:2;background:#1e293b;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-radius:16px 16px 0 0;}
+.sm-top select{width:auto;padding:5px 8px;border-radius:7px;border:none;font-size:12px;font-family:'Noto Sans KR',sans-serif;}
+.sm-close{margin-left:auto;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;}
+.sm-info{padding:12px 16px 4px;}
+.sm-name{font-size:17px;font-weight:800;color:var(--text);}
+.sm-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.sm-warn{margin-top:8px;font-size:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:7px 10px;}
+.sm-kakao{margin-top:8px;font-size:13px;background:#fffbe6;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.sm-kakao input{flex:1;min-width:120px;padding:5px 8px;border:1.5px solid #fde68a;border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif;}
+.sm-kakao button,.sm-greet button{padding:3px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.sm-greet{margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:12px;}
+.sm-greet-head{display:flex;align-items:center;justify-content:space-between;gap:6px;font-weight:700;color:var(--text2);margin-bottom:4px;}
+.sm-greet-text{white-space:pre-wrap;line-height:1.6;color:var(--text);font-size:12.5px;}
+.sm-greet textarea{width:100%;box-sizing:border-box;padding:7px 8px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:12.5px;line-height:1.6;font-family:'Noto Sans KR',sans-serif;resize:vertical;}
+.sm-preview-wrap{background:#f1f5f9;padding:10px;margin:10px 16px;border-radius:12px;text-align:center;min-height:120px;}
+.sm-preview-wrap img{width:100%;height:auto;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.08);display:block;}
+.sm-loading{padding:60px 10px;color:var(--text3);font-size:13px;}
+.sm-actions{position:sticky;bottom:0;background:#fff;padding:10px 16px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border);}
+.sm-actions button{padding:13px 10px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.sm-actions button:disabled{opacity:.45;cursor:default;}
+.sm-btn-share{background:#FEE500;color:#191919;}
+.sm-btn-copy{background:#1e293b;color:#fff;}
+.sm-btn-done{background:#16a34a;color:#fff;grid-column:1/-1;}
+.sm-btn-done.pulse{box-shadow:0 0 0 4px rgba(22,163,74,.3);}
+.sm-btn-sub{background:#f1f5f9;color:var(--text2);font-size:12px!important;padding:9px!important;}
+.sm-hint{font-size:12px;color:var(--text2);text-align:center;padding:0 16px 6px;min-height:16px;}
+.sm-empty{padding:50px 20px;text-align:center;font-size:15px;color:var(--text2);line-height:1.8;}
+@media (max-width:600px){
+  .sm-overlay{padding:0;}
+  .sm-box{max-height:100vh;height:100vh;border-radius:0;}
+  .sm-top{border-radius:0;}
+  .sm-preview-wrap{margin:8px 10px;padding:6px;}
+}
 </style>
 </head>
 <body>
@@ -208,6 +246,10 @@ textarea.fi{resize:vertical;min-height:72px;}
         <button id="batchSaveBtn" onclick="saveAllImages()"
           style="font-size:11px;padding:4px 9px;background:#0f172a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:'Noto Sans KR',sans-serif;">
           📸 전체 저장
+        </button>
+        <button id="sendModeBtn" onclick="openExamSendMode()"
+          style="font-size:11px;padding:4px 9px;background:#FEE500;color:#191919;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-family:'Noto Sans KR',sans-serif;">
+          📤 발송
         </button>
       </div>
       <div class="student-list" id="studentList"><div class="empty">시험을 선택하세요</div></div>
@@ -988,9 +1030,12 @@ async function loadStudentList() {
     const submittedCards = ss.map(s=>{
       const name = s.name;
       const score = s.score!==undefined&&s.score!==null ? `<span style="font-size:13px;font-weight:800;color:var(--blue);margin-left:6px;">${s.score}점</span>` : '';
-      const fbBadge = s.hasFeedback
+      const fbBadge = (s.hasFeedback
         ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:6px;">💬 피드백</span>`
-        : `<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;">미작성</span>`;
+        : `<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;">미작성</span>`)
+        + (s.sent
+        ? `<span title="눌러서 전송완료 해제" onclick="event.stopPropagation();unmarkExamSent('${name}')" style="cursor:pointer;font-size:10px;background:#FEE500;color:#191919;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:4px;">📲 보냄</span>`
+        : '');
       return `
         <div class="si">
           <div class="si-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
@@ -1329,6 +1374,359 @@ async function saveAllImages() {
   toast(`${targets.length}명 이미지 저장 완료!`);
 }
 
+// ════════════════════════════════════════════
+// 📤 시험 리포트 발송 모드
+// ════════════════════════════════════════════
+let esAll = [];          // 이 시험 제출 학생 전체
+let esList = [];         // 필터 적용된 목록
+let esCur = null;        // 지금 학생
+let esBlob = null;       // 지금 리포트 이미지
+let esUrl = null;        // 미리보기 URL
+let esToken = 0;         // 학생 전환 시 이전 작업 무시용
+let esBusy = false;
+let esCopyStep = 0;
+let esStudents = [];     // 등원일정 학생 (카톡 이름용)
+let esWasReportOpen = false;
+
+async function esApi(endpoint, body) {
+  const r = await fetch('/api/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!r.ok || d.error) throw new Error(d.error || '서버 오류');
+  return d;
+}
+function esFindStudent(name) { return esStudents.find(s => s.name === name); }
+
+async function openExamSendMode() {
+  if (!currentExam) { toast('먼저 시험을 선택하세요.'); return; }
+  esWasReportOpen = document.getElementById('report-page').style.display === 'block';
+  document.getElementById('exam-send-mode').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('es-exam').textContent = currentExam;
+  document.getElementById('es-body').innerHTML = '<div class="sm-empty">학생 목록 불러오는 중...</div>';
+  document.getElementById('es-actions').style.display = 'none';
+  try {
+    const [d, st] = await Promise.all([
+      call('get_submitted_students', { examId: currentExam }),
+      esStudents.length ? Promise.resolve(null) : esApi('get-students', {}).catch(() => null),
+    ]);
+    if (st) esStudents = st.students || [];
+    esAll = (d.students || []).map(s => ({ ...s }));
+  } catch(e) {
+    document.getElementById('es-body').innerHTML = `<div class="sm-empty">불러오기 실패: ${e.message}</div>`;
+    return;
+  }
+  esApplyFilter();
+}
+
+function closeExamSendMode() {
+  esToken++;
+  document.getElementById('exam-send-mode').classList.remove('open');
+  document.body.style.overflow = '';
+  if (esUrl) { URL.revokeObjectURL(esUrl); esUrl = null; }
+  esCur = null; esBlob = null;
+  if (!esWasReportOpen) closeReport();
+  loadStudentList();
+}
+
+function esApplyFilter() {
+  const f = document.getElementById('es-filter').value;
+  esList = esAll.filter(s =>
+    f === 'todo' ? (s.hasFeedback && !s.sent) :
+    f === 'feedback' ? s.hasFeedback : true);
+  esShow(esList[0] || null);
+}
+
+function esGreetTemplate() {
+  try { const v = localStorage.getItem('chaeum-greet-시험'); if (v !== null) return v; } catch(e) {}
+  return ES_GREET_DEFAULT;
+}
+const ES_GREET_DEFAULT = '[채움영어 성적 분석 리포트]\n\n안녕하세요, 학부모님! {시험} 성적 분석 리포트를 보내드립니다. 문항별 오답 분석과 선생님 피드백은 아래 이미지를 통해 확인해 주세요. 항상 믿고 맡겨주셔서 감사합니다! 📝';
+function esGreeting(s) {
+  if (!s) return '';
+  return esGreetTemplate().replace(/\{이름\}/g, s.name).replace(/\{시험\}/g, currentExam).trim();
+}
+
+async function esShow(s) {
+  const token = ++esToken;
+  esCur = s; esBlob = null;
+  if (esUrl) { URL.revokeObjectURL(esUrl); esUrl = null; }
+  const body = document.getElementById('es-body');
+  const actions = document.getElementById('es-actions');
+  document.getElementById('es-progress').textContent = esList.length ? `남은 ${esList.length}명` : '';
+  document.getElementById('es-hint').textContent = '';
+
+  if (!s) {
+    actions.style.display = 'none';
+    const f = document.getElementById('es-filter').value;
+    const todoLeft = esAll.filter(x => !x.sent && !x.hasFeedback).length;
+    body.innerHTML = f === 'todo'
+      ? `<div class="sm-empty">🎉 보낼 리포트를 모두 보냈어요!${todoLeft ? `<br><span style="font-size:13px;">피드백이 없는 학생 ${todoLeft}명은 목록에 안 나와요.<br>피드백을 저장하면 여기에 들어와요.</span>` : ''}</div>`
+      : '<div class="sm-empty">해당하는 학생이 없어요.</div>';
+    return;
+  }
+
+  const st = esFindStudent(s.name);
+  body.innerHTML = `
+    <div class="sm-info">
+      <div class="sm-name"></div>
+      <div class="sm-meta"></div>
+      <div id="es-warn"></div>
+      <div class="sm-kakao" id="es-kakao"></div>
+      <div class="sm-greet" id="es-greet"></div>
+    </div>
+    <div class="sm-preview-wrap" id="es-preview"><div class="sm-loading">⏳ 리포트 그리는 중...</div></div>`;
+  body.querySelector('.sm-name').textContent = `${s.name} 학생`;
+  body.querySelector('.sm-meta').textContent =
+    `${s.score ?? '-'}점${s.sent ? ' · 📲 이미 보냄' : ''}${s.hasFeedback ? '' : ' · 피드백 미작성'}${st?.teacher ? ' · 담임 ' + st.teacher : ''}`;
+  esRenderKakao(st?.parentKakao || '');
+  esRenderGreet();
+
+  actions.style.display = 'grid';
+  const canShareFiles = !!(navigator.canShare && window.File);
+  document.getElementById('es-share').style.display = canShareFiles ? '' : 'none';
+  document.getElementById('es-copy').style.gridColumn = canShareFiles ? '' : '1 / -1';
+  ['es-share', 'es-save'].forEach(id => document.getElementById(id).disabled = true);
+  document.getElementById('es-share').textContent = '⏳ 이미지 준비 중...';
+  document.getElementById('es-done').classList.remove('pulse');
+  esCopyStep = 0; esSetCopyLabel();
+
+  // 리포트 그리기 → 이미지 만들기
+  try {
+    const d = await call('get_report_data', { studentName: s.name, examId: currentExam });
+    if (token !== esToken) return;
+    reportData = d;
+    renderReport(d);
+    document.getElementById('main-wrap').style.display = 'none';
+    document.getElementById('report-page').style.display = 'block';
+    const warns = [];
+    if (!d.commonComment) warns.push('시험 총평이 비어 있어요 (리포트에 "총평이 작성되지 않았습니다"로 나가요)');
+    if (!(d.teacherFeedback || '').trim()) warns.push('선생님 피드백이 비어 있어요');
+    document.getElementById('es-warn').innerHTML = warns.length
+      ? `<div class="sm-warn">⚠️ ${warns.join('<br>⚠️ ')}</div>` : '';
+    await new Promise(r => setTimeout(r, 350));
+    if (token !== esToken) return;
+    window.scrollTo(0, 0);
+    const canvas = await html2canvas(document.getElementById('capture-area'), { scale: 2, useCORS: true, backgroundColor: '#fff' });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (token !== esToken) return;
+    esBlob = blob;
+    esUrl = URL.createObjectURL(blob);
+    document.getElementById('es-preview').innerHTML = `<img src="${esUrl}" alt="리포트 미리보기">`;
+    ['es-share', 'es-save'].forEach(id => document.getElementById(id).disabled = false);
+    document.getElementById('es-share').textContent = '📱 카톡으로 보내기';
+  } catch(e) {
+    if (token !== esToken) return;
+    document.getElementById('es-preview').innerHTML = `<div class="sm-loading">리포트를 못 그렸어요: ${e.message}</div>`;
+  }
+}
+
+function esFileName(s) { return `채움영어_${currentExam}_${s.name}.png`; }
+
+async function esShare() {
+  if (!esBlob || !esCur) return;
+  const file = new File([esBlob], esFileName(esCur), { type: 'image/png' });
+  if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+    toast('이 기기는 이미지 공유를 지원하지 않아요. 이미지 복사를 써주세요.'); return;
+  }
+  const greet = esGreeting(esCur);
+  if (greet && navigator.clipboard?.writeText) navigator.clipboard.writeText(greet).catch(() => {});
+  try {
+    await navigator.share(greet ? { files: [file], text: greet } : { files: [file] });
+    await esMarkSent();
+  } catch(e) {
+    if (e.name === 'AbortError') document.getElementById('es-hint').textContent = '공유를 취소했어요. 보냈다면 "보냈어요"를 눌러주세요.';
+    else toast('공유 실패: ' + e.message);
+  }
+}
+
+function esSetCopyLabel() {
+  const b = document.getElementById('es-copy');
+  const hasGreet = !!esGreeting(esCur);
+  if (!hasGreet) esCopyStep = 1;
+  b.textContent = !hasGreet ? '💻 이미지 복사' : esCopyStep === 0 ? '💻 ① 인사말 복사' : '💻 ② 이미지 복사';
+}
+async function esCopy() {
+  if (!esCur) return;
+  const hint = document.getElementById('es-hint');
+  if (esCopyStep === 0) {
+    try {
+      await navigator.clipboard.writeText(esGreeting(esCur));
+      esCopyStep = 1; esSetCopyLabel();
+      hint.textContent = '✉️ 인사말 복사됐어요! 카톡 채팅방에 Ctrl+V → Enter로 보낸 뒤 "② 이미지 복사"를 눌러주세요.';
+    } catch(e) { toast('인사말 복사가 안 돼요: ' + e.message); }
+    return;
+  }
+  if (!esBlob) { toast('이미지 준비 중이에요. 잠시만요.'); return; }
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': esBlob })]);
+    hint.textContent = '📋 이미지 복사됐어요! 채팅방에 Ctrl+V로 붙여넣어 보낸 뒤 "보냈어요"를 눌러주세요.';
+    document.getElementById('es-done').classList.add('pulse');
+    esCopyStep = 0; esSetCopyLabel();
+    document.getElementById('es-copy').textContent += ' (다시)';
+  } catch(e) { toast('복사가 안 돼요. 💾 저장을 눌러 파일로 받아주세요.'); }
+}
+
+function esDownload() {
+  if (!esUrl || !esCur) return;
+  const a = document.createElement('a');
+  a.href = esUrl; a.download = esFileName(esCur); a.click();
+}
+
+async function esMarkSent() {
+  if (!esCur || esBusy) return;
+  esBusy = true;
+  const s = esCur;
+  const btn = document.getElementById('es-done');
+  btn.disabled = true; btn.textContent = '⏳ 처리 중...';
+  try {
+    await call('set_sent', { studentName: s.name, examId: currentExam, sent: true });
+    s.sent = true;
+    const idx = esList.indexOf(s);
+    if (document.getElementById('es-filter').value === 'todo') esList = esList.filter(x => x !== s);
+    toast(`📲 ${s.name} 전송완료`);
+    const next = document.getElementById('es-filter').value === 'todo'
+      ? esList[Math.min(idx, esList.length - 1)]
+      : esList[idx + 1];
+    esShow(next || (document.getElementById('es-filter').value === 'todo' ? null : esList[idx]));
+  } catch(e) {
+    toast('전송완료 처리 실패: ' + e.message);
+  } finally {
+    esBusy = false;
+    btn.disabled = false; btn.textContent = '✅ 보냈어요 · 다음';
+  }
+}
+
+function esSkip() {
+  if (!esCur || esList.length < 2) { toast('남은 학생이 이 학생 하나예요.'); return; }
+  esList = esList.filter(x => x !== esCur).concat([esCur]);
+  esShow(esList[0]);
+}
+
+async function unmarkExamSent(name) {
+  if (!confirm(`${name} 학생의 '보냄' 표시를 해제할까요?\n(다시 발송 목록에 들어가요)`)) return;
+  try {
+    await call('set_sent', { studentName: name, examId: currentExam, sent: false });
+    toast(`${name} — 보냄 해제`);
+    loadStudentList();
+  } catch(e) { toast('해제 실패: ' + e.message); }
+}
+
+// 💬 학부모 카톡 이름 (등원일정 DB)
+function esRenderKakao(kakao) {
+  const box = document.getElementById('es-kakao');
+  if (!box) return;
+  box.innerHTML = '';
+  const st = esCur && esFindStudent(esCur.name);
+  const label = document.createElement('span');
+  if (kakao) {
+    label.textContent = '💬 카톡에서 찾기: ';
+    const b = document.createElement('b'); b.textContent = kakao; label.appendChild(b);
+  } else {
+    label.textContent = st ? '💬 학부모 카톡 이름이 아직 없어요' : '💬 등원일정에 없는 이름이라 카톡 이름을 저장할 수 없어요';
+  }
+  box.appendChild(label);
+  if (st) {
+    const edit = document.createElement('button');
+    edit.textContent = kakao ? '✏️ 수정' : '＋ 등록';
+    edit.onclick = () => esEditKakao(kakao);
+    box.appendChild(edit);
+  }
+}
+function esEditKakao(current) {
+  const box = document.getElementById('es-kakao');
+  box.innerHTML = '';
+  const input = document.createElement('input');
+  input.placeholder = '예: 민재맘, 김민재 어머니';
+  input.value = current || '';
+  const save = document.createElement('button'); save.textContent = '저장';
+  const cancel = document.createElement('button'); cancel.textContent = '취소';
+  cancel.onclick = () => esRenderKakao(current);
+  save.onclick = async () => {
+    const s = esCur; const st = s && esFindStudent(s.name);
+    if (!st) return;
+    const v = input.value.trim();
+    save.disabled = true; save.textContent = '⏳';
+    try {
+      await esApi('save-attendance', { action: 'set_parent_kakao', name: st.name, type: st.type, parentKakao: v });
+      st.parentKakao = v;
+      if (esCur === s) esRenderKakao(v);
+      toast('학부모 카톡 이름 저장됨');
+    } catch(e) { toast('저장 실패: ' + e.message); save.disabled = false; save.textContent = '저장'; }
+  };
+  input.onkeydown = e => { if (e.key === 'Enter') save.click(); if (e.key === 'Escape') cancel.click(); };
+  box.append('💬 ', input, save, cancel);
+  input.focus();
+}
+
+// ✉️ 인사말 (이 기기에 저장, 보고서 발송과 같은 저장소)
+function esRenderGreet() {
+  const box = document.getElementById('es-greet');
+  if (!box || !esCur) return;
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'sm-greet-head';
+  head.textContent = '✉️ 함께 보낼 인사말';
+  const edit = document.createElement('button');
+  edit.textContent = '✏️ 수정';
+  edit.onclick = esEditGreet;
+  head.appendChild(edit);
+  const text = document.createElement('div');
+  text.className = 'sm-greet-text';
+  text.textContent = esGreeting(esCur) || '(인사말 없이 이미지만 보내요)';
+  box.append(head, text);
+}
+function esEditGreet() {
+  const box = document.getElementById('es-greet');
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'sm-greet-head';
+  head.textContent = '✉️ 시험 리포트 인사말 — {이름}은 학생 이름, {시험}은 시험명으로 바뀌어요';
+  const ta = document.createElement('textarea');
+  ta.value = esGreetTemplate(); ta.rows = 5;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-top:6px;';
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; return b; };
+  row.append(
+    mk('저장', () => {
+      try { localStorage.setItem('chaeum-greet-시험', ta.value); } catch(e) {}
+      esRenderGreet(); esCopyStep = 0; esSetCopyLabel();
+      toast('인사말 저장됨');
+    }),
+    mk('기본으로', () => { ta.value = ES_GREET_DEFAULT; }),
+    mk('취소', esRenderGreet),
+  );
+  box.append(head, ta, row);
+  ta.focus();
+}
+
 </script>
+
+<!-- 📤 시험 리포트 발송 모드 -->
+<div class="sm-overlay" id="exam-send-mode">
+  <div class="sm-box">
+    <div class="sm-top">
+      <b style="font-size:15px;">📤 시험 리포트 발송</b>
+      <span id="es-progress" style="font-size:12px;color:#FEE500;font-weight:700;"></span>
+      <select id="es-filter" onchange="esApplyFilter()">
+        <option value="todo">보낼 학생 (피드백 O · 안 보냄)</option>
+        <option value="feedback">피드백 있는 학생 전체</option>
+        <option value="all">제출 학생 전체</option>
+      </select>
+      <button class="sm-close" onclick="closeExamSendMode()">✕ 닫기</button>
+      <div id="es-exam" style="width:100%;font-size:11px;color:#cbd5e1;"></div>
+    </div>
+    <div id="es-body"></div>
+    <div class="sm-hint" id="es-hint"></div>
+    <div class="sm-actions" id="es-actions" style="display:none;">
+      <button class="sm-btn-share" id="es-share" onclick="esShare()">📱 카톡으로 보내기</button>
+      <button class="sm-btn-copy"  id="es-copy"  onclick="esCopy()">💻 이미지 복사</button>
+      <button class="sm-btn-done"  id="es-done"  onclick="esMarkSent()">✅ 보냈어요 · 다음</button>
+      <div style="grid-column:1 / -1;display:flex;gap:8px;">
+        <button class="sm-btn-sub" style="flex:1;" onclick="esSkip()">⏭ 나중에 보내기</button>
+        <button class="sm-btn-sub" style="flex:1;" id="es-save" onclick="esDownload()">💾 이미지로 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
