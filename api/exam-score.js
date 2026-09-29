@@ -207,6 +207,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 리포트 전송완료 표시 / 해제 ──
+    if (action === 'set_sent') {
+      const { studentName, examId, sent } = body;
+      const rows = await queryDB(DB_RESULTS, {
+        and: [
+          { property: '학생이름', rich_text: { equals: studentName } },
+          { property: '시험명',   rich_text: { equals: examId } },
+        ]
+      });
+      if (!rows.length) return res.status(404).json({ error: '성적 데이터가 없습니다.' });
+      const r = await nFetch(`https://api.notion.com/v1/pages/${rows[0].id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ properties: { '전송완료': { checkbox: !!sent } } })
+      });
+      if (r.object === 'error') throw new Error(r.message);
+      return res.status(200).json({ ok: true });
+    }
+
     // ── 제출 학생 목록 (점수 + 피드백 + 미제출 대상 포함) ──
     if (action === 'get_submitted_students') {
       const { examId } = body;
@@ -233,7 +251,8 @@ export default async function handler(req, res) {
         let score = extra;
         if (answers._manual) score = answers._total || 0;
         else questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
-        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, submitted: true };
+        const sent = !!p.properties['전송완료']?.checkbox;
+        return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, sent, submitted: true };
       }).filter(s => s.name);
 
       const submittedNames = new Set(submitted.map(s => s.name));
