@@ -171,6 +171,11 @@ textarea.fi{resize:vertical;min-height:72px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:white;padding:9px 20px;border-radius:18px;font-size:12px;font-weight:600;opacity:0;transition:.28s;pointer-events:none;z-index:9999;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+/* ── 누적 성적표 중등/고등 탭 ── */
+.mlt{padding:5px 12px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:transparent;color:var(--text2);}
+.mlt.active{background:#0f172a;color:#fff;}
+.mlt .mlt-cnt{font-size:10px;opacity:.7;margin-left:3px;font-weight:600;}
+
 /* ── 📤 발송 모드 ── */
 .sm-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px;}
 .sm-overlay.open{display:flex;}
@@ -373,7 +378,14 @@ textarea.fi{resize:vertical;min-height:72px;}
     <div class="page" id="page-matrix">
       <div class="card" style="overflow-x:auto;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <div class="card-title" style="margin:0;">📊 누적 성적표</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div class="card-title" style="margin:0;">📊 누적 성적표</div>
+            <div id="matrix-level-tabs" style="display:flex;gap:4px;background:#f1f5f9;padding:3px;border-radius:9px;">
+              <button class="mlt" data-level="중등" onclick="setMatrixLevel('중등')">📚 중등부</button>
+              <button class="mlt" data-level="고등" onclick="setMatrixLevel('고등')">🎓 고등부</button>
+              <button class="mlt" data-level="" onclick="setMatrixLevel('')">전체</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="matrix-filter" placeholder="이름 검색" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Noto Sans KR',sans-serif;width:120px;" oninput="filterMatrix()">
             <button class="btn btn-ghost" onclick="loadMatrix()" style="font-size:12px;">🔄 새로고침</button>
@@ -542,11 +554,36 @@ function examToPeriod(examName) {
   return null;
 }
 
+// ── 중등부 / 고등부 탭 (이 기기에 기억) ──
+let matrixLevel = (() => { try { const v = localStorage.getItem('chaeum-matrix-level'); return v === null ? '중등' : v; } catch(e) { return '중등'; } })();
+function setMatrixLevel(level) {
+  matrixLevel = level;
+  try { localStorage.setItem('chaeum-matrix-level', level); } catch(e) {}
+  if (matrixData) filterMatrix();
+  else updateMatrixTabs(null);
+}
+function updateMatrixTabs(allRows) {
+  const cnt = { '중등': 0, '고등': 0, '': 0 };
+  (allRows || []).forEach(r => { if (r.type === '중등' || r.type === '고등') { cnt[r.type]++; cnt['']++; } });
+  document.querySelectorAll('#matrix-level-tabs .mlt').forEach(b => {
+    const lv = b.dataset.level;
+    b.classList.toggle('active', lv === matrixLevel);
+    const label = lv === '중등' ? '📚 중등부' : lv === '고등' ? '🎓 고등부' : '전체';
+    b.innerHTML = allRows ? `${label}<span class="mlt-cnt">${cnt[lv]}명</span>` : label;
+  });
+}
+updateMatrixTabs(null);
+
 function renderMatrix(d) {
   const wrap = document.getElementById('matrix-wrap');
   const exams = d.exams || [];
-  const rows  = (d.rows || []).filter(r => r.type !== '초등' && r.type !== '기타' && r.type !== '');
-  if (!rows.length) { wrap.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+  const allRows = (d.rows || []).filter(r => r.type !== '초등' && r.type !== '기타' && r.type !== '');
+  updateMatrixTabs(allRows);
+  const rows  = matrixLevel ? allRows.filter(r => r.type === matrixLevel) : allRows;
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty">${matrixLevel ? matrixLevel + '부에 ' : ''}해당하는 학생이 없어요</div>`;
+    return;
+  }
 
   const autoCell = (score, prev) => {
     const bg    = score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2';
