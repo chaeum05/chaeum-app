@@ -136,13 +136,21 @@ textarea.fi{resize:vertical;min-height:72px;}
 .weak-area-type b{color:var(--text);font-weight:700;}
 .exam-summary-box{border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;background:#fafafa;}
 .esb-title{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px;margin-bottom:10px;padding-bottom:7px;border-bottom:2px solid var(--border);}
-.esb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
-.esb-row:last-child{border-bottom:none;}
-.esb-label{color:var(--text2);}
-.esb-val{font-weight:700;color:var(--text);}
-.esb-bar-wrap{display:flex;align-items:center;gap:6px;flex:1;margin-left:8px;}
-.esb-bar{height:6px;border-radius:3px;background:var(--blue);min-width:2px;}
-.esb-pct{font-size:10px;color:var(--text3);white-space:nowrap;}
+/* 출제 분포 — 많은 순 막대 (한 색, 가장 큰 항목 강조) */
+.esb-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.esb-total{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0;}
+.esb-list{display:flex;flex-direction:column;gap:9px;padding-top:2px;}
+.esb-row{display:grid;grid-template-columns:92px 1fr 84px;align-items:center;column-gap:10px;font-size:12.5px;}
+.esb-label{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;}
+.esb-row.top .esb-label{color:var(--text);font-weight:700;}
+.esb-track{height:8px;border-radius:4px;background:#eef1f5;overflow:hidden;}
+.esb-bar{height:100%;border-radius:4px;min-width:4px;background:var(--esb-soft);}
+.esb-row.top .esb-bar{background:var(--esb-strong);}
+.esb-val{display:flex;justify-content:flex-end;align-items:baseline;gap:5px;white-space:nowrap;}
+.esb-cnt{font-size:12.5px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.esb-pct{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;min-width:28px;text-align:right;}
+.esb-blue{--esb-strong:#1a73e8;--esb-soft:#5b94ee;}
+.esb-gold{--esb-strong:#9c6f24;--esb-soft:#c99a4e;}
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
 .chart-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:white;height:220px;display:flex;flex-direction:column;}
 .chart-tag{font-size:12px;font-weight:700;text-align:center;margin-bottom:7px;color:var(--text);}
@@ -434,11 +442,11 @@ textarea.fi{resize:vertical;min-height:72px;}
       <div class="sec-title">시험 구성 분석</div>
       <div class="exam-summary-grid">
         <div class="exam-summary-box">
-          <div class="esb-title">📚 출제 단원별 분포</div>
+          <div class="esb-title"><span>📚 출제 단원별 분포</span><span class="esb-total" id="r-unit-total"></span></div>
           <div id="r-unit-summary"></div>
         </div>
         <div class="exam-summary-box">
-          <div class="esb-title">📝 출제 영역별 분포</div>
+          <div class="esb-title"><span>📝 출제 영역별 분포</span><span class="esb-total" id="r-area-total"></span></div>
           <div id="r-area-summary"></div>
         </div>
         <div class="exam-summary-box" style="grid-column:1/-1;">
@@ -1178,6 +1186,29 @@ async function openReport(name) {
   } catch(e){toast('리포트 로드 실패: '+e.message);}
 }
 
+// ── 출제 분포 막대 ──
+function renderDistribution(listId, totalId, labels, values, colorClass) {
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const items = (labels || []).map((l, i) => ({ label: l, v: Number(values?.[i]) || 0 }))
+    .filter(x => x.v > 0)
+    .sort((a, b) => b.v - a.v || String(a.label).localeCompare(String(b.label), 'ko', { numeric: true }));
+  const total = items.reduce((s, x) => s + x.v, 0);
+  const max = items.length ? items[0].v : 1;
+  const totalEl = document.getElementById(totalId);
+  if (totalEl) totalEl.textContent = total ? `총 ${total}문항` : '';
+  const el = document.getElementById(listId);
+  if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);">문항 정보 없음</div>'; return; }
+  el.innerHTML = `<div class="esb-list ${colorClass}">` + items.map(x => {
+    const pct = Math.round(x.v / total * 100);
+    const w = Math.max(3, x.v / max * 100);
+    return `<div class="esb-row${x.v === max ? ' top' : ''}">
+      <span class="esb-label" title="${esc(x.label)}">${esc(x.label)}</span>
+      <div class="esb-track"><div class="esb-bar" style="width:${w}%;"></div></div>
+      <span class="esb-val"><span class="esb-cnt">${x.v}문항</span><span class="esb-pct">${pct}%</span></span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
 function renderReport(d) {
   document.getElementById('r-exam').textContent    = d.examId;
   document.getElementById('r-student').textContent = d.studentName;
@@ -1200,36 +1231,9 @@ function renderReport(d) {
   rCommon.textContent = d.commonComment || '(총평이 작성되지 않았습니다. 시험지 등록 탭에서 작성해주세요.)';
   rCommon.style.color = d.commonComment ? '' : 'var(--text3)';
 
-  // 단원별 분포 요약 테이블
-  const totalQ = (d.unitValues||[]).reduce((a,b)=>a+b,0)||1;
-  document.getElementById('r-unit-summary').innerHTML =
-    (d.unitLabels||[]).map((l,i)=>{
-      const v = d.unitValues[i];
-      const pct = Math.round(v/totalQ*100);
-      return `<div class="esb-row">
-        <span class="esb-label">${l}</span>
-        <div class="esb-bar-wrap">
-          <div class="esb-bar" style="width:${pct*1.2}px;"></div>
-          <span class="esb-pct">${v}문항 (${pct}%)</span>
-        </div>
-      </div>`;
-    }).join('');
-
-  // 영역별 분포 요약 테이블
-  const totalA = (d.areaValues||[]).reduce((a,b)=>a+b,0)||1;
-  const aColors = ['#4285F4','#EA4335','#FBBC05','#34A853','#9C27B0','#00BCD4','#FF6D00'];
-  document.getElementById('r-area-summary').innerHTML =
-    (d.areaLabels||[]).map((l,i)=>{
-      const v = d.areaValues[i];
-      const pct = Math.round(v/totalA*100);
-      return `<div class="esb-row">
-        <span class="esb-label">${l}</span>
-        <div class="esb-bar-wrap">
-          <div class="esb-bar" style="width:${pct*1.2}px;background:${aColors[i%aColors.length]};"></div>
-          <span class="esb-pct">${v}문항 (${pct}%)</span>
-        </div>
-      </div>`;
-    }).join('');
+  // 출제 분포 (단원별 · 영역별): 많은 순으로 정렬, 한 색 막대, 가장 많은 항목 강조
+  renderDistribution('r-unit-summary', 'r-unit-total', d.unitLabels, d.unitValues, 'esb-blue');
+  renderDistribution('r-area-summary', 'r-area-total', d.areaLabels, d.areaValues, 'esb-gold');
 
   // 오답 테이블
   const tbody = document.getElementById('r-errors');
