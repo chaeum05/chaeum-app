@@ -43,6 +43,19 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   const { action } = body;
 
+  // 문항별 받은 점수: 'O'(또는 없음)=만점, 'X'=0점, 숫자=부분점수
+  const earnedOf = (ans, max) => {
+    if (ans === undefined || ans === null || ans === '' || ans === 'O') return max;
+    if (ans === 'X') return 0;
+    const n = Number(ans);
+    return Number.isFinite(n) ? Math.max(0, Math.min(n, max)) : max;
+  };
+  // 소문항(서1-1, 서1-2 …)은 분포에서 상위 문항(서1) 하나로 묶기
+  const groupKey = (num) => {
+    const m = String(num || '').match(/^(.+?)-\d+$/);
+    return m ? m[1] : String(num || '');
+  };
+
   try {
 
     // ── 시험 목록 (최신 등록순) ──
@@ -250,7 +263,7 @@ export default async function handler(req, res) {
         try { answers = JSON.parse(answersJson); } catch {}
         let score = extra;
         if (answers._manual) score = answers._total || 0;
-        else questions.forEach(q => { if ((answers[q.num] || 'O') === 'O') score += q.score; });
+        else questions.forEach(q => { score += earnedOf(answers[q.num], q.score); });
         const sent = !!p.properties['전송완료']?.checkbox;
         return { name, score: Number(score.toFixed(1)), hasFeedback: feedback.length > 0, sent, submitted: true };
       }).filter(s => s.name);
@@ -359,17 +372,23 @@ export default async function handler(req, res) {
       let totalScore = extraScore;
       const incorrectList = [];
       questions.forEach(q => {
-        const result = answers[q.num] || 'O';
-        if (result === 'O') {
-          totalScore += (q.score || 0);
-        } else {
-          incorrectList.push({ num: q.num, unit: q.unit, area: q.area, type: q.type, score: q.score });
+        const max = q.score || 0;
+        const earned = earnedOf(answers[q.num], max);
+        totalScore += earned;
+        if (earned < max) {
+          const e = Number(earned.toFixed(1));
+          incorrectList.push({ num: q.num, unit: q.unit, area: q.area, type: q.type, score: max,
+            earned: e, partial: e > 0 });
         }
       });
 
-      // 차트 데이터
+      // 차트 데이터 (소문항은 상위 문항 하나로 셈)
       const unitCount = {}, areaCount = {};
+      const seenGroup = new Set();
       questions.forEach(q => {
+        const g = groupKey(q.num);
+        if (seenGroup.has(g)) return;
+        seenGroup.add(g);
         if (q.unit) unitCount[q.unit] = (unitCount[q.unit] || 0) + 1;
         if (q.area) areaCount[q.area] = (areaCount[q.area] || 0) + 1;
       });
@@ -446,7 +465,7 @@ export default async function handler(req, res) {
           manualExams.add(exam);
         } else {
           score = extra;
-          (examQMap[exam] || []).forEach(q => { if ((answers[q.num]||'O') === 'O') score += q.score; });
+          (examQMap[exam] || []).forEach(q => { score += earnedOf(answers[q.num], q.score); });
         }
 
         if (!studentMap[name]) {
@@ -532,7 +551,7 @@ export default async function handler(req, res) {
       const { studentName, examId, totalScore, incorrectList, teacherMemo, hasTeacherMemo } = body;
       const incorrectSummary = !incorrectList?.length
         ? '모든 문항 정답'
-        : incorrectList.map(i => `${i.num}번(${i.area}/${i.type})`).join(', ');
+        : incorrectList.map(i => `${i.num}번(${i.area}/${i.type}${i.partial ? `, 부분점수 ${i.earned}/${i.score}점` : ''})`).join(', ');
 
       const prompt = hasTeacherMemo
         ? `채움영어학원 선생님이 작성한 피드백을 아래 학생 성적 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 기존 피드백의 핵심 내용과 톤을 유지하면서 오답 분석 내용을 자연스럽게 녹여주세요.
