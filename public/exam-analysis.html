@@ -93,8 +93,27 @@ textarea.fi{resize:vertical;min-height:72px;}
 
 /* ── 성적 입력 문항 리스트 ── */
 .q-wrap{border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.q-head{display:grid;grid-template-columns:38px 180px 42px 74px;gap:0;background:#f8f9fa;padding:5px 10px;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;border-bottom:1.5px solid var(--border);}
-.q-row{display:grid;grid-template-columns:38px 180px 42px 74px;gap:0;padding:5px 10px;border-bottom:1px solid #f5f5f5;align-items:center;}
+.q-head{display:grid;grid-template-columns:64px 180px 42px auto;gap:0;background:#f8f9fa;padding:5px 10px;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;border-bottom:1.5px solid var(--border);}
+.q-row{display:grid;grid-template-columns:64px 180px 42px auto;gap:0;padding:5px 10px;border-bottom:1px solid #f5f5f5;align-items:center;}
+.q-row.q-sub .q-num{padding-left:8px;color:#9a3412;}
+.q-row.q-sub .q-num::before{content:'└ ';color:var(--text3);font-weight:400;}
+.q-divider{padding:7px 10px;font-size:11px;font-weight:700;color:#9a3412;background:#fff7ed;border-top:1.5px solid #fed7aa;border-bottom:1px solid #fde6c8;}
+.q-partial{align-items:center;gap:4px;margin-left:4px;font-size:12px;color:var(--text2);font-weight:600;}
+.q-partial input{width:56px;padding:3px 6px;border:1.5px solid #f59e0b;border-radius:5px;font-size:13px;font-weight:700;text-align:center;color:#b45309;outline:none;}
+.q-partial input.bad{border-color:var(--red);color:var(--red);background:#fdecea;}
+/* 시험지 등록: 소문항 · 배점 합계 */
+.et-sub{padding:2px 6px;margin-right:2px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;}
+.et-sub:hover{background:#ffedd5;}
+#examTbody tr.et-subrow td{background:#fffbf5;}
+#examTbody tr.et-subrow .et-num{padding-left:14px;color:#9a3412;font-weight:700;}
+.exam-sum{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:var(--text2);}
+.exam-sum:empty{display:none;}
+.es-total{font-weight:600;}
+.es-total.ok{color:#15803d;}
+.es-total.warn{color:#b45309;}
+.exam-help{margin-top:8px;font-size:11.5px;color:var(--text3);line-height:1.7;}
+.exam-help b{color:var(--text2);}
+.tag-partial{display:inline-block;margin-left:4px;padding:0 6px;border-radius:10px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;}
 .q-row:last-child{border-bottom:none;}
 .q-row:hover{background:#fafafa;}
 .q-num{font-weight:700;color:var(--blue);font-size:12px;}
@@ -104,11 +123,13 @@ textarea.fi{resize:vertical;min-height:72px;}
 .ox-btn{padding:3px 10px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.12s;background:var(--bg);}
 .ox-btn.o-on{background:#e8f7ee;border-color:var(--green);color:var(--green);}
 .ox-btn.x-on{background:#fdecea;border-color:var(--red);color:var(--red);}
+.ox-btn.p-on{background:#fef3c7;border-color:#f59e0b;color:#b45309;}
 .ox-btn:hover{border-color:var(--blue);}
 .ox-btns{display:flex;gap:6px;}
 .ox-btn{padding:4px 12px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:.12s;background:var(--bg);}
 .ox-btn.o-on{background:#e8f7ee;border-color:var(--green);color:var(--green);}
 .ox-btn.x-on{background:#fdecea;border-color:var(--red);color:var(--red);}
+.ox-btn.p-on{background:#fef3c7;border-color:#f59e0b;color:#b45309;}
 .ox-btn:hover{border-color:var(--blue);}
 .score-preview{font-size:11px;font-weight:700;color:var(--blue);padding:3px 8px;background:#e8f0fe;border-radius:12px;margin-left:auto;}
 
@@ -318,7 +339,13 @@ textarea.fi{resize:vertical;min-height:72px;}
           </table>
           <div style="display:flex;gap:8px;margin-top:8px;">
             <button class="add-row-btn" onclick="addExamRow()">＋ 문항 추가</button>
+            <button class="add-row-btn" style="background:#fff7ed;color:#9a3412;" onclick="addEssayRow()">＋ 서술형 추가</button>
             <button class="add-row-btn" style="background:#eef2ff;color:#3730a3;" onclick="sortExamRows()">↕️ 번호순 정렬</button>
+          </div>
+          <div class="exam-sum" id="examSum"></div>
+          <div class="exam-help">
+            💡 서술형 한 번호 안에 문제가 여러 개면 그 줄의 <b>＋소</b>를 누르세요. <b>서1 → 서1-1, 서1-2…</b>로 나뉘고 각자 배점을 넣으면 돼요.
+            부분점수는 성적 입력에서 <b>△</b>로 넣어요.
           </div>
         </div>
 
@@ -354,7 +381,7 @@ textarea.fi{resize:vertical;min-height:72px;}
             <input class="fi" id="studentName" placeholder="이름 입력">
           </div>
           <div class="fg" style="max-width:140px;">
-            <label class="fl">추가점수 (서술형 등)</label>
+            <label class="fl" title="문항으로 등록하지 않은 점수만 여기에 (서술형은 문항으로 등록 권장)">추가점수 (문항 외)</label>
             <input class="fi" type="number" id="extraScore" value="0" step="0.1">
           </div>
           <div class="fg" style="max-width:120px;justify-content:flex-end;">
@@ -816,20 +843,83 @@ async function onExamChange() {
 }
 
 // ── 시험지 등록 ──
-function addExamRow(num='', unit='', area='', type='', score=3.5) {
+function addExamRow(num='', unit='', area='', type='', score=3.5, afterTr=null) {
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   const tr = document.createElement('tr');
   tr.draggable = true;
   tr.innerHTML = `
     <td class="drag-handle" style="cursor:grab;text-align:center;color:var(--text3);font-size:14px;user-select:none;">⠿</td>
-    <td><input class="et-input" value="${num}" placeholder="번호" style="width:56px;"></td>
-    <td><input class="et-input" value="${unit}" placeholder="1과, 교과서…" list="unitList" style="width:92px;"></td>
-    <td><input class="et-input" value="${area}" placeholder="문법, 어휘…" list="areaList" style="width:96px;"></td>
-    <td><input class="et-input" value="${type}" placeholder="문제 유형 입력" style="width:230px;"></td>
-    <td><input class="et-input" type="number" value="${score}" step="0.1" min="0" style="width:50px;"></td>
-    <td><button class="et-del" onclick="this.closest('tr').remove()" title="삭제">✕</button></td>`;
-  document.getElementById('examTbody').appendChild(tr);
+    <td><input class="et-input et-num" value="${esc(num)}" placeholder="번호" style="width:56px;"></td>
+    <td><input class="et-input" value="${esc(unit)}" placeholder="1과, 교과서…" list="unitList" style="width:92px;"></td>
+    <td><input class="et-input" value="${esc(area)}" placeholder="문법, 어휘…" list="areaList" style="width:96px;"></td>
+    <td><input class="et-input" value="${esc(type)}" placeholder="문제 유형 입력" style="width:230px;"></td>
+    <td><input class="et-input" type="number" value="${esc(score)}" step="0.1" min="0" style="width:50px;"></td>
+    <td style="white-space:nowrap;">
+      <button class="et-sub" onclick="addSubRow(this.closest('tr'))" title="소문항 추가 (예: 서1 → 서1-1, 서1-2)">＋소</button>
+      <button class="et-del" onclick="this.closest('tr').remove();refreshExamTable()" title="삭제">✕</button>
+    </td>`;
+  const tbody = document.getElementById('examTbody');
+  if (afterTr && afterTr.parentNode === tbody) afterTr.after(tr);
+  else tbody.appendChild(tr);
   attachDragEvents(tr);
+  refreshExamTable();
+  return tr;
 }
+
+// ── 서술형 소문항: 서1 → 서1-1, 서1-2 … (각자 배점) ──
+function addSubRow(tr) {
+  const numIn = tr.querySelector('.et-num');
+  const num = numIn.value.trim();
+  if (!num) { toast('먼저 번호를 입력하세요 (예: 서1)'); numIn.focus(); return; }
+  const m = num.match(/^(.+?)-(\d+)$/);
+  const base = m ? m[1] : num;
+  const tbody = document.getElementById('examTbody');
+  const isSib = v => v === base || (v.startsWith(base + '-') && /^\d+$/.test(v.slice(base.length + 1)));
+  // 상위 문항(서1)을 처음 나눌 때는 서1-1로 바꿈
+  if (!m && [...tbody.rows].filter(r => isSib(r.querySelector('.et-num').value.trim())).length === 1) {
+    numIn.value = base + '-1';
+  }
+  const sibs = [...tbody.rows].filter(r => isSib(r.querySelector('.et-num').value.trim()));
+  const maxN = Math.max(0, ...sibs.map(r => parseInt(r.querySelector('.et-num').value.trim().slice(base.length + 1)) || 0));
+  const last = sibs[sibs.length - 1] || tr;
+  const ins = tr.querySelectorAll('input');
+  const nr = addExamRow(`${base}-${maxN + 1}`, ins[1].value, ins[2].value, ins[3].value, '', last);
+  nr.querySelectorAll('input')[4].focus();
+  nr.querySelectorAll('input')[4].select();
+}
+
+// ＋ 서술형 추가: 서1, 서2 … 다음 번호로
+function addEssayRow() {
+  const nums = [...document.querySelectorAll('#examTbody .et-num')].map(i => i.value.trim());
+  const used = nums.map(v => { const m = v.match(/^서(?:술형)?\s*(\d+)/); return m ? parseInt(m[1]) : 0; });
+  const n = Math.max(0, ...used) + 1;
+  const tr = addExamRow(`서${n}`, '', '서술형', '', 0);
+  tr.querySelectorAll('input')[4].focus();
+  tr.querySelectorAll('input')[4].select();
+}
+
+// 소문항 들여쓰기 + 배점 합계
+function refreshExamTable() {
+  const rows = [...document.querySelectorAll('#examTbody tr')];
+  let sum = 0, obj = 0, essayGroups = new Set(), subs = 0;
+  rows.forEach(tr => {
+    const ins = tr.querySelectorAll('input');
+    const num = ins[0].value.trim();
+    const isSub = /^.+-\d+$/.test(num);
+    tr.classList.toggle('et-subrow', isSub);
+    if (!num) return;
+    sum += parseFloat(ins[4].value) || 0;
+    if (/^\d+$/.test(num)) obj++;
+    else { essayGroups.add(isSub ? num.replace(/-\d+$/, '') : num); if (isSub) subs++; }
+  });
+  const el = document.getElementById('examSum');
+  if (!el) return;
+  const s = Math.round(sum * 10) / 10;
+  const ok = Math.abs(s - 100) < 0.05;
+  el.innerHTML = `<span>객관식 <b>${obj}</b> · 서술형 <b>${essayGroups.size}</b>${subs ? ` (소문항 ${subs})` : ''}</span>
+    <span class="es-total ${ok ? 'ok' : 'warn'}">배점 합계 <b>${s}</b>점${ok ? ' ✓' : ` · 100점까지 ${Math.round((100 - s) * 10) / 10 > 0 ? Math.round((100 - s) * 10) / 10 + '점 부족' : Math.round((s - 100) * 10) / 10 + '점 초과'}`}</span>`;
+}
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#examTbody')) refreshExamTable(); });
 
 let dragSrcRow = null;
 function attachDragEvents(tr) {
@@ -868,9 +958,11 @@ function sortExamRows() {
     if (isNumA && isNumB) return fa - fb;
     if (isNumA) return -1;
     if (isNumB) return 1;
-    return na.localeCompare(nb, 'ko');
+    // 서1 < 서1-1 < 서1-2 < 서2 < 서10
+    return na.localeCompare(nb, 'ko', { numeric: true });
   });
   rows.forEach(r => tbody.appendChild(r));
+  refreshExamTable();
   toast('번호순으로 정렬했어요!');
 }
 
@@ -963,38 +1055,87 @@ async function loadExamForEdit() {
 }
 
 // ── 성적 입력 ──
+// 서술형 문항인지 (번호가 숫자만이 아니거나, 유형·영역에 '서술')
+function isEssayQ(q) {
+  const k = q.numStr || String(q.num ?? '');
+  return !/^\d+$/.test(k) || /서술/.test((q.type || '') + (q.area || ''));
+}
+function qMax(safeKey) {
+  const q = currentQs.find(x => encodeURIComponent(x.numStr || String(x.num ?? '')) === safeKey);
+  return q ? (parseFloat(q.score) || 0) : 0;
+}
+
 function renderQList() {
   const wrap = document.getElementById('qWrap');
   if (!currentQs.length) {
     wrap.innerHTML = '<div class="empty" style="padding:20px 0;">문항 없음</div>'; return;
   }
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  let lastGroup = '';
   wrap.innerHTML = `
     <div class="q-head">
-      <span>번호</span><span>유형</span><span>배점</span><span>정오답</span>
+      <span>번호</span><span>유형</span><span>배점</span><span>채점</span>
     </div>
     ${currentQs.map(q=>{
       const key = q.numStr || String(q.num ?? '');
       const safeKey = encodeURIComponent(key);
-      return `
-      <div class="q-row" id="qr-${safeKey}">
-        <span class="q-num">${key}</span>
-        <span class="q-type" title="${q.type||''}">${q.type||'-'}</span>
+      const essay = isEssayQ(q);
+      const sub = /^.+-\d+$/.test(key);
+      // 서술형 첫 문항 위에 구분선
+      let divider = '';
+      if (essay && !lastGroup) divider = `<div class="q-divider">✍️ 서술형 — 부분점수는 △를 눌러 받은 점수를 적어요</div>`;
+      if (essay) lastGroup = 'essay';
+      return `${divider}
+      <div class="q-row${sub ? ' q-sub' : ''}" id="qr-${safeKey}" data-state="O">
+        <span class="q-num">${esc(key)}</span>
+        <span class="q-type" title="${esc(q.type)}">${esc(q.type||'-')}</span>
         <span class="q-score">${q.score}점</span>
         <div class="ox-btns">
           <button class="ox-btn o-on" id="o-${safeKey}" onclick="setOX('${safeKey}','O')">O</button>
+          ${essay ? `<button class="ox-btn" id="p-${safeKey}" onclick="setOX('${safeKey}','P')" title="부분점수">△</button>` : ''}
           <button class="ox-btn"     id="x-${safeKey}" onclick="setOX('${safeKey}','X')">X</button>
+          ${essay ? `<span class="q-partial" id="pw-${safeKey}" style="display:none;">
+            <input type="number" id="pv-${safeKey}" step="0.5" min="0" max="${q.score}" placeholder="점수"
+              oninput="onPartialInput('${safeKey}')"><span>/ ${q.score}</span></span>` : ''}
         </div>
       </div>`;
     }).join('')}`;
   updateScorePreview();
 }
 
+// val: 'O' | 'X' | 'P'(부분점수 칸 열기) | 숫자(받은 점수)
 function setOX(safeKey, val) {
+  const row = document.getElementById('qr-'+safeKey);
   const ob = document.getElementById('o-'+safeKey);
   const xb = document.getElementById('x-'+safeKey);
-  if(!ob||!xb) return;
-  ob.className = 'ox-btn' + (val==='O'?' o-on':'');
-  xb.className = 'ox-btn' + (val==='X'?' x-on':'');
+  if(!row||!ob||!xb) return;
+  const pb = document.getElementById('p-'+safeKey);
+  const pw = document.getElementById('pw-'+safeKey);
+  const pv = document.getElementById('pv-'+safeKey);
+  let state = val;
+  if (val !== 'O' && val !== 'X' && val !== 'P') {
+    const n = Number(val);
+    const max = qMax(safeKey);
+    if (!Number.isFinite(n)) state = 'O';
+    else if (n >= max) state = 'O';
+    else if (n <= 0) state = 'X';
+    else if (pb) { state = 'P'; if (pv) pv.value = n; }
+    else state = 'X'; // 부분점수 칸이 없는 문항이면 오답 처리
+  }
+  row.dataset.state = state;
+  ob.className = 'ox-btn' + (state==='O'?' o-on':'');
+  xb.className = 'ox-btn' + (state==='X'?' x-on':'');
+  if (pb) pb.className = 'ox-btn' + (state==='P'?' p-on':'');
+  if (pw) pw.style.display = state==='P' ? 'inline-flex' : 'none';
+  if (state==='P' && val==='P' && pv) { pv.focus(); pv.select(); }
+  if (state!=='P' && pv) { pv.value = ''; pv.classList.remove('bad'); }
+  updateScorePreview();
+}
+
+function onPartialInput(safeKey) {
+  const pv = document.getElementById('pv-'+safeKey);
+  const n = parseFloat(pv.value);
+  pv.classList.toggle('bad', Number.isFinite(n) && (n < 0 || n > qMax(safeKey)));
   updateScorePreview();
 }
 
@@ -1002,21 +1143,32 @@ function setAllO() {
   currentQs.forEach(q => setOX(encodeURIComponent(q.numStr||String(q.num??'')),'O'));
 }
 
+// 'O' | 'X' | 숫자(부분점수). 만점이면 'O', 0점이면 'X'로 정리
 function getOX(safeKey) {
-  const ob = document.getElementById('o-'+safeKey);
-  if(!ob) return 'O';
-  return ob.classList.contains('o-on') ? 'O' : 'X';
+  const row = document.getElementById('qr-'+safeKey);
+  if(!row) return 'O';
+  const st = row.dataset.state || 'O';
+  if (st !== 'P') return st;
+  const max = qMax(safeKey);
+  const n = parseFloat(document.getElementById('pv-'+safeKey)?.value);
+  if (!Number.isFinite(n) || n <= 0) return 'X';
+  if (n >= max) return 'O';
+  return Math.round(n * 10) / 10;
+}
+
+function earnedFor(q) {
+  const key = encodeURIComponent(q.numStr||String(q.num??''));
+  const r = getOX(key);
+  const max = parseFloat(q.score)||0;
+  return r === 'O' ? max : r === 'X' ? 0 : Math.min(max, r);
 }
 
 function updateScorePreview() {
   const extra = parseFloat(document.getElementById('extraScore')?.value)||0;
   let total = extra;
-  currentQs.forEach(q => {
-    const key = encodeURIComponent(q.numStr||String(q.num??''));
-    if(getOX(key)==='O') total += (parseFloat(q.score)||0);
-  });
+  currentQs.forEach(q => { total += earnedFor(q); });
   const el = document.getElementById('scorePreview');
-  if(el) el.textContent = total.toFixed(1)+'점';
+  if(el) el.textContent = (Math.round(total*10)/10).toFixed(1)+'점';
 }
 document.addEventListener('input', e=>{
   if(e.target.id==='extraScore') updateScorePreview();
@@ -1242,7 +1394,9 @@ function renderReport(d) {
     document.getElementById('r-wrong-summary').innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">오답 없음 🎉</div>';
   } else {
     tbody.innerHTML = d.incorrectList.map(i=>
-      `<tr><td>${i.num}</td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td>${i.type||'-'}</td><td>${i.score}점</td></tr>`
+      `<tr><td>${i.num}</td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td>${i.type||'-'}</td><td>${
+        i.partial ? `<b>${i.earned}</b> / ${i.score}점<span class="tag-partial">부분</span>` : `${i.score}점`
+      }</td></tr>`
     ).join('');
 
     // 영역별 오답 집계 + 영역별 대표 유형 계산
