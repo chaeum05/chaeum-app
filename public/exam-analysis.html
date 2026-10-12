@@ -319,6 +319,7 @@ textarea.fi{resize:vertical;min-height:72px;}
           <button class="btn btn-ghost" onclick="loadExamForEdit()" title="기존 시험 불러오기">📂 불러오기</button>
           <button class="btn btn-danger" onclick="deleteExamSetup()" title="시험지 삭제">🗑️ 삭제</button>
           <button class="btn btn-primary" onclick="saveExamSetup()">💾 시험지 저장</button>
+          <button class="btn btn-ghost" onclick="printExamSheet()" title="상담용 시험 분석표 출력">🖨️ 상담용 출력</button>
         </div>
 
         <!-- 문항 테이블 -->
@@ -344,7 +345,7 @@ textarea.fi{resize:vertical;min-height:72px;}
           </div>
           <div class="exam-sum" id="examSum"></div>
           <div class="exam-help">
-            💡 서술형 한 번호 안에 문제가 여러 개면 그 줄의 <b>＋소</b>를 누르세요. <b>서1 → 서1-1, 서1-2…</b>로 나뉘고 각자 배점을 넣으면 돼요.
+            💡 서술형은 <b>＋ 서술형 추가</b>로 넣으세요. 한 번호 안에 문제가 여러 개면 그 줄의 <b>＋소</b>를 눌러 <b>서1 → 서1-1, 서1-2…</b>로 나누고 각자 배점을 넣으면 돼요.
             부분점수는 성적 입력에서 <b>△</b>로 넣어요.
           </div>
         </div>
@@ -888,6 +889,133 @@ function addSubRow(tr) {
   nr.querySelectorAll('input')[4].select();
 }
 
+// ── 🖨️ 상담용 시험 분석표 출력 (화면에 있는 시험지 그대로) ──
+function printExamSheet() {
+  const rows = getExamRows();
+  if (!rows.length) { toast('먼저 시험지를 불러오거나 문항을 입력하세요.'); return; }
+  const examName = (document.getElementById('examName').value.trim() || currentExam || '시험').replace(/_/g, ' ');
+  const common = document.getElementById('examCommon')?.value.trim() || '';
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const isSub = n => /^.+-\d+$/.test(n);
+  const group = n => isSub(n) ? n.replace(/-\d+$/, '') : n;
+  const isEssay = r => !/^\d+$/.test(r.num) || /서술/.test(r.area + r.type);
+  const r1 = x => Math.round(x * 10) / 10;
+
+  const total = r1(rows.reduce((s, r) => s + r.score, 0));
+  const objRows = rows.filter(r => !isEssay(r));
+  const essRows = rows.filter(isEssay);
+  const essGroups = [...new Set(essRows.map(r => group(r.num)))];
+
+  // 단원 · 영역별: 문항 수(소문항은 1문항으로) + 배점 합
+  const tally = key => {
+    const m = {}, seen = new Set();
+    rows.forEach(r => {
+      const k = r[key] || '미입력';
+      if (!m[k]) m[k] = { cnt: 0, pts: 0 };
+      m[k].pts += r.score;
+      const g = k + '|' + group(r.num);
+      if (!seen.has(g)) { seen.add(g); m[k].cnt++; }
+    });
+    return Object.entries(m).map(([k, v]) => ({ k, cnt: v.cnt, pts: r1(v.pts) }))
+      .sort((a, b) => b.pts - a.pts || b.cnt - a.cnt || a.k.localeCompare(b.k, 'ko', { numeric: true }));
+  };
+  const dist = (title, items) => {
+    const max = Math.max(...items.map(i => i.pts), 1);
+    return `<div class="box"><div class="box-h"><span>${title}</span></div>
+      ${items.map((i, idx) => `<div class="d-row${idx === 0 ? ' top' : ''}">
+        <span class="d-l">${esc(i.k)}</span>
+        <span class="d-t"><span class="d-b" style="width:${Math.max(3, i.pts / max * 100)}%"></span></span>
+        <span class="d-v"><b>${i.pts}점</b> · ${i.cnt}문항 · ${total ? Math.round(i.pts / total * 100) : 0}%</span>
+      </div>`).join('')}</div>`;
+  };
+
+  const tr = r => `<tr class="${isSub(r.num) ? 'sub' : ''}">
+    <td class="c-num">${isSub(r.num) ? '└ ' : ''}${esc(r.num)}</td>
+    <td>${esc(r.unit) || '-'}</td><td>${esc(r.area) || '-'}</td><td class="c-type">${esc(r.type) || '-'}</td>
+    <td class="c-pt">${r.score}</td><td class="c-memo"></td></tr>`;
+  const essayTotal = r1(essRows.reduce((s, r) => s + r.score, 0));
+
+  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>${esc(examName)} — 시험 분석표</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{margin:0;background:#e5e7eb;font-family:'Noto Sans KR',sans-serif;color:#1f2937;}
+  .bar{position:sticky;top:0;display:flex;gap:8px;justify-content:center;padding:10px;background:#1e293b;}
+  .bar button{padding:8px 18px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .bar .p{background:#1a73e8;color:#fff}.bar .c{background:#475569;color:#fff}
+  .page{width:210mm;min-height:297mm;margin:16px auto;background:#fff;padding:10mm 13mm 6mm;box-shadow:0 6px 24px rgba(0,0,0,.12);}
+  .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a73e8;padding-bottom:7px;margin-bottom:10px;}
+  .brand{font-size:10px;letter-spacing:3px;color:#1a73e8;font-weight:800;}
+  .ttl{font-size:20px;font-weight:800;margin-top:2px;}
+  .sub-t{font-size:11px;color:#6b7280;margin-top:3px;}
+  .kpi{display:flex;gap:14px;text-align:right;}
+  .kpi div{font-size:10px;color:#6b7280;}.kpi b{display:block;font-size:17px;color:#111827;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:8px;}
+  .box{border:1px solid #e5e7eb;border-radius:8px;padding:9px 11px;}
+  .box-h{font-size:12px;font-weight:800;margin-bottom:7px;padding-bottom:5px;border-bottom:1.5px solid #e5e7eb;}
+  .d-row{display:grid;grid-template-columns:70px 1fr 118px;gap:8px;align-items:center;font-size:11px;margin:3px 0;}
+  .d-l{color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .d-row.top .d-l{color:#111827;font-weight:700;}
+  .d-t{height:7px;background:#eef1f5;border-radius:4px;overflow:hidden;}
+  .d-b{display:block;height:100%;background:#5b94ee;border-radius:4px;}
+  .d-row.top .d-b{background:#1a73e8;}
+  .d-v{text-align:right;color:#6b7280;white-space:nowrap;font-variant-numeric:tabular-nums;}.d-v b{color:#111827;}
+  .common{border-left:4px solid #1a73e8;background:#f0f7ff;border-radius:6px;padding:7px 11px;font-size:11px;line-height:1.6;margin-bottom:8px;white-space:pre-line;}
+  .common strong{display:block;font-size:12px;margin-bottom:2px;}
+  table{width:100%;border-collapse:collapse;font-size:10.5px;}
+  th{background:#f3f4f6;color:#374151;font-weight:700;padding:5px 6px;border-bottom:1.5px solid #d1d5db;text-align:left;}
+  td{padding:2.2px 6px;border-bottom:1px solid #eef0f3;vertical-align:top;line-height:1.45;}
+  .c-num{font-weight:700;color:#1a73e8;white-space:nowrap;width:52px;}
+  .c-pt{text-align:right;font-weight:700;width:38px;font-variant-numeric:tabular-nums;}
+  .c-memo{width:24%;border-left:1px dashed #d1d5db;}
+  .c-type{color:#374151;}
+  tr.sec td{background:#fff7ed;color:#9a3412;font-weight:800;font-size:11px;padding:5px 6px;border-top:1.5px solid #fed7aa;}
+  tr.sub td{background:#fffbf5;}tr.sub .c-num{color:#9a3412;padding-left:12px;}
+  tr.tot td{font-weight:800;border-top:1.5px solid #d1d5db;background:#f9fafb;}
+  thead{display:table-header-group;} tr{break-inside:avoid;}
+  .memo{margin-top:9px;border:1px solid #e5e7eb;border-radius:8px;padding:8px 11px;break-inside:avoid;}
+  .memo strong{font-size:12px;}
+  .line{border-bottom:1px solid #e5e7eb;height:19px;}
+  .ft{margin-top:7px;text-align:center;font-size:10.5px;color:#6b7280;font-weight:700;}
+  .ft span{color:#1a73e8;margin-left:6px;}
+  @page{size:A4;margin:0;}
+  @media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:auto;}}
+</style></head><body>
+<div class="bar"><button class="p" onclick="print()">🖨️ 인쇄 / PDF 저장</button><button class="c" onclick="close()">닫기</button></div>
+<div class="page">
+  <div class="hd">
+    <div><div class="brand">CHAEUM ENGLISH ACADEMY</div>
+      <div class="ttl">${esc(examName)}</div>
+      <div class="sub-t">시험 구성 분석표 · 상담용</div></div>
+    <div class="kpi">
+      <div>객관식<b>${objRows.length}</b></div>
+      <div>서술형<b>${essGroups.length}</b></div>
+      <div>배점 합계<b>${total}</b></div>
+    </div>
+  </div>
+  <div class="grid">${dist('📚 단원별 출제', tally('unit'))}${dist('📝 영역별 출제', tally('area'))}</div>
+  ${common ? `<div class="common"><strong>📌 시험 총평</strong>${esc(common)}</div>` : ''}
+  <table>
+    <thead><tr><th>번호</th><th>단원</th><th>영역</th><th>문제 유형</th><th style="text-align:right">배점</th><th>상담 메모</th></tr></thead>
+    <tbody>
+      ${objRows.length && essRows.length ? `<tr class="sec"><td colspan="6">객관식 ${objRows.length}문항 · ${r1(objRows.reduce((s,r)=>s+r.score,0))}점</td></tr>` : ''}
+      ${objRows.map(tr).join('')}
+      ${essRows.length ? `<tr class="sec"><td colspan="6">서술형 ${essGroups.length}문항${essRows.length > essGroups.length ? ` (소문항 포함 ${essRows.length}개)` : ''} · ${essayTotal}점</td></tr>` : ''}
+      ${essRows.map(tr).join('')}
+      <tr class="tot"><td colspan="4">합계</td><td class="c-pt">${total}</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="memo"><strong>✍️ 상담 메모</strong>${'<div class="line"></div>'.repeat(3)}</div>
+  <div class="ft">프리미엄 채움영어학원<span>054.715.7773</span></div>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('팝업이 막혔어요. 브라우저 주소창의 팝업 허용을 눌러주세요.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
 // ＋ 서술형 추가: 서1, 서2 … 다음 번호로
 function addEssayRow() {
   const nums = [...document.querySelectorAll('#examTbody .et-num')].map(i => i.value.trim());
@@ -907,6 +1035,10 @@ function refreshExamTable() {
     const num = ins[0].value.trim();
     const isSub = /^.+-\d+$/.test(num);
     tr.classList.toggle('et-subrow', isSub);
+    // ＋소문항은 서술형 줄에만 (번호가 '서…'이거나 영역에 '서술')
+    const isEssayRow = /^서/.test(num) || /서술/.test(ins[2].value);
+    const subBtn = tr.querySelector('.et-sub');
+    if (subBtn) subBtn.style.visibility = isEssayRow ? 'visible' : 'hidden';
     if (!num) return;
     sum += parseFloat(ins[4].value) || 0;
     if (/^\d+$/.test(num)) obj++;
