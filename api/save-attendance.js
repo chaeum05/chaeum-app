@@ -189,6 +189,33 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, message: '등원 일정 저장 완료' });
     }
 
+    // 👋 퇴원 처리: 등원일정 DB에서 휴지통으로 (노션 휴지통에서 30일간 복구 가능)
+    if (action === 'archive_student') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      if (!name || !type) return res.status(400).json({ error: '학생 이름과 구분이 필요해요.' });
+      const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          filter: { and: [
+            { property: '학생이름', title: { equals: name } },
+            { property: '구분', select: { equals: type } }
+          ]}
+        })
+      });
+      const searchData = await searchRes.json();
+      if (searchData.object === 'error') throw new Error(searchData.message);
+      const pages = searchData.results || [];
+      if (!pages.length) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      for (const p of pages) {
+        const r = await fetch(`https://api.notion.com/v1/pages/${p.id}`, {
+          method: 'PATCH', headers, body: JSON.stringify({ archived: true })
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+      }
+      return res.status(200).json({ ok: true, count: pages.length });
+    }
+
     // 학부모 카톡 이름 저장 (등원일정 DB)
     if (action === 'set_parent_kakao') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
