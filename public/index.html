@@ -959,6 +959,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <div style="margin-top:16px;">
             <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 0;border-bottom:1.5px solid var(--border);margin-bottom:6px;">
               🔄 보강 대기 <span id="makeup-count" style="font-weight:400;color:var(--text3);"></span>
+              <span style="font-weight:400;color:var(--text3);font-size:10px;letter-spacing:0;text-transform:none;margin-left:4px;">· 이번 달 결석만</span>
             </div>
             <div id="makeup-list"></div>
           </div>
@@ -2674,7 +2675,8 @@ async function leaveStudent() {
     renderLeaveList();
     leaveDone.unshift(`${s.name}(${s.type} ${s.grade})`);
     document.getElementById('leave-recent').textContent = `방금 퇴원 처리: ${leaveDone.slice(0, 5).join(', ')}`;
-    toast(`👋 ${s.name} 퇴원 처리 완료${d.count > 1 ? ` (${d.count}건)` : ''}`);
+    toast(`👋 ${s.name} 퇴원 처리 완료${d.removedMakeups ? ` · 예정 보강 ${d.removedMakeups}건 정리` : ''}`);
+    if (typeof loadAttendance === 'function') loadAttendance(); // 보강 대기 목록도 새로
   } catch(e) {
     toast('퇴원 처리 실패: ' + e.message);
   } finally {
