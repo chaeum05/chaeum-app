@@ -213,7 +213,29 @@ export default async function handler(req, res) {
         const d = await r.json();
         if (d.object === 'error') throw new Error(d.message);
       }
-      return res.status(200).json({ ok: true, count: pages.length });
+
+      // 오늘 이후로 잡혀 있던 보강 예정도 정리 (지난 출결 기록은 그대로)
+      const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      let removedMakeups = 0;
+      try {
+        const mk = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ filter: { and: [
+            { property: '학생이름', rich_text: { equals: name } },
+            { property: '출결상태', select: { equals: '보강' } },
+            { property: '날짜', date: { on_or_after: todayKST } },
+          ]}})
+        });
+        const mkData = await mk.json();
+        for (const p of (mkData.results || [])) {
+          await fetch(`https://api.notion.com/v1/pages/${p.id}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ archived: true })
+          });
+          removedMakeups++;
+        }
+      } catch (e) {}
+
+      return res.status(200).json({ ok: true, count: pages.length, removedMakeups });
     }
 
     // 학부모 카톡 이름 저장 (등원일정 DB)
