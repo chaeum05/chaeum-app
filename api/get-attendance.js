@@ -18,7 +18,8 @@ export default async function handler(req, res) {
     'Notion-Version': '2022-06-28'
   };
 
-  const { date } = req.body || {};
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  const { date } = body;
   const today = date || new Date().toISOString().split('T')[0];
 
   // 요일 계산 (0=일, 1=월, 2=화, 3=수, 4=목, 5=금, 6=토)
@@ -60,6 +61,25 @@ export default async function handler(req, res) {
       };
     }).filter(s => s.name);
 
+    // 1-1. 재원생 명단 (등원일정 전체) — 퇴원 처리된 학생은 여기 없음
+    const activeNames = new Set();
+    let cursor;
+    do {
+      const q = { page_size: 100 };
+      if (cursor) q.start_cursor = cursor;
+      const r = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+        method: 'POST', headers, body: JSON.stringify(q)
+      });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      (d.results || []).forEach(p => {
+        const n = p.properties['학생이름']?.title?.[0]?.text?.content?.trim();
+        if (n) activeNames.add(n);
+      });
+      cursor = d.has_more ? d.next_cursor : undefined;
+    } while (cursor);
+    const isActive = n => activeNames.has(String(n || '').trim());
+
     // 2. 오늘 날짜 출결 기록 조회 (timezone 안전하게 on_or_after + on_or_before)
     const attendRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
@@ -88,16 +108,14 @@ export default async function handler(req, res) {
     const studentKeys = new Set(students.map(s => `${s.name}_${s.type}_${s.grade}`));
     attendance.forEach(a => {
       const key = `${a.name}_${a.type}_${a.grade}`;
-      if (a.name && !studentKeys.has(key)) {
+      if (a.name && !studentKeys.has(key) && isActive(a.name)) { // 퇴원생 보강 기록은 제외
         students.push({ id: '', name: a.name, type: a.type, grade: a.grade, isMakeup: true });
         studentKeys.add(key);
       }
     });
 
-    // 3. 결석 조회 (최근 4주 이내만)
-    const fourWeeksAgo = new Date();
-    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-    const limitDate = fourWeeksAgo.toISOString().split('T')[0];
+    // 3. 결석 조회 — 보강 대기는 매달 리셋 (선택한 날짜가 속한 달 1일부터만)
+    const limitDate = today.slice(0, 7) + '-01';
 
     const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
@@ -191,7 +209,7 @@ export default async function handler(req, res) {
         absentDate: p.properties['날짜']?.date?.start || '',
         memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }))
-      .filter(m => m.name && !hasMakeup(m.name, m.absentDate))
+      .filter(m => m.name && isActive(m.name) && !hasMakeup(m.name, m.absentDate)) // 퇴원생 제외
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
     return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
