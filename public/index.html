@@ -2722,6 +2722,14 @@ async function addStudentManually() {
   // 등원 일정 노션에 항상 등록 (요일 없어도 보고서 현황에 나오도록)
   try {
     await api('save-attendance', { action:'save_schedule', name, type, grade, days, school, teacher });
+    // 앱 전체 학생 명단에도 바로 반영 (보고서·발송함·일괄입력에서 바로 찾을 수 있게)
+    const dayList = Object.entries(days).filter(([, v]) => v).map(([d]) => d);
+    const entry = { name, type, grade, school, teacher, parentKakao: '', teachers: {}, days: dayList };
+    const i = allStudentsCache.findIndex(s => s.name === name && s.type === type);
+    if (i >= 0) allStudentsCache[i] = { ...allStudentsCache[i], ...entry };
+    else allStudentsCache.push(entry);
+    if (typeof batchStudents !== 'undefined' && batchStudents.length && !batchStudents.some(s => s.name === name && s.type === type)) batchStudents.push(entry);
+    if (typeof populateReportDropdown === 'function') populateReportDropdown(allStudentsCache);
     const hasDays = Object.values(days).some(Boolean);
     const tMsg = teacher ? ` · 담임 ${teacher}` : '';
     toast(hasDays ? `${name} 추가 + 등원 요일 등록 완료${tMsg}` : `${name} 등록 완료 (요일 미지정)${tMsg}`);
@@ -3804,7 +3812,12 @@ async function getReportCtx() {
   if (!lastData) throw new Error('먼저 보고서를 생성해주세요.');
   await ensureStudentsCache();
   const name = lastData.name, type = lastData.type;
-  const st = findStudent(name, type);
+  let st = findStudent(name, type);
+  if (!st) {
+    // 앱을 연 뒤 새로 등록한 학생일 수 있어요 → 명단을 다시 불러와 한 번 더 찾기
+    try { const d = await api('get-students', {}); allStudentsCache = d.students || []; } catch(e) {}
+    st = findStudent(name, type);
+  }
   const grade = st?.grade || (/학년$/.test(lastData.grade || '') ? lastData.grade : '');
   if (!grade) throw new Error(`${name} 학생의 학년을 찾지 못했어요. 등원일정에 등록돼 있는지 확인해주세요.`);
   let reportType, baseDate;
