@@ -241,7 +241,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-slot-header .sl-cnt { margin-left:auto; font-weight:600; color:var(--text3); font-size:11px; }
 .att-slot-header.s1530 { background:#ecfeff; } .att-slot-header.s1800 { background:#eef2ff; } .att-slot-header.s2030 { background:#f5f3ff; }
 .att-slot-header.snone { background:#fff7ed; color:#9a3412; }
-.pchip { padding:1px 7px; margin-left:4px; border-radius:10px; font-size:10px; font-weight:800; cursor:pointer; border:1.5px dashed #cbd5e1; background:#fff; color:#94a3b8; font-family:'Pretendard',sans-serif; white-space:nowrap; }
+.pchip { width:auto !important; min-width:0 !important; padding:1px 4px !important; margin-left:4px; border-radius:10px; font-size:10.5px; font-weight:800; cursor:pointer; border:1.5px dashed #cbd5e1; background:#fff; color:#94a3b8; font-family:'Pretendard',sans-serif; white-space:nowrap; height:auto; outline:none; }
 .pchip.p1 { border:1.5px solid #3b82f6; background:#eff6ff; color:#1d4ed8; }
 .pchip.p2 { border:1.5px solid #8b5cf6; background:#f5f3ff; color:#6d28d9; }
 .pchip:disabled { opacity:.5; }
@@ -2483,24 +2483,29 @@ function attDayName() {
   return ['일','월','화','수','목','금','토'][new Date(date + 'T00:00:00').getDay()];
 }
 
-// 이름 옆 칩: 미정 → 1부 → 2부 → 미정 (그 요일에만 저장)
-async function cyclePeriod(name, type, grade, btn) {
+// 이름 옆 선택칸: 부? / 1부 / 2부 를 바로 고르기 (그 요일 + 기본값이 비었으면 기본값도)
+const periodSaveSeq = {}; // 같은 학생을 연달아 바꿨을 때 마지막 선택만 반영
+async function setStudentPeriod(name, type, grade, value) {
   const day = attDayName();
-  if (!['월','화','수','목','금'].includes(day)) { toast('평일에만 정할 수 있어요.'); return; }
+  if (!['월','화','수','목','금'].includes(day)) { toast('평일에만 정할 수 있어요.'); renderAttGrid(); return; }
   const targets = [attStudents, ...Object.values(attCache || {}).map(c => c.students || [])]
     .flatMap(arr => arr.filter(x => x.name === name && x.type === type && x.grade === grade));
   if (!targets.length) return;
   const prev = targets[0].period || '';
-  const next = prev === '' ? '1부' : prev === '1부' ? '2부' : '';
-  targets.forEach(x => x.period = next);
-  if (btn) btn.disabled = true;
+  if (value === prev) return;
+  targets.forEach(x => x.period = value);
   renderAttGrid();
+  const key = `${name}_${type}_${grade}_${day}`;
+  const seq = (periodSaveSeq[key] || 0) + 1;
+  periodSaveSeq[key] = seq;
   try {
-    await api('save-attendance', { action: 'set_period', name, type, day, period: next });
+    await api('save-attendance', { action: 'set_period', name, type, day, period: value });
+    if (periodSaveSeq[key] !== seq) return; // 그 사이 다시 바꿨으면 그쪽이 처리
     const st = allStudentsCache.find(x => x.name === name && x.type === type);
-    if (st) { st.periods = { ...(st.periods || {}), [day]: next }; if (!st.period && next) st.period = next; }
-    toast(`${name} — ${day}요일 ${next || '시간 미지정'}`);
+    if (st) { st.periods = { ...(st.periods || {}), [day]: value }; if (!st.period && value) st.period = value; }
+    toast(`${name} — ${day}요일 ${value || '시간 미지정'} 저장`);
   } catch(e) {
+    if (periodSaveSeq[key] !== seq) return;
     targets.forEach(x => x.period = prev);
     renderAttGrid();
     toast('저장 실패: ' + e.message);
@@ -2598,8 +2603,12 @@ function renderAttGrid() {
           : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
         const isPresent = isMakeup ? (st==='보강완료') : (st==='출석');
         const pchip = isMakeup ? '' :
-          `<button class="pchip ${s.period==='1부'?'p1':s.period==='2부'?'p2':''}" title="눌러서 1부/2부 바꾸기 (이 요일만)"
-            onclick="cyclePeriod('${s.name}','${s.type}','${s.grade}',this)">${s.period || '부?'}</button>`;
+          `<select class="pchip ${s.period==='1부'?'p1':s.period==='2부'?'p2':''}" title="수업 시간 고르기 (이 요일)"
+            onchange="setStudentPeriod('${s.name}','${s.type}','${s.grade}',this.value)">
+            <option value=""${!s.period?' selected':''}>부?</option>
+            <option value="1부"${s.period==='1부'?' selected':''}>1부</option>
+            <option value="2부"${s.period==='2부'?' selected':''}>2부</option>
+          </select>`;
         html += `
           <div class="att-row s-${st||''}" id="arow-${enc}">
             <span class="att-row-name">${s.name}${pchip}</span>
