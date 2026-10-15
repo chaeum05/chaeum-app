@@ -57,6 +57,14 @@ export default async function handler(req, res) {
           '목': p.properties['담임_목']?.select?.name || '',
           '금': p.properties['담임_금']?.select?.name || '',
         },
+        period: p.properties['수업부']?.select?.name || '',
+        periods: {
+          '월': p.properties['수업부_월']?.select?.name || '',
+          '화': p.properties['수업부_화']?.select?.name || '',
+          '수': p.properties['수업부_수']?.select?.name || '',
+          '목': p.properties['수업부_목']?.select?.name || '',
+          '금': p.properties['수업부_금']?.select?.name || '',
+        },
         days,
       };
     }).filter(s => s.name);
