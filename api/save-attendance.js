@@ -132,7 +132,7 @@ export default async function handler(req, res) {
     // 등원 일정 저장 (학생 스케줄 등록)
     if (action === 'save_schedule') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
-      const { days, school, teacher } = body; // { 월: true, ... }, 학교명, 담임
+      const { days, school, teacher, period } = body; // { 월: true, ... }, 학교명, 담임, 수업부
 
       // 기존 스케줄 찾기
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
@@ -171,6 +171,14 @@ export default async function handler(req, res) {
         });
       }
 
+      // 수업부(1부/2부)도 선택됐을 때만: 기본 + 등원 요일에만
+      if (period === '1부' || period === '2부') {
+        props['수업부'] = { select: { name: period } };
+        ['월','화','수','목','금'].forEach(d => {
+          props[`수업부_${d}`] = days[d] ? { select: { name: period } } : { select: null };
+        });
+      }
+
       let saveRes;
       if (searchData.results && searchData.results.length > 0) {
         saveRes = await fetch(`https://api.notion.com/v1/pages/${searchData.results[0].id}`, {
@@ -187,6 +195,34 @@ export default async function handler(req, res) {
       if (saveData.object === 'error') throw new Error('등원일정 저장 실패: ' + saveData.message);
 
       return res.status(200).json({ ok: true, message: '등원 일정 저장 완료' });
+    }
+
+    // 🕕 요일별 수업부 지정 (출결 화면의 1부/2부 칩)
+    if (action === 'set_period') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const { day, period } = body;
+      if (!['월','화','수','목','금'].includes(day)) return res.status(400).json({ error: '요일이 올바르지 않아요.' });
+      const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ filter: { and: [
+          { property: '학생이름', title: { equals: name } },
+          { property: '구분', select: { equals: type } }
+        ]}})
+      });
+      const searchData = await searchRes.json();
+      if (searchData.object === 'error') throw new Error(searchData.message);
+      const page = searchData.results?.[0];
+      if (!page) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      const val = (period === '1부' || period === '2부') ? { select: { name: period } } : { select: null };
+      const props = { [`수업부_${day}`]: val };
+      // 기본 수업부가 비어 있으면 같이 채워 둠 (다른 화면 표시용)
+      if (val.select && !page.properties['수업부']?.select?.name) props['수업부'] = val;
+      const r = await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ properties: props })
+      });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true });
     }
 
     // 👋 퇴원 처리: 등원일정 DB에서 휴지통으로 (노션 휴지통에서 30일간 복구 가능)
