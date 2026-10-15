@@ -57,6 +57,8 @@ export default async function handler(req, res) {
         grade:  p.properties['학년']?.select?.name || '',
         school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
         teacher: dayTeacher || baseTeacher,
+        // 그날 요일의 수업부 (수업부_월 등), 없으면 기본 수업부
+        period: p.properties[`수업부_${dayName}`]?.select?.name || p.properties['수업부']?.select?.name || '',
         isMakeup: false,
       };
     }).filter(s => s.name);
