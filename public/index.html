@@ -239,7 +239,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-slot-header .sl-time { font-size:14px; }
 .att-slot-header .sl-sub { font-weight:600; color:var(--text2); font-size:11.5px; }
 .att-slot-header .sl-cnt { margin-left:auto; font-weight:600; color:var(--text3); font-size:11px; }
-.att-slot-header.s1530 { background:#ecfeff; } .att-slot-header.s1800 { background:#eef2ff; } .att-slot-header.s2030 { background:#f5f3ff; }
+.att-slot-header.sM1, .att-slot-header.sM2 { background:#eff6ff; } .att-slot-header.sH1, .att-slot-header.sH2 { background:#fdf2f4; }
+.att-st .st-time { font-weight:500; opacity:.75; font-size:11px; }
 .att-slot-header.snone { background:#fff7ed; color:#9a3412; }
 .pchip { width:auto !important; min-width:0 !important; padding:1px 4px !important; margin-left:4px; border-radius:10px; font-size:10.5px; font-weight:800; cursor:pointer; border:1.5px dashed #cbd5e1; background:#fff; color:#94a3b8; font-family:'Pretendard',sans-serif; white-space:nowrap; height:auto; outline:none; }
 .pchip.p1 { border:1.5px solid #3b82f6; background:#eff6ff; color:#1d4ed8; }
@@ -973,9 +974,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div id="att-slot-tabs" style="display:flex;gap:6px;margin:-4px 0 12px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:11px;font-weight:700;color:var(--text3);margin-right:2px;">시간대</span>
         <button class="att-st active" data-slot="" onclick="setAttSlot('')">전체</button>
-        <button class="att-st" data-slot="15:30" onclick="setAttSlot('15:30')">🕞 3:30</button>
-        <button class="att-st" data-slot="18:00" onclick="setAttSlot('18:00')">🕕 6:00</button>
-        <button class="att-st" data-slot="20:30" onclick="setAttSlot('20:30')">🕣 8:30</button>
+        <button class="att-st" data-slot="M1" onclick="setAttSlot('M1')">중등 1부</button>
+        <button class="att-st" data-slot="M2" onclick="setAttSlot('M2')">중등 2부</button>
+        <button class="att-st" data-slot="H1" onclick="setAttSlot('H1')">고등 1부</button>
+        <button class="att-st" data-slot="H2" onclick="setAttSlot('H2')">고등 2부</button>
         <button class="att-st" data-slot="none" onclick="setAttSlot('none')">미지정</button>
       </div>
 
@@ -2447,17 +2449,19 @@ function setAttTeacher(t) {
 
 // ── 🕕 수업 시간대 (중등 1부 3:30 · 2부 6:00 / 고등 1부 6:00 · 2부 8:30) ──
 let attSlotFilter = '';
+// 시간이 같아도 중등·고등은 따로 (중등 2부 6:00 / 고등 1부 6:00)
 const SLOT_INFO = {
-  '15:30': { emoji: '🕞', time: '3:30', sub: '중등 1부', cls: 's1530' },
-  '18:00': { emoji: '🕕', time: '6:00', sub: '중등 2부 · 고등 1부', cls: 's1800' },
-  '20:30': { emoji: '🕣', time: '8:30', sub: '고등 2부', cls: 's2030' },
-  'none':  { emoji: '❔', time: '시간 미지정', sub: '이름 옆 칩을 눌러 1부/2부를 정해주세요', cls: 'snone' },
+  'M1':   { emoji: '🕞', label: '중등 1부', time: '3:30', cls: 'sM1' },
+  'M2':   { emoji: '🕕', label: '중등 2부', time: '6:00', cls: 'sM2' },
+  'H1':   { emoji: '🕕', label: '고등 1부', time: '6:00', cls: 'sH1' },
+  'H2':   { emoji: '🕣', label: '고등 2부', time: '8:30', cls: 'sH2' },
+  'none': { emoji: '❔', label: '시간 미지정', time: '', cls: 'snone', sub: '이름 옆 칸에서 1부/2부를 골라주세요' },
 };
-const SLOT_ORDER = ['15:30', '18:00', '20:30', 'none'];
+const SLOT_ORDER = ['M1', 'M2', 'H1', 'H2', 'none'];
 function slotOf(s) {
   if (s.period !== '1부' && s.period !== '2부') return 'none';
-  if (s.type === '고등') return s.period === '1부' ? '18:00' : '20:30';
-  return s.period === '1부' ? '15:30' : '18:00'; // 중등·초등
+  const lv = s.type === '고등' ? 'H' : 'M'; // 초등은 중등 시간대와 같이
+  return lv + (s.period === '1부' ? '1' : '2');
 }
 function setAttSlot(slot) {
   attSlotFilter = slot;
@@ -2473,7 +2477,7 @@ function updateSlotTabs(base) {
   document.querySelectorAll('#att-slot-tabs .att-st').forEach(b => {
     const k = b.dataset.slot;
     b.classList.toggle('active', k === attSlotFilter);
-    const label = k ? `${SLOT_INFO[k].emoji} ${k === 'none' ? '미지정' : SLOT_INFO[k].time}` : '전체';
+    const label = k ? (k === 'none' ? '❔ 미지정' : `${SLOT_INFO[k].label} <span class="st-time">${SLOT_INFO[k].time}</span>`) : '전체';
     b.innerHTML = `${label}<span class="st-cnt">${cnt[k] || 0}</span>`;
   });
 }
@@ -2640,7 +2644,7 @@ function renderAttGrid() {
       const info = SLOT_INFO[slot];
       const present = inSlot.filter(s => getStatus(s.name, s.type, s.grade) === '출석').length;
       html += `<div class="att-slot-header ${info.cls}">
-        <span class="sl-time">${info.emoji} ${info.time}</span><span class="sl-sub">${info.sub}</span>
+        <span class="sl-time">${info.emoji} ${info.label}</span><span class="sl-sub">${slot === 'none' ? info.sub : info.time + '~'}</span>
         <span class="sl-cnt">${slot === 'none' ? inSlot.length + '명' : `출석 ${present} / ${inSlot.length}명`}</span>
       </div>`;
       html += renderRows(inSlot, false, false);
