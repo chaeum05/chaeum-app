@@ -59,9 +59,10 @@ export default async function handler(req, res) {
         teacher: dayTeacher || baseTeacher,
         // 그날 요일의 수업부 (수업부_월 등), 없으면 기본 수업부
         period: p.properties[`수업부_${dayName}`]?.select?.name || p.properties['수업부']?.select?.name || '',
+        startDate: p.properties['등록일']?.date?.start?.slice(0, 10) || '',
         isMakeup: false,
       };
-    }).filter(s => s.name);
+    }).filter(s => s.name && (!s.startDate || s.startDate <= today)); // 등록일 이전 날짜엔 안 나옴
 
     // 1-1. 재원생 명단 (등원일정 전체) — 퇴원 처리된 학생은 여기 없음
     const activeNames = new Set();
