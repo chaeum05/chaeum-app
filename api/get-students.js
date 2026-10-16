@@ -57,6 +57,7 @@ export default async function handler(req, res) {
           '목': p.properties['담임_목']?.select?.name || '',
           '금': p.properties['담임_금']?.select?.name || '',
         },
+        startDate: p.properties['등록일']?.date?.start?.slice(0, 10) || '',
         period: p.properties['수업부']?.select?.name || '',
         periods: {
           '월': p.properties['수업부_월']?.select?.name || '',
