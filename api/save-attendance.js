@@ -132,7 +132,7 @@ export default async function handler(req, res) {
     // 등원 일정 저장 (학생 스케줄 등록)
     if (action === 'save_schedule') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
-      const { days, school, teacher, period } = body; // { 월: true, ... }, 학교명, 담임, 수업부
+      const { days, school, teacher, period, startDate } = body; // { 월: true, ... }, 학교명, 담임, 수업부, 등록일
 
       // 기존 스케줄 찾기
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
@@ -177,6 +177,12 @@ export default async function handler(req, res) {
         ['월','화','수','목','금'].forEach(d => {
           props[`수업부_${d}`] = days[d] ? { select: { name: period } } : { select: null };
         });
+      }
+
+      // 등록일: 새 학생이면 넣고, 이미 있는 학생은 등록일이 비어 있을 때만 (기존 등록일은 안 바꿈)
+      const existingPage = searchData.results?.[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(startDate || '') && !existingPage?.properties?.['등록일']?.date?.start) {
+        props['등록일'] = { date: { start: startDate } };
       }
 
       let saveRes;
