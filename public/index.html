@@ -913,6 +913,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <input type="text" id="add-name" placeholder="이름" style="width:72px;">
           <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:88px;" title="예: 형곡, 본교 등">
           <input type="text" id="add-school" placeholder="학교 (예:형곡고)" style="width:100px;" title="보고서 성적표 그룹핑용">
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px;" title="이 날부터 출결·보고서·일괄입력에 나와요">등록일
+            <input type="date" id="add-start" style="width:132px;"></label>
           <select id="add-type" onchange="updateAddGrades()" style="width:58px;">
             <option value="초등">초등</option>
             <option value="중등">중등</option>
@@ -1258,8 +1260,8 @@ async function renderBatchRows() {
   const date = document.getElementById('batch-date').value;
 
   let list = batchScope==='weekly'
-    ? batchStudents.filter(s => s.type==='초등' || s.type==='중등')
-    : batchStudents.filter(s => s.type==='고등');
+    ? batchStudents.filter(s => (s.type==='초등' || s.type==='중등') && startedBy(s, date))
+    : batchStudents.filter(s => s.type==='고등' && startedBy(s, date ? getScopeRange(date, 'monthly').end : ''));
 
   if (filter === '금') list = list.filter(s => (s.days||[]).includes('금'));
   else if (filter === '목') list = list.filter(s => (s.days||[]).includes('목'));
@@ -1743,6 +1745,28 @@ async function loadStudentListForReport() {
 }
 
 // 보고서 날짜 자동 설정 (구분에 따라)
+// ── 🆕 등록일: 이 날부터 출결·보고서현황·일괄입력에 나옴 ──
+function startedBy(s, end) { return !s.startDate || !end || s.startDate <= end; }
+function studentStartDate(name, type) {
+  return (allStudentsCache.find(s => s.name === name && s.type === type) || {}).startDate || '';
+}
+// 보고서 기간 중간에 들어온 학생이면 시작일을 등록일로
+function clampReportStart() {
+  const name = document.getElementById('rep-name')?.value.trim();
+  const type = document.getElementById('rep-type')?.value;
+  const sd = studentStartDate(name, type);
+  const st = document.getElementById('rep-start'), en = document.getElementById('rep-end');
+  if (sd && st && en && st.value && sd > st.value && (!en.value || sd <= en.value)) st.value = sd;
+}
+function rsPickStudents(tab, baseDate) {
+  const end = baseDate ? getScopeRange(baseDate, tab).end : '';
+  return allStudentsCache.filter(s => (tab==='weekly' ? (s.type==='초등'||s.type==='중등') : s.type==='고등') && startedBy(s, end));
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('add-start');
+  if (el && !el.value) el.value = localDateStr(new Date());
+});
+
 function autoSetReportDates() {
   const type  = document.getElementById('rep-type').value;
   const today = localDateStr(new Date());
@@ -1755,6 +1779,7 @@ function autoSetReportDates() {
     document.getElementById('rep-start').value = getWeekMonday(today);
     document.getElementById('rep-end').value   = getWeekFriday(getWeekMonday(today));
   }
+  clampReportStart();
 }
 
 function selectReportStudent() {
@@ -1901,9 +1926,7 @@ function initReportStatus() {
   const cacheKey = getRsCacheKey();
   if (rsStatusCache[cacheKey] && allStudentsCache.length) {
     rsStatusMap = rsStatusCache[cacheKey];
-    rsStudents  = rsCurrentTab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
-      : allStudentsCache.filter(s => s.type==='고등');
+    rsStudents  = rsPickStudents(rsCurrentTab, document.getElementById('rs-base-date').value);
     renderReportStatusGrid(
       document.getElementById('rs-base-date').value,
       rsCurrentTab==='weekly' ? '주간' : '월간'
@@ -1937,9 +1960,7 @@ function switchReportTab(tab) {
   const cacheKey = getRsCacheKey();
   if (rsStatusCache[cacheKey] && allStudentsCache.length) {
     rsStatusMap = rsStatusCache[cacheKey];
-    rsStudents  = tab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
-      : allStudentsCache.filter(s => s.type==='고등');
+    rsStudents  = rsPickStudents(tab, document.getElementById('rs-base-date').value);
     renderReportStatusGrid(
       document.getElementById('rs-base-date').value,
       tab==='weekly' ? '주간' : '월간'
@@ -1985,9 +2006,7 @@ async function loadReportStatus(forceRefresh = true) {
     const cacheKey = getRsCacheKey();
     rsStatusCache[cacheKey] = d.statusMap || {};
     rsStatusMap = rsStatusCache[cacheKey];
-    rsStudents = rsCurrentTab==='weekly'
-      ? allStudentsCache.filter(s => s.type==='초등'||s.type==='중등')
-      : allStudentsCache.filter(s => s.type==='고등');
+    rsStudents = rsPickStudents(rsCurrentTab, baseDate);
 
     // 기록 건수 조회 (주간=그 주, 월간=그 달)
     const { start, end } = getScopeRange(baseDate, rsCurrentTab);
@@ -2184,7 +2203,11 @@ function renderRsRow(s) {
 
     return `
       <div class="${rowCls}" id="rsrow-${encodeURIComponent(key)}">
-        <span class="rs-row-name">${s.name}</span>
+        <span class="rs-row-name">${s.name}${(() => {
+          const r = getScopeRange(baseDate, rsCurrentTab);
+          return s.startDate && s.startDate >= r.start && s.startDate <= r.end
+            ? `<span style="font-size:9.5px;background:#ecfdf5;color:#047857;border-radius:10px;padding:0 6px;margin-left:4px;font-weight:700;">🆕 ${s.startDate.slice(5).replace('-','/')}~</span>` : '';
+        })()}</span>
         ${(() => {
           const cnt = rsRecordCounts[s.name] || 0;
           if (cnt > 0) return `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;font-weight:700;white-space:nowrap;">📗 ${cnt}건</span>`;
@@ -2245,6 +2268,7 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
 }
 
 function rsGoReport(name, type, grade, baseDate, reportType) {
+  showPanel('report');
   document.getElementById('rep-name').value = name;
   document.getElementById('rep-type').value = type;
 
@@ -2261,8 +2285,7 @@ function rsGoReport(name, type, grade, baseDate, reportType) {
     document.getElementById('rep-start').value = first;
     document.getElementById('rep-end').value   = lastFriday;
   }
-
-  showPanel('report');
+  clampReportStart();
   toast(`${name} 보고서 생성 탭으로 이동`);
 }
 
@@ -2835,17 +2858,21 @@ async function addStudentManually() {
   const school  = document.getElementById('add-school')?.value.trim() || '';
   const teacher = document.getElementById('add-teacher')?.value || '';
   const period  = document.getElementById('add-period')?.value || '';
+  const attDate = document.getElementById('att-date')?.value || localDateStr(new Date());
+  const startDate = document.getElementById('add-start')?.value || attDate;
 
-  // 오늘 출결 목록에 추가
-  attStudents.push({ name, type, grade, teacher, period, school, isMakeup: section==='보강' });
-  renderAttGrid();
+  // 지금 보고 있는 날짜가 등록일 이후일 때만 출결 목록에 바로 추가
+  if (startDate <= attDate) {
+    attStudents.push({ name, type, grade, teacher, period, school, startDate, isMakeup: section==='보강' });
+    renderAttGrid();
+  }
 
   // 등원 일정 노션에 항상 등록 (요일 없어도 보고서 현황에 나오도록)
   try {
-    await api('save-attendance', { action:'save_schedule', name, type, grade, days, school, teacher, period });
+    await api('save-attendance', { action:'save_schedule', name, type, grade, days, school, teacher, period, startDate });
     // 앱 전체 학생 명단에도 바로 반영 (보고서·발송함·일괄입력에서 바로 찾을 수 있게)
     const dayList = Object.entries(days).filter(([, v]) => v).map(([d]) => d);
-    const entry = { name, type, grade, school, teacher, period, periods: Object.fromEntries(dayList.map(d => [d, period])), parentKakao: '', teachers: {}, days: dayList };
+    const entry = { name, type, grade, school, teacher, period, startDate, periods: Object.fromEntries(dayList.map(d => [d, period])), parentKakao: '', teachers: {}, days: dayList };
     const i = allStudentsCache.findIndex(s => s.name === name && s.type === type);
     if (i >= 0) allStudentsCache[i] = { ...allStudentsCache[i], ...entry };
     else allStudentsCache.push(entry);
@@ -2864,6 +2891,8 @@ async function addStudentManually() {
   if (document.getElementById('add-school'))  document.getElementById('add-school').value = '';
   if (document.getElementById('add-teacher')) document.getElementById('add-teacher').value = '';
   if (document.getElementById('add-period'))  document.getElementById('add-period').value = '';
+  if (document.getElementById('add-start'))   document.getElementById('add-start').value = attDate;
+  if (startDate > attDate) toast(`${name} — ${startDate.slice(5).replace('-','/')}부터 출결에 나와요`);
   ['add-mon','add-tue','add-wed','add-thu','add-fri'].forEach(id =>
     document.getElementById(id).checked = false
   );
