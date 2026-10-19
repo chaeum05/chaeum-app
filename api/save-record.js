@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Vercel 환경변수가 설정되지 않았습니다.' });
   }
 
-  const data = req.body;
+  const data = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
   const notionHeaders = {
     'Authorization': `Bearer ${NOTION_TOKEN}`,
@@ -108,6 +108,54 @@ export default async function handler(req, res) {
         for (const k of Object.keys(obj)) records[name][k] = obj[k].join(' / ');
       }
       return res.status(200).json({ ok: true, records });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── 진도 이어쓰기용: 학생별 지난 진도 (기준일 전 N일, 칸마다 가장 최근 값 + 최근에 쓴 값 목록) ──
+  if (data.action === 'get_progress_history') {
+    try {
+      const before = data.before;               // 이 날짜 '전'까지
+      const days = Math.min(Number(data.days) || 60, 120);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(before || '')) return res.status(400).json({ error: '기준일이 필요해요.' });
+      const from = new Date(before + 'T00:00:00Z'); from.setUTCDate(from.getUTCDate() - days);
+      const fromStr = from.toISOString().slice(0, 10);
+      let all = [], cursor;
+      do {
+        const body = {
+          filter: { and: [
+            { property: '날짜', date: { on_or_after: fromStr } },
+            { property: '날짜', date: { before: before } },
+          ]},
+          sorts: [{ property: '날짜', direction: 'descending' }],
+          page_size: 100
+        };
+        if (cursor) body.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers: notionHeaders, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor);
+
+      const FIELDS = { word: '단어', grammar: '문법', reading: '독해', listening: '듣기', writing: '라이팅' };
+      const history = {};   // name → { field: { last, lastDate, recent: [] } }
+      all.forEach(p => {   // 최신순
+        const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
+        if (!name) return;
+        const date = p.properties['날짜']?.date?.start || '';
+        const h = history[name] || (history[name] = {});
+        Object.entries(FIELDS).forEach(([f, col]) => {
+          const v = (p.properties[col]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+          if (!v) return;
+          const e = h[f] || (h[f] = { last: v, lastDate: date, recent: [] });
+          if (!e.recent.includes(v) && e.recent.length < 6) e.recent.push(v);
+        });
+      });
+      return res.status(200).json({ ok: true, history });
     } catch(e) {
       return res.status(500).json({ error: e.message });
     }
