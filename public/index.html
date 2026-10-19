@@ -122,6 +122,37 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   .sm-card-wrap { margin: 8px 10px; padding: 8px; }
 }
 
+
+/* ── ⚡ 일괄 생성 ── */
+.bg-tools { display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--border,#eee); }
+.bg-tools button { padding:5px 10px; border:1.5px solid var(--border,#e2e8f0); background:#fff; border-radius:7px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; color:var(--text2,#475569); }
+.bg-countlbl { font-size:12px; font-weight:800; color:#3a5fd9; margin-left:4px; }
+.bg-ai { margin-left:auto; font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px; cursor:pointer; }
+.bg-list { padding:4px 10px 8px; max-height:52vh; overflow-y:auto; }
+.bg-grp { font-size:11px; font-weight:800; color:var(--text3,#94a3b8); padding:8px 6px 3px; }
+.bg-row { display:grid; grid-template-columns:22px 1fr 64px minmax(120px,1.2fr); align-items:center; gap:6px; padding:6px; border-radius:7px; font-size:13px; cursor:pointer; }
+.bg-row:hover { background:#f8fafc; }
+.bg-row.run { background:#eff6ff; } .bg-row.ok { background:#f0fdf4; } .bg-row.err { background:#fef2f2; } .bg-row.skip { opacity:.6; }
+.bg-name { font-weight:700; color:var(--text,#111); }
+.bg-new { font-size:10px; background:#ecfdf5; color:#047857; border-radius:10px; padding:0 6px; font-weight:700; }
+.bg-cnt { font-size:11px; color:#16a34a; font-weight:700; white-space:nowrap; }
+.bg-msg { font-size:11px; color:var(--text2,#64748b); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bg-row.err .bg-msg { color:#b91c1c; }
+.bg-foot { position:sticky; bottom:0; background:#fff; border-top:1px solid var(--border,#eee); padding:10px 14px 12px; display:flex; flex-direction:column; gap:8px; }
+.bg-foot > div:nth-child(2) { justify-content:flex-end; }
+.bg-summary { font-size:12.5px; font-weight:700; color:#1e293b; min-height:16px; }
+.bg-btn { padding:11px 18px; border:none; border-radius:9px; font-size:14px; font-weight:800; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.bg-btn.main { background:#3a5fd9; color:#fff; } .bg-btn.main:disabled { opacity:.6; cursor:default; }
+.bg-btn.kakao { background:#FEE500; color:#191919; } .bg-btn.sub { background:#f1f5f9; color:#475569; }
+.bg-note { font-size:11px; color:var(--text3,#94a3b8); }
+
+
+/* ── ⤵ 진도 이어쓰기 ── */
+#batch-rows input.has-sugg::placeholder { color:#b45309; opacity:.55; font-style:italic; }
+#batch-rows input.sugg-filled { background:#fffbeb; border-color:#fcd34d !important; }
+.batch-sugg-hint { font-size:11px; color:var(--text3); margin-top:8px; line-height:1.6; }
+.batch-sugg-hint b { color:var(--text2); }
+
 /* ── 리포트 카드 공통 ── */
 #reportCard {
   background: white;
@@ -508,6 +539,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             </select>
           </div>
           <button class="btn-secondary" style="padding:9px 14px;font-size:12px;" onclick="loadBatchStudents()">🔄 학생 불러오기</button>
+          <button class="btn-secondary" id="batch-fill-btn" style="padding:9px 14px;font-size:12px;white-space:nowrap;background:#fffbeb;border-color:#fcd34d;color:#92400e;" onclick="fillAllSuggestions()" title="빈칸에 학생별 '지난 진도 다음'을 한 번에 채워요">⤵ 빈칸 모두 이어쓰기</button>
+          <button class="btn-secondary" id="batch-undo-btn" style="padding:9px 12px;font-size:12px;white-space:nowrap;display:none;" onclick="undoFillSuggestions()">↩ 되돌리기</button>
           <button class="btn-primary" style="padding:9px 18px;font-size:13px;margin-left:auto;" id="batch-save-btn" onclick="saveBatchRecords()">💾 전체 저장</button>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="batch-hint">
@@ -681,10 +714,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <button class="exam-tab"        id="exam-school-tab-mid"  onclick="filterExamSchool('mid')">중등</button>
           </div>
           <select id="exam-semester-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--burgundy);border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;color:var(--burgundy);">
-            <option value="2026-1학기">2026-1학기</option>
-            <option value="2026-2학기">2026-2학기</option>
-            <option value="2027-1학기">2027-1학기</option>
             <option value="2027-2학기">2027-2학기</option>
+            <option value="2027-1학기">2027-1학기</option>
+            <option value="2026-2학기">2026-2학기</option>
+            <option value="2026-1학기">2026-1학기</option>
             <option value="">전체 학기</option>
           </select>
           <select id="exam-type-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none;">
@@ -1056,6 +1089,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
         <button onclick="resetReportStatus()" style="padding:7px 14px;background:#fdecea;color:var(--burgundy);border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔁 전체 초기화</button>
         <button id="rs-waiting-btn" onclick="toggleRsWaiting()" title="기록은 들어왔는데 아직 보고서를 안 만든 학생만 보기" style="padding:7px 14px;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;cursor:pointer;">⏳ 생성 대기만</button>
+        <button onclick="openBulkGen()" title="기록이 쌓인 학생들 보고서를 한 번에 만들어 발송함에 담기" style="padding:7px 14px;background:#3a5fd9;color:#fff;border:1.5px solid #3a5fd9;border-radius:8px;font-size:12px;font-weight:800;font-family:'Pretendard',sans-serif;cursor:pointer;">⚡ 일괄 생성</button>
         <button onclick="openSendMode()" style="padding:7px 14px;background:#FEE500;color:#191919;border:1.5px solid #f5d800;border-radius:8px;font-size:12px;font-weight:800;font-family:'Pretendard',sans-serif;cursor:pointer;">📤 발송함 <span id="outbox-count" style="background:#191919;color:#FEE500;border-radius:20px;padding:0 7px;margin-left:2px;font-size:11px;">0</span></button>
 
         <!-- 그룹 방식 (주간=초중등 전용) -->
@@ -1337,8 +1371,114 @@ async function renderBatchRows() {
       </div>`;
   });
 
-  wrap.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">${headerRow}${rowsHtml}</div>`;
+  wrap.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">${headerRow}${rowsHtml}</div>
+    <div class="batch-sugg-hint">💡 흐린 글씨는 <b>지난 진도 다음</b> 제안이에요. 칸에서 <b>Tab</b>이나 <b>→</b>를 누르면 받아지고, 칸을 누르면 그 학생이 최근 쓴 진도 목록이 떠요.</div>`;
+  const myRender = ++batchRenderSeq;
+  attachProgressSuggestions(date, myRender);
 }
+
+
+// ════════════════════════════════════════════
+// ⤵ 진도 이어쓰기: 학생별 지난 진도에서 다음 진도 제안
+// ════════════════════════════════════════════
+let batchRenderSeq = 0;
+const batchHistCache = {};       // date → history
+let batchFilledInputs = [];      // 되돌리기용
+const SUGG_FIELDS = ['word', 'grammar', 'reading', 'listening', 'writing'];
+
+// "Day 7~8" → "Day 9~10", "유형 12~18" → "유형 19~25", "Unit 3" → "Unit 4", 숫자 없으면 그대로
+function nextProgress(str) {
+  const v = String(str || '').trim();
+  if (!v) return '';
+  const re = /(\d+)(?:(\s*[~\-–～]\s*)(\d+))?/g;
+  let m, last = null;
+  while ((m = re.exec(v))) last = m;
+  if (!last) return v;
+  const a = parseInt(last[1]), b = last[3] !== undefined ? parseInt(last[3]) : null;
+  let repl;
+  if (b !== null && b > a) { const span = b - a; repl = `${b + 1}${last[2]}${b + 1 + span}`; }   // 범위 → 같은 크기만큼 다음
+  else if (b !== null) { repl = `${last[1]}${last[2]}${b + 1}`; }                                   // 2-1 → 2-2
+  else { repl = String(a + 1); }
+  return v.slice(0, last.index) + repl + v.slice(last.index + last[0].length);
+}
+
+async function attachProgressSuggestions(date, seq) {
+  if (!date) return;
+  let hist = batchHistCache[date];
+  if (!hist) {
+    try { hist = (await api('save-record', { action: 'get_progress_history', before: date, days: 60 })).history || {}; }
+    catch (e) { return; }
+    batchHistCache[date] = hist;
+  }
+  if (seq !== batchRenderSeq) return; // 그 사이 다시 그려짐
+  let dl = document.getElementById('batch-datalists');
+  if (!dl) { dl = document.createElement('div'); dl.id = 'batch-datalists'; dl.style.display = 'none'; document.body.appendChild(dl); }
+  dl.innerHTML = '';
+  let n = 0;
+  document.querySelectorAll('#batch-rows .batch-card').forEach(card => {
+    const name = card.dataset.name, id = card.dataset.id;
+    const h = hist[name] || {};
+    SUGG_FIELDS.forEach(f => {
+      const inp = document.getElementById(`b-${f}-${id}`);
+      const e = h[f];
+      if (!inp || !e) return;
+      const sugg = nextProgress(e.last);
+      // 최근에 쓴 진도 목록 (제안을 맨 위에)
+      const list = document.createElement('datalist');
+      list.id = `dl-${f}-${id}`;
+      [sugg, ...e.recent].filter((x, i, arr) => x && arr.indexOf(x) === i).forEach(x => { const o = document.createElement('option'); o.value = x; list.appendChild(o); });
+      dl.appendChild(list);
+      inp.setAttribute('list', list.id);
+      inp.dataset.sugg = sugg;
+      inp.title = `지난번(${(e.lastDate || '').slice(5).replace('-', '/')}): ${e.last}`;
+      if (!inp.value) { inp.placeholder = sugg; inp.classList.add('has-sugg'); n++; }
+    });
+  });
+  const btn = document.getElementById('batch-fill-btn');
+  if (btn) btn.textContent = n ? `⤵ 빈칸 모두 이어쓰기 (${n})` : '⤵ 빈칸 모두 이어쓰기';
+}
+
+function acceptSuggestion(inp) {
+  if (!inp || inp.value || !inp.dataset.sugg) return false;
+  inp.value = inp.dataset.sugg;
+  inp.classList.remove('has-sugg');
+  inp.classList.add('sugg-filled');
+  return true;
+}
+
+function fillAllSuggestions() {
+  const filled = [];
+  document.querySelectorAll('#batch-rows input.has-sugg').forEach(inp => { if (acceptSuggestion(inp)) filled.push(inp); });
+  if (!filled.length) { toast('채울 제안이 없어요. (지난 60일 기록이 있는 학생만 제안돼요)'); return; }
+  batchFilledInputs = filled;
+  document.getElementById('batch-undo-btn').style.display = '';
+  toast(`⤵ ${filled.length}칸 채웠어요 — 노란 칸을 훑어보고 다른 것만 고친 뒤 저장하세요`);
+}
+
+function undoFillSuggestions() {
+  batchFilledInputs.forEach(inp => {
+    if (inp.classList.contains('sugg-filled') && inp.value === inp.dataset.sugg) {
+      inp.value = ''; inp.classList.remove('sugg-filled'); inp.classList.add('has-sugg');
+    }
+  });
+  batchFilledInputs = [];
+  document.getElementById('batch-undo-btn').style.display = 'none';
+}
+
+// Tab / → 로 한 칸 받기, 직접 고치면 노란 표시 해제
+document.addEventListener('keydown', e => {
+  const inp = e.target;
+  if (!inp.classList || !inp.closest || !inp.closest('#batch-rows')) return;
+  if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'ArrowRight' && !inp.value)) {
+    if (acceptSuggestion(inp) && e.key === 'ArrowRight') e.preventDefault();
+  }
+});
+document.addEventListener('input', e => {
+  const inp = e.target;
+  if (!inp.closest || !inp.closest('#batch-rows')) return;
+  inp.classList.remove('sugg-filled');
+  inp.classList.toggle('has-sugg', !inp.value && !!inp.dataset.sugg);
+});
 
 async function saveBatchRecords() {
   const date = document.getElementById('batch-date').value;
@@ -1553,7 +1693,7 @@ function renderNewbieReport({ name, type, feedback }) {
 }
 
 
-function renderReport({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
+function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
   const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
   const period = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
   const isHigh = type === '고등';
@@ -1618,9 +1758,12 @@ function renderReport({ name, grade, type, start, end, words, grammars, readings
       <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
     `;
   }
+  return html;
+}
 
+function renderReport(data) {
   const card = document.getElementById('reportCard');
-  card.innerHTML = html;
+  card.innerHTML = buildReportHTML(data);
   card.style.display = 'block';
   document.getElementById('report-actions').classList.add('visible');
 }
@@ -3174,7 +3317,21 @@ let examsCache = [];
 let studentExamsCache = [];
 let examSchoolFilter = 'all'; // all / high / mid
 
+// 지금 학기: 3~8월 1학기, 9~12월 2학기, 1~2월은 전년도 2학기
+function currentSemester(d = new Date()) {
+  const y = d.getFullYear(), m = d.getMonth() + 1;
+  if (m >= 3 && m <= 8) return `${y}-1학기`;
+  if (m >= 9) return `${y}-2학기`;
+  return `${y - 1}-2학기`;
+}
+let examSemInit = false;
 function initExam() {
+  if (!examSemInit) {
+    const sel = document.getElementById('exam-semester-filter');
+    const cur = currentSemester();
+    if (sel && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+    examSemInit = true;
+  }
   loadExams();
   if (allStudentsCache.length) populateStudentExamSelect();
   else api('get-students', {}).then(d => {
@@ -3599,7 +3756,8 @@ function renderExams() {
 
   const buildGradeGroups = (list) => {
     const byGrade = {};
-    list.sort((a,b) => (a.grade||'').localeCompare(b.grade) || a.school.localeCompare(b.school,'ko'));
+    const when = e => e.periodStart || e.examDate || '9999-12-31';
+    list.sort((a,b) => (a.grade||'').localeCompare(b.grade) || when(a).localeCompare(when(b)) || a.school.localeCompare(b.school,'ko'));
     list.forEach(e => {
       const key = e.grade || '미지정';
       if (!byGrade[key]) byGrade[key] = [];
@@ -3714,8 +3872,15 @@ function openExamForm(id) {
     document.getElementById('ef-memo').value         = e.memo;
   } else {
     ['ef-school','ef-grade','ef-type','ef-period-start','ef-period-end',
-     'ef-exam-date','ef-attend-day','ef-textbook','ef-subtext','ef-mock','ef-memo']
+     'ef-exam-date','ef-attend-day','ef-textbook','ef-subtext','ef-mock','ef-extra','ef-memo']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    // 위 필터에서 고른 학기·시험종류를 그대로 넣어 둠
+    const semF  = document.getElementById('exam-semester-filter')?.value || '';
+    const typeF = document.getElementById('exam-type-filter')?.value || '';
+    const semEl = document.getElementById('ef-semester');
+    if (semEl) semEl.value = semF || currentSemester();
+    const typeEl = document.getElementById('ef-type');
+    if (typeEl && typeF && [...typeEl.options].some(o => o.value === typeF)) typeEl.value = typeF;
   }
   document.getElementById('modal-exam-form').classList.add('open');
 }
@@ -4005,6 +4170,156 @@ async function refreshOutboxCount() {
     const el = document.getElementById('outbox-count');
     if (el) el.textContent = (d.items || []).length;
   } catch(e) {}
+}
+
+
+// ════════════════════════════════════════════
+// ⚡ 보고서 일괄 생성 (월간 고등부처럼 기록이 다 쌓인 뒤 한 번에)
+// ════════════════════════════════════════════
+let bgRows = [];      // { s, key, state, msg, checked }
+let bgRunning = false, bgStop = false;
+let bgCtx = null;     // { tab, baseDate, reportType, start, end }
+
+function openBulkGen() {
+  if (bgRunning) { document.getElementById('bulk-gen').classList.add('open'); return; }
+  const baseDate = document.getElementById('rs-base-date').value;
+  if (!baseDate || !rsStudents.length) { toast('먼저 보고서현황을 불러와 주세요.'); return; }
+  const tab = rsCurrentTab;
+  const { start, end } = getScopeRange(baseDate, tab);
+  bgCtx = { tab, baseDate, reportType: tab === 'weekly' ? '주간' : '월간', start, end };
+  const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
+  bgRows = [...rsStudents].sort((a, b) =>
+      (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3) || (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) || a.name.localeCompare(b.name, 'ko'))
+    .map(s => {
+      const key = `${s.name}_${s.type}_${s.grade}`;
+      const st = rsStatusMap[key]?.status || '미작성';
+      const cnt = rsRecordCounts[s.name] || 0;
+      const done = ['생성완료', '전송완료'].includes(st);
+      return { s, key, cnt, st, state: 'idle', msg: done ? (st === '전송완료' ? '📲 전송완료' : '📥 이미 생성') : (cnt ? '' : '기록 없음'), checked: cnt > 0 && !done };
+    });
+  const label = tab === 'weekly'
+    ? `주간 보고서 · ${start.slice(5).replace('-', '/')} ~ ${end.slice(5).replace('-', '/')}`
+    : `월간 보고서 · ${parseInt(baseDate.slice(5, 7))}월 (${start.slice(5).replace('-', '/')} ~ ${end.slice(5).replace('-', '/')})`;
+  document.getElementById('bg-title').textContent = label;
+  document.getElementById('bg-ai').checked = true;
+  document.getElementById('bg-summary').textContent = '';
+  document.getElementById('bg-start').disabled = false;
+  document.getElementById('bg-start').textContent = '⚡ 시작';
+  document.getElementById('bg-stop').style.display = 'none';
+  document.getElementById('bg-outbox').style.display = 'none';
+  renderBulkRows();
+  document.getElementById('bulk-gen').classList.add('open');
+}
+
+function closeBulkGen() {
+  if (bgRunning && !confirm('아직 만드는 중이에요. 창만 닫고 계속 만들까요?\n(다시 ⚡ 일괄 생성을 누르면 진행 상황이 보여요)')) return;
+  document.getElementById('bulk-gen').classList.remove('open');
+}
+
+function renderBulkRows() {
+  const box = document.getElementById('bg-list');
+  const n = bgRows.filter(r => r.checked).length;
+  document.getElementById('bg-count').textContent = `${n}명 선택`;
+  let last = '';
+  box.innerHTML = bgRows.map((r, i) => {
+    const grp = r.s.type === '초등' ? '초등' : `${r.s.type} ${r.s.grade}`;
+    const head = grp !== last ? `<div class="bg-grp">${grp}</div>` : '';
+    last = grp;
+    const icon = { idle: '', wait: '⏳', run: '🔄', ok: '✅', skip: '➖', err: '❌' }[r.state];
+    return `${head}<label class="bg-row ${r.state}">
+      <input type="checkbox" ${r.checked ? 'checked' : ''} ${bgRunning ? 'disabled' : ''} onchange="bgRows[${i}].checked=this.checked;renderBulkRows()">
+      <span class="bg-name">${r.s.name}${r.s.startDate && r.s.startDate > bgCtx.start ? ` <span class="bg-new">🆕 ${r.s.startDate.slice(5).replace('-', '/')}~</span>` : ''}</span>
+      <span class="bg-cnt"${r.cnt ? '' : ' style="color:var(--text3,#94a3b8);font-weight:600;"'}>${r.cnt ? `📗 ${r.cnt}건` : '기록없음'}</span>
+      <span class="bg-msg">${icon} ${r.msg || ''}</span>
+    </label>`;
+  }).join('');
+}
+
+function bgSelect(mode) {
+  if (bgRunning) return;
+  bgRows.forEach(r => {
+    const done = ['생성완료', '전송완료'].includes(r.st);
+    r.checked = mode === 'all' ? r.cnt > 0 : mode === 'none' ? false : (r.cnt > 0 && !done);
+  });
+  renderBulkRows();
+}
+
+async function bgMakeOne(r, useAI) {
+  const { s } = r;
+  const start = s.startDate && s.startDate > bgCtx.start ? s.startDate : bgCtx.start;
+  let d;
+  try {
+    d = await api('get-report', { name: s.name, type: s.type, start, end: bgCtx.end });
+  } catch (e) {
+    if (/기록이 없습니다/.test(e.message)) { r.state = 'skip'; r.msg = '이 기간 기록 없음'; return; }
+    throw e;
+  }
+  let feedback = [...new Set(d.notes || [])].join(' ') || '성실하게 학습 중입니다.';
+  if (useAI && (d.notes || []).length) {
+    r.msg = 'AI 피드백 쓰는 중…'; renderBulkRows();
+    const rr = await api('polish-feedback', { notes: d.notes, name: s.name, grade: d.grade || s.grade, type: s.type, attendanceInfo: d.attendanceInfo || [] });
+    feedback = rr.feedback || feedback;
+  }
+  const html = buildReportHTML({ ...d, grade: d.grade || s.grade, name: s.name, type: s.type, start, end: bgCtx.end, feedback });
+  await api('update-report-status', { action: 'save_draft', name: s.name, type: s.type, grade: s.grade,
+    reportType: bgCtx.reportType, baseDate: bgCtx.baseDate, html, feedback });
+  rsLocalSet({ name: s.name, type: s.type, grade: s.grade, reportType: bgCtx.reportType, baseDate: bgCtx.baseDate }, '생성완료', true);
+  r.st = '생성완료'; r.state = 'ok'; r.msg = `${d.count || ''}건 기록으로 생성 · 발송함에 담음`;
+}
+
+async function startBulkGen() {
+  if (bgRunning) return;
+  const queue = bgRows.filter(r => r.checked);
+  if (!queue.length) { toast('만들 학생을 골라주세요.'); return; }
+  const useAI = document.getElementById('bg-ai').checked;
+  bgRunning = true; bgStop = false;
+  queue.forEach(r => { r.state = 'wait'; r.msg = '대기'; });
+  document.getElementById('bg-start').disabled = true;
+  document.getElementById('bg-start').textContent = '만드는 중…';
+  document.getElementById('bg-stop').style.display = '';
+  document.getElementById('bg-outbox').style.display = 'none';
+  renderBulkRows();
+  const summary = document.getElementById('bg-summary');
+  let doneN = 0;
+  const tick = () => { summary.textContent = `${doneN} / ${queue.length}명 완료`; };
+  tick();
+  const worker = async () => {
+    while (!bgStop) {
+      const r = queue.find(x => x.state === 'wait');
+      if (!r) return;
+      r.state = 'run'; r.msg = '기록 불러오는 중…'; renderBulkRows();
+      try { await bgMakeOne(r, useAI); }
+      catch (e) { r.state = 'err'; r.msg = '실패: ' + e.message; }
+      doneN++; tick(); renderBulkRows();
+    }
+  };
+  await Promise.all([worker(), worker()]); // 두 명씩 동시에
+  queue.filter(r => r.state === 'wait').forEach(r => { r.state = 'idle'; r.msg = '중지됨'; });
+  bgRunning = false;
+  const ok = queue.filter(r => r.state === 'ok').length;
+  const skip = queue.filter(r => r.state === 'skip').length;
+  const err = queue.filter(r => r.state === 'err').length;
+  summary.textContent = `✅ ${ok}명 생성${skip ? ` · ➖ 기록없음 ${skip}명` : ''}${err ? ` · ❌ 실패 ${err}명 (다시 시작하면 실패한 학생만 다시 만들어요)` : ''}${bgStop ? ' · 중지함' : ''}`;
+  bgRows.forEach(r => { r.checked = r.state === 'err' || (bgStop && r.msg === '중지됨'); });
+  document.getElementById('bg-start').disabled = false;
+  document.getElementById('bg-start').textContent = err || bgStop ? '⚡ 남은 학생 다시 시작' : '⚡ 시작';
+  document.getElementById('bg-stop').style.display = 'none';
+  document.getElementById('bg-outbox').style.display = ok ? '' : 'none';
+  renderBulkRows();
+  refreshOutboxCount();
+  toast(`⚡ 일괄 생성 끝 — ${ok}명 발송함에 담음`);
+}
+
+function stopBulkGen() {
+  bgStop = true;
+  document.getElementById('bg-stop').textContent = '중지하는 중…';
+  setTimeout(() => { document.getElementById('bg-stop').textContent = '⏸ 중지'; }, 1500);
+}
+
+function bgOpenOutbox() {
+  document.getElementById('bulk-gen').classList.remove('open');
+  document.getElementById('sm-filter-type').value = bgCtx?.reportType || '';
+  openSendMode();
 }
 
 // 📥 발송함에 담기
@@ -4508,6 +4823,33 @@ function toast(msg) {
         <button class="sm-btn-sub" style="flex:1;" id="sm-save" onclick="smDownload()">💾 이미지로 저장</button>
         <button class="sm-btn-sub" style="flex:1;color:#b91c1c !important;" id="sm-remove" onclick="smRemove()">🗑 발송함에서 빼기</button>
       </div>
+    </div>
+  </div>
+</div>
+<!-- ⚡ 보고서 일괄 생성 -->
+<div class="sm-overlay" id="bulk-gen">
+  <div class="sm-box" style="width:min(560px,100%);">
+    <div class="sm-top">
+      <b style="font-size:15px;">⚡ 보고서 일괄 생성</b>
+      <span id="bg-title" style="font-size:12px;color:#cbd5e1;"></span>
+      <button class="sm-close" onclick="closeBulkGen()">✕ 닫기</button>
+    </div>
+    <div class="bg-tools">
+      <button onclick="bgSelect('todo')">아직 안 만든 학생</button>
+      <button onclick="bgSelect('all')">기록 있는 학생 전체</button>
+      <button onclick="bgSelect('none')">선택 해제</button>
+      <span id="bg-count" class="bg-countlbl"></span>
+      <label class="bg-ai"><input type="checkbox" id="bg-ai" checked> ✨ AI 피드백</label>
+    </div>
+    <div id="bg-list" class="bg-list"></div>
+    <div class="bg-foot">
+      <div id="bg-summary" class="bg-summary"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="bg-stop" class="bg-btn sub" style="display:none;" onclick="stopBulkGen()">⏸ 중지</button>
+        <button id="bg-outbox" class="bg-btn kakao" style="display:none;" onclick="bgOpenOutbox()">📤 발송함에서 확인·보내기</button>
+        <button id="bg-start" class="bg-btn main" onclick="startBulkGen()">⚡ 시작</button>
+      </div>
+      <div class="bg-note">만든 보고서는 발송함에 담겨요. 보내기 전에 발송함에서 ✏️ 수정으로 고칠 수 있어요.</div>
     </div>
   </div>
 </div>
