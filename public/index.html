@@ -526,6 +526,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           </div>
           <button type="button" id="batch-refresh-btn" onclick="refreshBatch()" title="학생 명단과 저장된 기록을 새로 불러와요"
             style="align-self:flex-end;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 새로고침</button>
+          <span id="batch-refresh-time" style="align-self:flex-end;padding-bottom:10px;font-size:11px;color:var(--text3);white-space:nowrap;"></span>
           <div class="form-group" style="margin:0;">
             <label>추가 필터</label>
             <select id="batch-filter" onchange="renderBatchRows()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;">
@@ -996,6 +997,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <input type="date" class="att-date-input" id="att-date" onchange="loadAttendance()">
         <span class="att-day-badge" id="att-day-badge">-요일</span>
         <button class="att-action-btn" id="att-refresh-btn" onclick="refreshAttendance()" title="다른 기기에서 바꾼 출결·학생 명단을 새로 불러와요">🔄 새로고침</button>
+        <span id="att-refresh-time" style="font-size:11px;color:var(--text3);white-space:nowrap;"></span>
         <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
       </div>
 
@@ -2585,6 +2587,7 @@ async function syncAttendance(date) {
   try {
     const d = await api('get-attendance', { date });
     attCache[date] = d;
+    markRefreshed('att-refresh-time');
     attRecords  = d.attendance || [];
     attMakeup   = d.makeupList || [];
     attStudents = d.students  || [];
@@ -2611,6 +2614,7 @@ async function loadAttendance() {
     const d = await api('get-attendance', { date });
     attCache[date] = d;
     applyAttCache(d);
+    markRefreshed('att-refresh-time');
     loadDailyMemo(date);
   } catch(e) {
     grid.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
@@ -2619,12 +2623,19 @@ async function loadAttendance() {
 
 // 🔄 출결 새로고침: 출결·보강·학생 명단을 새로 받고, 쓰던 메모와 스크롤 위치는 지킴
 function nowHM() { const n = new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
+function markRefreshed(spanId) {
+  const el = document.getElementById(spanId);
+  if (!el) return;
+  el.textContent = `${nowHM()} 갱신됨`;
+  el.style.color = '#2d8a4e'; el.style.fontWeight = '700';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.color = 'var(--text3)'; el.style.fontWeight = ''; }, 2500);
+}
 function flashRefreshBtn(btn, ok) {
   if (!btn) return;
   btn.disabled = false;
-  btn.textContent = ok ? `✓ ${nowHM()} 갱신` : '⚠️ 실패 · 다시';
-  clearTimeout(btn._t);
-  btn._t = setTimeout(() => { btn.textContent = '🔄 새로고침'; }, 3000);
+  btn.textContent = ok ? '🔄 새로고침' : '⚠️ 실패 · 다시';
+  if (ok) markRefreshed(btn.id === 'att-refresh-btn' ? 'att-refresh-time' : 'batch-refresh-time');
 }
 async function refreshAttendance() {
   const date = document.getElementById('att-date').value;
