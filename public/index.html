@@ -524,6 +524,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <label>날짜</label>
             <input type="date" id="batch-date" onchange="renderBatchRows()" style="width:150px;">
           </div>
+          <button type="button" id="batch-refresh-btn" onclick="refreshBatch()" title="학생 명단과 저장된 기록을 새로 불러와요"
+            style="align-self:flex-end;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 새로고침</button>
           <div class="form-group" style="margin:0;">
             <label>추가 필터</label>
             <select id="batch-filter" onchange="renderBatchRows()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;">
@@ -993,7 +995,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="att-header">
         <input type="date" class="att-date-input" id="att-date" onchange="loadAttendance()">
         <span class="att-day-badge" id="att-day-badge">-요일</span>
-        <button class="att-action-btn" onclick="loadAttendance()">🔄 새로고침</button>
+        <button class="att-action-btn" id="att-refresh-btn" onclick="refreshAttendance()" title="다른 기기에서 바꾼 출결·학생 명단을 새로 불러와요">🔄 새로고침</button>
         <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
       </div>
 
@@ -2615,6 +2617,63 @@ async function loadAttendance() {
   }
 }
 
+// 🔄 출결 새로고침: 출결·보강·학생 명단을 새로 받고, 쓰던 메모와 스크롤 위치는 지킴
+function nowHM() { const n = new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
+function flashRefreshBtn(btn, ok) {
+  if (!btn) return;
+  btn.disabled = false;
+  btn.textContent = ok ? `✓ ${nowHM()} 갱신` : '⚠️ 실패 · 다시';
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => { btn.textContent = '🔄 새로고침'; }, 3000);
+}
+async function refreshAttendance() {
+  const date = document.getElementById('att-date').value;
+  if (!date) return;
+  const btn = document.getElementById('att-refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 불러오는 중'; }
+  // 저장 전 메모 보관 (방금 친 글자가 사라지지 않게)
+  const typed = {};
+  document.querySelectorAll('#att-grid .att-row-memo').forEach(inp => {
+    const parts = decodeURIComponent(inp.id.replace('memo-', '')).split('_');
+    if (parts.length >= 3 && inp.value !== getMemo(parts[0], parts[1], parts[2])) typed[inp.id] = inp.value;
+  });
+  const y = window.scrollY;
+  try {
+    const [d, st] = await Promise.all([
+      api('get-attendance', { date }),
+      api('get-students', {}).catch(() => null),
+    ]);
+    attCache[date] = d;
+    applyAttCache(d);
+    if (st && st.students) { allStudentsCache = st.students; batchStudents = st.students; }
+    Object.entries(typed).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.value = v; });
+    window.scrollTo(0, y);
+    flashRefreshBtn(btn, true);
+  } catch (e) {
+    flashRefreshBtn(btn, false);
+    toast('새로고침 실패: ' + e.message);
+  }
+}
+
+// 🔄 일괄입력 새로고침: 학생 명단 + 그날 기록 + 진도 제안 다시
+async function refreshBatch() {
+  const btn = document.getElementById('batch-refresh-btn');
+  const dirty = [...document.querySelectorAll('#batch-rows input[type=text]')].some(i => i.value !== (i.dataset.orig || '') && !i.classList.contains('sugg-filled'));
+  if (dirty && !confirm('아직 저장 안 한 입력이 있어요. 새로고침하면 지워져요. 계속할까요?')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 불러오는 중'; }
+  try {
+    const d = await api('get-students', {});
+    batchStudents = d.students || [];
+    allStudentsCache = batchStudents;
+    Object.keys(batchHistCache).forEach(k => delete batchHistCache[k]);
+    await renderBatchRows();
+    flashRefreshBtn(btn, true);
+  } catch (e) {
+    flashRefreshBtn(btn, false);
+    toast('새로고침 실패: ' + e.message);
+  }
+}
+
 function getStatus(name, type, grade) {
   const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   return r ? r.status : null;
@@ -3306,12 +3365,29 @@ function renderMemoLog(memos) {
     return;
   }
   // 최신 순으로 표시
-  log.innerHTML = [...memos].reverse().map(m => `
+  const esc = v => String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  log.innerHTML = memos.map((m, i) => ({ m, i })).reverse().map(({ m, i }) => `
     <div style="padding:5px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:10px;font-weight:700;color:var(--burgundy);">${m.date}</span>
-      ${m.time ? `<span style="font-size:10px;color:var(--text3);margin-left:4px;">${m.time}</span>` : ''}
-      <div style="margin-top:2px;white-space:pre-wrap;">${m.text}</div>
+      <div style="display:flex;align-items:center;">
+        <span style="font-size:10px;font-weight:700;color:var(--burgundy);">${m.date}</span>
+        ${m.time ? `<span style="font-size:10px;color:var(--text3);margin-left:4px;">${m.time}</span>` : ''}
+        <button type="button" onclick="deleteDailyMemo(${i})" title="이 메모 삭제"
+          style="margin-left:auto;border:none;background:none;color:var(--text3);font-size:12px;cursor:pointer;padding:0 2px;line-height:1;">✕</button>
+      </div>
+      <div style="margin-top:2px;white-space:pre-wrap;">${esc(m.text)}</div>
     </div>`).join('');
+}
+
+function deleteDailyMemo(i) {
+  const allMemos = JSON.parse(localStorage.getItem('chaeum-memos') || '[]');
+  const m = allMemos[i];
+  if (!m) return;
+  const preview = m.text.length > 40 ? m.text.slice(0, 40) + '…' : m.text;
+  if (!confirm(`이 메모를 삭제할까요?\n\n${m.date}  ${preview}`)) return;
+  allMemos.splice(i, 1);
+  localStorage.setItem('chaeum-memos', JSON.stringify(allMemos));
+  renderMemoLog(allMemos);
+  toast('메모 삭제 ✓');
 }
 
 function saveDailyMemo() {
