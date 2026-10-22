@@ -29,7 +29,7 @@ body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color
 .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
 .nav-item.active { background: rgba(176,28,46,0.35); color: #fff; }
 
-.main-content { margin-left: 220px; flex: 1; min-height: 100vh; }
+.main-content { margin-left: 220px; flex: 1; min-height: 100vh; min-width: 0; }
 .panel { display: none; padding: 36px 40px; }
 .panel.active { display: block; }
 .panel-title { font-family: 'Noto Serif KR', serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
@@ -491,6 +491,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 #toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); color: #fff; padding: 11px 22px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9000; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ✏️ 일괄입력 표: 칸 폭 고정 + 옆으로 스크롤, 이름 고정 */
+.bt-wrap { border:1px solid var(--border); border-radius:8px; overflow-x:auto; background:#fff; position:relative; z-index:0; }
+.bt-inner { min-width:1270px; }
+.bt-row { display:flex; gap:6px; padding:6px 10px; align-items:center; border-bottom:1px solid #f1f5f9; background:#fff; }
+.bt-head { background:#1e293b !important; color:#cbd5e1; font-size:11px; font-weight:700; padding:9px 10px; position:sticky; top:0; z-index:2; }
+.bt-name { flex:0 0 84px; font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:2px; position:sticky; left:0; z-index:1; background:inherit; padding-right:4px; }
+.bt-f { flex:1 0 158px; min-width:158px; }
+.bt-memo { flex:1.5 0 190px; min-width:190px; }
+.bt-row input { width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:5px; font-size:13px; font-family:'Pretendard',sans-serif; box-sizing:border-box; }
+.bt-group { font-size:11px; font-weight:800; color:#475569; padding:6px 10px; background:#e2e8f0; position:sticky; left:0; }
+#batch-record-card { max-width:100% !important; min-width:0; box-sizing:border-box; padding:22px 22px; }
+#panel-record { min-width:0; max-width:100%; }
+.bt-wrap { max-width:100%; }
+#batch-record-card button { white-space:nowrap; }
+#batch-filter { min-width:140px; }
 /* 📚 교재 관리 */
 .bm-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
 .bm-tbl { border-collapse:collapse; width:100%; min-width:820px; font-size:12px; }
@@ -1422,16 +1437,15 @@ async function renderBatchRows() {
 
   // 컬럼 헤더 (한 줄, flex 비율)
   const headerRow = `
-    <div style="display:flex;gap:6px;padding:9px 10px;background:#1e293b;color:#cbd5e1;
-      font-size:11px;font-weight:700;border-radius:8px 8px 0 0;">
-      <span style="flex:0 0 70px;">학생</span>
-      <span style="flex:1;">📝 단어</span>
-      <span style="flex:1;">📐 문법</span>
-      <span style="flex:1;">📖 독해</span>
-      <span style="flex:1;">🎧 듣기</span>
-      <span style="flex:1;">${writingLabel}</span>
-      <span style="flex:1;">🏫 내신대비</span>
-      <span style="flex:1.4;">💬 메모</span>
+    <div class="bt-row bt-head">
+      <span class="bt-name">학생</span>
+      <span class="bt-f">📝 단어</span>
+      <span class="bt-f">📐 문법</span>
+      <span class="bt-f">📖 독해</span>
+      <span class="bt-f">🎧 듣기</span>
+      <span class="bt-f">${writingLabel}</span>
+      <span class="bt-f">🏫 내신대비</span>
+      <span class="bt-memo">💬 메모</span>
     </div>`;
 
   let rowsHtml = '';
@@ -1441,19 +1455,18 @@ async function renderBatchRows() {
     if (sectionKey !== lastKey) {
       lastKey = sectionKey;
       const label = s.type==='초등' ? '초등부' : `${s.type} ${s.grade}`;
-      rowsHtml += `<div style="font-size:11px;font-weight:800;color:#475569;padding:6px 10px;background:#e2e8f0;">${label}</div>`;
+      rowsHtml += `<div class="bt-group">${label}</div>`;
     }
     const id = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
     const ex = existing[s.name] || {};
     const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.naesin||ex.note;
     const val = v => (v||'').replace(/"/g,'&quot;');
-    const inp = (field, ph, flex) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}" data-orig="${val(ex[field])}"
-      style="flex:${flex};min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;">`;
+    const inp = (field, ph, flex) => `<span class="${field === 'note' ? 'bt-memo' : 'bt-f'}"><input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}" data-orig="${val(ex[field])}"></span>`;
 
     rowsHtml += `
-      <div class="batch-card" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}" data-prefilled="${hasRecord?'1':'0'}"
-        style="display:flex;gap:6px;padding:6px 10px;align-items:center;border-bottom:1px solid #f1f5f9;${hasRecord?'background:#f0fdf4;':''}">
-        <span style="flex:0 0 70px;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:2px;">
+      <div class="batch-card bt-row" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}" data-prefilled="${hasRecord?'1':'0'}"
+        style="${hasRecord?'background:#f0fdf4;':''}">
+        <span class="bt-name">
           <span style="overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
           ${isHigh && monthRec[s.name] ? `<button type="button" class="bm-btn" onclick="toggleBatchMonth('${id}')" title="이번 달 쌓인 기록 보기" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:12px;flex-shrink:0;">📚</button>` : ''}
         </span>
@@ -1467,7 +1480,7 @@ async function renderBatchRows() {
       </div>`;
   });
 
-  wrap.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">${headerRow}${rowsHtml}</div>
+  wrap.innerHTML = `<div class="bt-wrap"><div class="bt-inner">${headerRow}${rowsHtml}</div></div>
     <div class="batch-sugg-hint">💡 흐린 글씨는 <b>지난 진도 다음</b> 제안이에요. 칸에서 <b>Tab</b>이나 <b>→</b>를 누르면 받아지고, 칸을 누르면 그 학생이 최근 쓴 진도 목록이 떠요.</div>`;
   const myRender = ++batchRenderSeq;
   attachProgressSuggestions(date, myRender);
@@ -1493,7 +1506,7 @@ function toggleBatchMonth(id) {
     `<div style="display:flex;gap:8px;"><b style="flex:0 0 74px;color:#475569;">${l}</b><span style="flex:1;white-space:pre-wrap;">${esc(r[k])}</span></div>`).join('');
   const box = document.createElement('div');
   box.className = 'batch-month';
-  box.style.cssText = 'padding:8px 12px 10px 86px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;line-height:1.6;display:flex;flex-direction:column;gap:3px;';
+  box.style.cssText = 'padding:8px 12px 10px 100px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;line-height:1.6;display:flex;flex-direction:column;gap:3px;';
   box.innerHTML = `<div style="font-size:11px;color:#64748b;font-weight:700;">이번 달 쌓인 기록 (보기 전용 · 저장되지 않아요)</div>${rows || '<span style="color:#94a3b8;">기록 없음</span>'}`;
   card.after(box);
 }
@@ -1548,7 +1561,7 @@ async function attachProgressSuggestions(date, seq) {
         const span = p.last ? p.last.e - p.last.s : 0;
         if (p.pos !== null) {
           const a = p.pos + 1, rng = span > 0 ? `${a}-${a + span}` : `${a}`;
-          sugg = SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${rng}${bk.u}` : `${bk.b} ${bk.u} ${rng}`;
+          sugg = SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${rng}${bk.u}` : `${bk.b} ${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${rng}`;
         } else sugg = `${bk.b} ${bk.u} `;
         inp.dataset.book = '1';
         inp.dataset.bookInfo = `📚 ${bk.b}${p.pos !== null ? ` · 지금 ${p.pos}${bk.t ? '/' + bk.t : ''} ${bk.u}${p.pct !== null ? ' (' + p.pct + '%)' : ''}` : ''}`;
@@ -1580,6 +1593,42 @@ function acceptSuggestion(inp) {
   if (inp.dataset.book && document.activeElement === inp) selectEndNumber(inp);
   return true;
 }
+// 📚 숫자만 쓰면 교재 이름·단위를 붙임: "15-20" → "WordMaster 중등 실력 Day 15-20"
+function expandWithBook(v, bk) {
+  const t = String(v || '').trim();
+  if (!t || !bk || !bk.b || !bk.u) return v;
+  if (normB(t).includes(normB(bk.b))) return t;                          // 이미 교재명 있음
+  const RNG = /^\d+(\s*[-~–～]\s*\d+)?$/;
+  if (RNG.test(t)) return SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${t}${bk.u}` : `${bk.b} ${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${t}`;   // Ch.9 · p.90 · Day 15
+  if (SUFFIX_UNITS.includes(bk.u) && new RegExp('^\\d+(\\s*[-~–～]\\s*\\d+)?\\s*' + bk.u + '$').test(t)) return `${bk.b} ${t}`;   // "12-14회"
+  if (unitRe(bk.u).test(t) && t.search(unitRe(bk.u)) === 0) return `${bk.b} ${t}`;                       // "Day 15-20"
+  return t;
+}
+const FIELD_ARR = { word: 'words', grammar: 'grammars', reading: 'readings', listening: 'listenings', writing: 'writings', naesin: 'naesins' };
+// 보고서용: 예전에 숫자만 저장된 기록도 교재 이름 붙여 보여줌
+function expandReportData(d, name, type) {
+  const st = (allStudentsCache || []).find(x => x.name === name && x.type === type);
+  const books = st?.books || {};
+  const out = { ...d };
+  Object.entries(FIELD_ARR).forEach(([f, arr]) => { if (books[f]?.b && Array.isArray(d[arr])) out[arr] = d[arr].map(v => expandWithBook(v, books[f])); });
+  return out;
+}
+function bookOfInput(inp) {
+  const card = inp.closest && inp.closest('.batch-card');
+  if (!card) return null;
+  const f = (inp.id.match(/^b-(\w+)-/) || [])[1];
+  const st = batchStudents.find(x => x.name === card.dataset.name && x.type === card.dataset.type);
+  return st?.books?.[f] || null;
+}
+document.addEventListener('focusout', e => {
+  const inp = e.target;
+  if (!inp.closest || !inp.closest('#batch-rows') || inp.tagName !== 'INPUT') return;
+  const bk = bookOfInput(inp);
+  if (!bk) return;
+  const nv = expandWithBook(inp.value, bk);
+  if (nv !== inp.value) { inp.value = nv; inp.classList.add('sugg-filled'); }
+});
+
 // 📚 끝 번호만 선택 → 숫자만 치면 바뀜 ("어법끝 point 24-[35]")
 function selectEndNumber(inp) {
   const v = inp.value;
@@ -1635,7 +1684,7 @@ async function saveBatchRecords() {
   cards.forEach(card => {
     const id = card.dataset.id;
     const el = f => document.getElementById(`b-${f}-${id}`);
-    const get = f => (el(f)?.value || '').trim();
+    const get = f => { const e = el(f); if (!e) return ''; const bk = bookOfInput(e); return (bk ? expandWithBook(e.value, bk) : e.value || '').trim(); };
     const orig = f => (el(f)?.dataset.orig || '').trim();
 
     const fields = ['word','grammar','reading','listening','writing','naesin','note'];
@@ -1698,8 +1747,13 @@ async function saveRecord() {
       grammar:   document.getElementById('r-grammar').value,
       reading:   document.getElementById('r-reading').value,
       listening: document.getElementById('r-listening').value,
-      writing:   document.getElementById('r-writing').value,
-      naesin:    document.getElementById('r-naesin').value,
+      ...(() => {   // 숫자만 쓰면 교재 이름·단위 붙임
+        const st = (allStudentsCache || []).find(x => x.name === name && x.type === document.getElementById('r-type').value);
+        const bk = st?.books || {};
+        const o = {};
+        ['word','grammar','reading','listening','writing','naesin'].forEach(f => { o[f] = expandWithBook(document.getElementById('r-' + f).value, bk[f]); });
+        return o;
+      })(),
       note:      document.getElementById('r-note').value
     });
     status.className = 'status-msg success';
@@ -1805,7 +1859,7 @@ async function generateReport(withAI = false) {
     let progress = [];
     try { progress = await reportBookProgress(name, type, start, end); } catch (e) {}
     lastData.progress = progress;
-    renderReport({ ...d, name, type, start, end, feedback, progress });
+    renderReport({ ...expandReportData(d, name, type), name, type, start, end, feedback, progress });
     status.className = 'status-msg success';
     status.textContent = `✅ ${d.count}개 기록으로 보고서 생성 완료`;
   } catch(e) {
@@ -4552,7 +4606,7 @@ async function bgMakeOne(r, useAI) {
     if (!bgCtx.hist) bgCtx.hist = await getBookHistory(nextDayStr(bgCtx.end), null);   // 한 번만 불러와서 같이 씀
     progress = await reportBookProgress(s.name, s.type, start, bgCtx.end, bgCtx.hist);
   } catch (e) {}
-  const html = buildReportHTML({ ...d, grade: d.grade || s.grade, name: s.name, type: s.type, start, end: bgCtx.end, feedback, progress });
+  const html = buildReportHTML({ ...expandReportData(d, s.name, s.type), grade: d.grade || s.grade, name: s.name, type: s.type, start, end: bgCtx.end, feedback, progress });
   await api('update-report-status', { action: 'save_draft', name: s.name, type: s.type, grade: s.grade,
     reportType: bgCtx.reportType, baseDate: bgCtx.baseDate, html, feedback });
   rsLocalSet({ name: s.name, type: s.type, grade: s.grade, reportType: bgCtx.reportType, baseDate: bgCtx.baseDate }, '생성완료', true);
