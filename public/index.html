@@ -1580,18 +1580,25 @@ async function attachProgressSuggestions(date, seq) {
       const inp = document.getElementById(`b-${f}-${id}`);
       const e = h[f] || { last: '', lastDate: '', recent: [], entries: [] };
       if (!inp) return;
-      const bk = (stu.books || {})[f];
+      const bkKeys = fieldBookKeys(f).filter(k => stu.books?.[k]?.b && stu.books[k].u);
       let sugg;
-      if (bk?.b && bk.u) {
+      if (bkKeys.length) {
         // 📚 교재 기준: "어법끝 point 24-35" (지난번 분량만큼, 끝 번호는 선택돼서 바로 덮어 칠 수 있음)
-        const p = bookProgress(bk, e.entries);
-        const span = p.last ? p.last.e - p.last.s : 0;
-        if (p.pos !== null) {
-          const a = p.pos + 1, rng = span > 0 ? `${a}-${a + span}` : `${a}`;
-          sugg = SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${rng}${bk.u}` : `${bk.b} ${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${rng}`;
-        } else sugg = `${bk.b} ${bk.u} `;
+        //    단어장 2권이면 "A Day 31-35, B Day 5-8"
+        const parts = [], infos = [];
+        bkKeys.forEach(k => {
+          const bk = stu.books[k];
+          const p = bookProgOf(stu.books, k, e.entries);
+          const span = p.last ? p.last.e - p.last.s : 0;
+          if (p.pos !== null) {
+            const a = p.pos + 1, rng = span > 0 ? `${a}-${a + span}` : `${a}`;
+            parts.push(SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${rng}${bk.u}` : `${bk.b} ${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${rng}`);
+          } else parts.push(`${bk.b} ${bk.u} `);
+          infos.push(`📚 ${bk.b}${p.pos !== null ? ` · 지금 ${p.pos}${bk.t ? '/' + bk.t : ''} ${bk.u}${p.pct !== null ? ' (' + p.pct + '%)' : ''}` : ''}`);
+        });
+        sugg = parts.join(', ');
         inp.dataset.book = '1';
-        inp.dataset.bookInfo = `📚 ${bk.b}${p.pos !== null ? ` · 지금 ${p.pos}${bk.t ? '/' + bk.t : ''} ${bk.u}${p.pct !== null ? ' (' + p.pct + '%)' : ''}` : ''}`;
+        inp.dataset.bookInfo = infos.join('\n');
       } else {
         if (!e.last) return;
         sugg = nextProgress(e.last);
@@ -1631,28 +1638,35 @@ function expandWithBook(v, bk) {
   if (unitRe(bk.u).test(t) && t.search(unitRe(bk.u)) === 0) return `${bk.b} ${t}`;                       // "Day 15-20"
   return t;
 }
+function expandWithBooks(v, list) {
+  if (!list || !list.length) return v;
+  const parts = String(v || '').split(/\s*[,，]\s*/);
+  if (list.length < 2 || parts.length < 2) return expandWithBook(v, list[0]);
+  return parts.map((x, i) => list[i] ? expandWithBook(x, list[i]) : x).join(', ');   // "30-40, 1-4" → A …, B …
+}
 const FIELD_ARR = { word: 'words', grammar: 'grammars', reading: 'readings', listening: 'listenings', writing: 'writings', naesin: 'naesins' };
 // 보고서용: 예전에 숫자만 저장된 기록도 교재 이름 붙여 보여줌
 function expandReportData(d, name, type) {
   const st = (allStudentsCache || []).find(x => x.name === name && x.type === type);
   const books = st?.books || {};
   const out = { ...d };
-  Object.entries(FIELD_ARR).forEach(([f, arr]) => { if (books[f]?.b && Array.isArray(d[arr])) out[arr] = d[arr].map(v => expandWithBook(v, books[f])); });
+  Object.entries(FIELD_ARR).forEach(([f, arr]) => { const list = fieldBooks(books, f); if (list.length && Array.isArray(d[arr])) out[arr] = d[arr].map(v => expandWithBooks(v, list)); });
   return out;
 }
-function bookOfInput(inp) {
+function bookOfInput(inp) {   // 이 칸의 교재들 (단어는 2권일 수 있음)
   const card = inp.closest && inp.closest('.batch-card');
   if (!card) return null;
   const f = (inp.id.match(/^b-(\w+)-/) || [])[1];
   const st = batchStudents.find(x => x.name === card.dataset.name && x.type === card.dataset.type);
-  return st?.books?.[f] || null;
+  const list = fieldBooks(st?.books, f);
+  return list.length ? list : null;
 }
 document.addEventListener('focusout', e => {
   const inp = e.target;
   if (!inp.closest || !inp.closest('#batch-rows') || inp.tagName !== 'INPUT') return;
   const bk = bookOfInput(inp);
   if (!bk) return;
-  const nv = expandWithBook(inp.value, bk);
+  const nv = expandWithBooks(inp.value, bk);
   if (nv !== inp.value) { inp.value = nv; inp.classList.add('sugg-filled'); }
 });
 
@@ -1711,7 +1725,7 @@ async function saveBatchRecords() {
   cards.forEach(card => {
     const id = card.dataset.id;
     const el = f => document.getElementById(`b-${f}-${id}`);
-    const get = f => { const e = el(f); if (!e) return ''; const bk = bookOfInput(e); return (bk ? expandWithBook(e.value, bk) : e.value || '').trim(); };
+    const get = f => { const e = el(f); if (!e) return ''; const bk = bookOfInput(e); return (bk ? expandWithBooks(e.value, bk) : e.value || '').trim(); };
     const orig = f => (el(f)?.dataset.orig || '').trim();
 
     const fields = ['word','grammar','reading','listening','writing','naesin','note'];
@@ -1778,7 +1792,7 @@ async function saveRecord() {
         const st = (allStudentsCache || []).find(x => x.name === name && x.type === document.getElementById('r-type').value);
         const bk = st?.books || {};
         const o = {};
-        ['word','grammar','reading','listening','writing','naesin'].forEach(f => { o[f] = expandWithBook(document.getElementById('r-' + f).value, bk[f]); });
+        ['word','grammar','reading','listening','writing','naesin'].forEach(f => { o[f] = expandWithBooks(document.getElementById('r-' + f).value, fieldBooks(bk, f)); });
         return o;
       })(),
       note:      document.getElementById('r-note').value
@@ -1800,8 +1814,15 @@ async function saveRecord() {
 function smartRange(arr) {
   const unique = [...new Set(arr)].filter(Boolean);
   if (!unique.length) return '';
-  const days = unique.map(s => { const m = s.match(/\d+/); return m ? +m[0] : null; }).filter(n => n !== null).sort((a,b)=>a-b);
-  if (days.length > 1) return `Day ${Math.min(...days)} ~ ${Math.max(...days)}`;
+  if (unique.length === 1) return unique[0];
+  // 같은 교재·단위끼리만 "Day 1 ~ 20"처럼 합침 (단어장 2권이거나 모양이 다르면 그대로 나열)
+  const re = /^(.*?)(\d+)(?:\s*[-~–～]\s*(\d+))?(\s*회)?\s*$/;
+  const ms = unique.map(x => x.match(re));
+  const same = ms.every(m => m && !/[,，\/]/.test(m[1]) && m[1].replace(/\s+/g, '') === ms[0][1].replace(/\s+/g, '') && (m[4] || '') === (ms[0][4] || ''));
+  if (same) {
+    const nums = ms.flatMap(m => [+m[2], m[3] !== undefined ? +m[3] : +m[2]]);
+    return `${ms[0][1] || 'Day '}${Math.min(...nums)} ~ ${Math.max(...nums)}${ms[0][4] || ''}`;
+  }
   return unique.join(', ');
 }
 
@@ -5171,6 +5192,7 @@ function toast(msg) {
 // ════════════════════════════════════════════
 const BOOK_SUBJ = [
   { k: 'word',      label: '단어', icon: '📝' },
+  { k: 'word2',     label: '단어②', icon: '📝', field: 'word' },   // 단어장 2권 쓰는 학생 (기록은 같은 '단어' 칸)
   { k: 'grammar',   label: '문법', icon: '📐' },
   { k: 'reading',   label: '독해', icon: '📖' },
   { k: 'listening', label: '듣기', icon: '🎧' },
@@ -5180,6 +5202,16 @@ const BOOK_SUBJ = [
 const BOOK_UNITS = ['Day', 'point', 'Unit', 'Ch.', 'p.', '회', '강', '과'];
 const SUFFIX_UNITS = ['회', '강', '과'];   // 숫자 뒤에 붙는 단위
 const bookSubjLabel = k => { const s = BOOK_SUBJ.find(x => x.k === k); return s ? s.label : k; };
+const BASE_SUBJ = BOOK_SUBJ.filter(x => !x.field);                        // 교재 목록의 과목 (단어②는 단어로)
+const subjField = k => (BOOK_SUBJ.find(x => x.k === k) || {}).field || k;  // 교재 칸 → 기록 칸
+const fieldBookKeys = f => BOOK_SUBJ.filter(x => subjField(x.k) === f).map(x => x.k);
+function fieldBooks(books, f) { return fieldBookKeys(f).map(k => books?.[k]).filter(b => b?.b && b.u); }
+function bookProgOf(books, k, entries, opts = {}) {
+  const b = books[k];
+  const others = fieldBooks(books, subjField(k)).filter(x => x !== b);
+  const needName = others.length > 0 && !!(BOOK_SUBJ.find(x => x.k === k) || {}).field;   // 단어② 같은 두 번째 교재
+  return bookProgress(b, entries, { ...opts, others, needName });
+}
 const escH = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const nextDayStr = d => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + 1); return localDateStr(x); };
 const normB = v => String(v || '').replace(/\s+/g, '').toLowerCase();
@@ -5192,9 +5224,23 @@ function unitRe(u) {
 }
 
 // 기록 한 줄에서 이 교재의 {s, e} 읽기 (못 읽으면 null)
-function parseBookRange(text, book) {
+function parseBookRange(text, book, others = [], needName = false) {
   if (!text || !book || !book.u) return null;
   let t = String(text);
+  const has = (part, b) => b && b.b && normB(part).includes(normB(b.b));
+  if (others.length) {
+    // 같은 칸에 교재가 2권: "A Day 30-40, B Day 1-4" → 쉼표로 나눠 내 교재 부분만
+    const parts = t.split(/\s*[,，]\s*/);
+    const mine = parts.findIndex(x => has(x, book));
+    let pick = [];
+    if (mine >= 0) {
+      pick.push(parts[mine]);
+      for (let i = mine + 1; i < parts.length && !others.some(o => has(parts[i], o)) && !has(parts[i], book); i++) pick.push(parts[i]);
+    } else if (needName) return null;                                  // 두 번째 교재는 이름이 적힌 기록만
+    else pick = parts.filter(x => !others.some(o => has(x, o)));     // 내 교재명이 없으면 다른 교재 부분만 빼고
+    t = pick.join(', ');
+    if (!t.trim()) return null;
+  }
   if (book.b) {                                  // 교재명이 있으면 그 뒤부터 봄
     const i = normB(t).indexOf(normB(book.b));
     if (i >= 0) {                                // 공백 무시 위치 → 원래 위치로 환산
@@ -5205,17 +5251,17 @@ function parseBookRange(text, book) {
   }
   const m = t.match(unitRe(book.u));
   if (m) { const s = +m[1], e = m[2] !== undefined ? +m[2] : s; return { s, e: Math.max(s, e) }; }
-  const bare = String(text).trim().match(/^(\d+)(?:\s*[-~–～]\s*(\d+))?\s*$/);   // "10~12"처럼 숫자만
+  const bare = t.trim().match(/^(\d+)(?:\s*[-~–～]\s*(\d+))?\s*$/);   // "10~12"처럼 숫자만
   if (bare) { const s = +bare[1], e = bare[2] !== undefined ? +bare[2] : s; return { s, e: Math.max(s, e) }; }
   return null;
 }
 
 // entries(최신순)에서 asOf 날짜 '전'까지의 현재 위치
-function bookPosition(book, entries, beforeDate) {
+function bookPosition(book, entries, beforeDate, others, needName) {
   for (const en of entries || []) {
     if (beforeDate && en.d >= beforeDate) continue;
     if (book.cd && en.d < book.cd) break;        // 등록 시점보다 예전 기록은 안 봄
-    const r = parseBookRange(en.v, book);
+    const r = parseBookRange(en.v, book, others || [], !!needName);
     if (r) return { pos: r.e, last: r, date: en.d };
   }
   if (book.c !== undefined && book.c !== '' && book.c !== null && (!beforeDate || !book.cd || book.cd < beforeDate))
@@ -5224,12 +5270,12 @@ function bookPosition(book, entries, beforeDate) {
 }
 
 function bookProgress(book, entries, opts = {}) {
-  const now = bookPosition(book, entries, opts.before);
+  const now = bookPosition(book, entries, opts.before, opts.others, opts.needName);
   const t = +book.t || 0;
   const pct = t && now.pos !== null ? Math.max(0, Math.min(100, Math.round(now.pos / t * 100))) : null;
   let gain = null;
   if (opts.since && now.pos !== null) {
-    const prev = bookPosition(book, entries, opts.since);
+    const prev = bookPosition(book, entries, opts.since, opts.others, opts.needName);
     if (prev.pos !== null && now.pos >= prev.pos) gain = now.pos - prev.pos;
   }
   return { pos: now.pos, total: t, pct, gain, last: now.last, date: now.date };
@@ -5256,15 +5302,15 @@ async function reportBookProgress(name, type, start, end, histAll) {
     st = allStudentsCache.find(x => x.name === name && x.type === type);
   }
   const books = st?.books || {};
-  const keys = BOOK_SUBJ.map(x => x.k).filter(k => books[k]?.b && +books[k]?.t > 0);
+  const keys = BOOK_SUBJ.map(x => x.k).filter(k => books[k]?.b && books[k]?.u && +books[k]?.t > 0);
   if (!keys.length) return [];
   let hist;
   try { hist = histAll ? histAll[name] : (await getBookHistory(nextDayStr(end), name))[name]; } catch (e) { return []; }
   hist = hist || {};
   return keys.map(k => {
     const b = books[k];
-    const p = bookProgress(b, hist[k]?.entries, { before: nextDayStr(end), since: start });
-    return { k, label: bookSubjLabel(k, type), book: b.b, unit: b.u, ...p };
+    const p = bookProgOf(books, k, hist[subjField(k)]?.entries, { before: nextDayStr(end), since: start });
+    return { k, label: bookSubjLabel(subjField(k)), book: b.b, unit: b.u, ...p };
   }).filter(p => p.pos !== null);
 }
 
@@ -5342,7 +5388,7 @@ function bmCatalog() {   // 교재 목록 + 학생에게만 등록된 교재 (�
     const key = normB(b.b);
     const c = cat[key] || (cat[key] = { b: b.b.trim(), u: b.u, t: b.t, subj: [], n: 0, used: {}, listed: false });
     c.n++; c.used[k] = (c.used[k] || 0) + 1;
-    if (!c.listed && !c.subj.includes(k)) c.subj.push(k);
+    if (!c.listed && !c.subj.includes(subjField(k))) c.subj.push(subjField(k));
     if (!c.t && b.t) c.t = b.t;
   }));
   return Object.values(cat).sort((a, b) => a.b.localeCompare(b.b, 'ko'));
@@ -5361,7 +5407,7 @@ function bmCellHTML(s, k) {
       <div class="bm-book">💡 ${escH(sg.b || '(교재명?)')}</div><div class="bm-sub">${escH(sg.u)}${sg.c ? ' · 지금 ' + sg.c : ''}</div></td>`;
     return `<td class="bm-cell bm-empty" ${click}>＋</td>`;
   }
-  const p = bookProgress(b, bmHist[s.name]?.[k]?.entries);
+  const p = bookProgOf(s.books, k, bmHist[s.name]?.[subjField(k)]?.entries);
   const color = p.pct >= 90 ? '#d97706' : (s.type === '고등' ? '#b01c2e' : '#3a5fd9');
   const amount = p.pos !== null ? `${p.pos}${b.t ? ' / ' + b.t : ''} ${escH(b.u)}` : `${escH(b.u)} · 위치 모름`;
   return `<td class="bm-cell" ${click} title="${escH(p.last ? '최근 기록(' + p.date + ')에서 읽음' : (p.pos !== null ? '시작 위치로 계산' : '기록에서 위치를 못 읽었어요'))}">
@@ -5399,7 +5445,7 @@ function renderBookAlerts() {
   const near = [];
   bmStudents.forEach(s => Object.entries(s.books || {}).forEach(([k, b]) => {
     if (!b?.b || !(+b.t)) return;
-    const p = bookProgress(b, bmHist[s.name]?.[k]?.entries);
+    const p = bookProgOf(s.books, k, bmHist[s.name]?.[subjField(k)]?.entries);
     if (p.pct !== null && p.pct >= 90) near.push({ s, k, b, p });
   }));
   near.sort((a, b) => b.p.pct - a.p.pct);
@@ -5437,7 +5483,7 @@ function findBookSuggestions() {
   let n = 0;
   bmFiltered().forEach(s => {
     const h = bmHist[s.name] || {};
-    BOOK_SUBJ.forEach(({ k }) => {
+    BASE_SUBJ.forEach(({ k }) => {
       if ((s.books || {})[k]?.b) return;
       const en = h[k]?.entries || [];
       for (const e of en.slice(0, 4)) {
@@ -5496,7 +5542,8 @@ function openBookEditor(name, type, k) {
   const cur = (s.books || {})[k] || bmSugg[bmKey(s)]?.[k] || {};
   const fromSugg = !(s.books || {})[k]?.b && !!bmSugg[bmKey(s)]?.[k];
   beCtx = { s, k };
-  const p = bookProgress({ u: 'Day', ...cur }, bmHist[s.name]?.[k]?.entries);
+  const sib = fieldBooks(s.books, subjField(k)).filter(x => x !== (s.books || {})[k]);
+  const p = bookProgress({ u: 'Day', ...cur }, bmHist[s.name]?.[subjField(k)]?.entries, { others: sib, needName: sib.length > 0 && subjField(k) !== k });
   document.getElementById('be-title').textContent = `📚 ${s.name} · ${bookSubjLabel(k, s.type)} 교재`;
   document.getElementById('be-b').value = cur.b || '';
   beFillSelect(k, cur.b || '');
@@ -5506,7 +5553,7 @@ function openBookEditor(name, type, k) {
   document.getElementById('be-u-other').style.display = uSel.value === '__other' ? '' : 'none';
   document.getElementById('be-t').value = cur.t || '';
   document.getElementById('be-c').value = '';
-  const recent = (bmHist[s.name]?.[k]?.entries || []).slice(0, 3).map(e => `${e.d.slice(5).replace('-', '/')} ${e.v}`);
+  const recent = (bmHist[s.name]?.[subjField(k)]?.entries || []).slice(0, 3).map(e => `${e.d.slice(5).replace('-', '/')} ${e.v}`);
   document.getElementById('be-info').innerHTML =
     (fromSugg ? '<div style="color:#b45309;font-weight:700;">💡 지난 기록에서 찾은 제안이에요. 맞게 고친 뒤 저장하세요.</div>' : '') +
     (cur.b && p.pos !== null ? `<div>지금 위치: <b>${p.pos}</b> ${p.last ? `(${p.date} 기록에서 읽음)` : '(시작 위치)'}</div>` : '') +
@@ -5527,8 +5574,8 @@ function openBookEditor(name, type, k) {
 function beFillSelect(k, curB) {
   const sel = document.getElementById('be-bsel');
   const cat = bmCatalog();
-  const mine = cat.filter(c => (c.subj || []).includes(k));
-  const rest = cat.filter(c => !(c.subj || []).includes(k));
+  const mine = cat.filter(c => (c.subj || []).includes(subjField(k)));
+  const rest = cat.filter(c => !(c.subj || []).includes(subjField(k)));
   const opt = c => `<option value="${escH(c.b)}">${escH(c.b)}  (${escH(c.u || '?')}${c.t ? ' · ' + c.t : ''})${c.listed ? '' : ' ·목록에 없음'}</option>`;
   sel.innerHTML = `<option value="">── 교재 고르기 ──</option>`
     + (mine.length ? `<optgroup label="${bookSubjLabel(k)} 교재">${mine.map(opt).join('')}</optgroup>` : '')
@@ -5567,11 +5614,11 @@ async function openBookList() {
   renderBookList();
 }
 function blTabs() {
-  const tabs = [['all', '전체'], ...BOOK_SUBJ.map(x => [x.k, x.label])];
+  const tabs = [['all', '전체'], ...BASE_SUBJ.map(x => [x.k, x.label])];
   document.getElementById('bl-tabs').innerHTML = tabs.map(([k, l]) => `<button class="rs-tab${blTab === k ? ' active' : ''}" onclick="blTab='${k}';renderBookList()">${l}</button>`).join('');
 }
 function blRowHTML(c, i, kind) {
-  const subjBox = BOOK_SUBJ.map(x => {
+  const subjBox = BASE_SUBJ.map(x => {
     const on = (c.subj || []).includes(x.k);
     return `<label class="${on ? 'on' : ''}"><input type="checkbox" data-k="${x.k}" ${on ? 'checked' : ''} onchange="this.parentNode.classList.toggle('on',this.checked)">${x.label}</label>`;
   }).join('');
