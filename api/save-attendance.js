@@ -231,6 +231,57 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // 📖 교재 목록 (학원 교재 카탈로그)
+    if (action === 'list_books' || action === 'save_book' || action === 'delete_book') {
+      const DB_BOOKS = process.env.NOTION_DB_BOOKS || '53209d1a69c84234bb890d61d0f81b3b';
+      const SUBJ = { word: '단어', grammar: '문법', reading: '독해', listening: '듣기', writing: '라이팅', naesin: '내신' };
+      const REV = Object.fromEntries(Object.entries(SUBJ).map(([k, v]) => [v, k]));
+      const toBook = p => ({
+        id: p.id,
+        b: (p.properties['교재명']?.title || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim(),
+        subj: (p.properties['과목']?.multi_select || []).map(o => REV[o.name]).filter(Boolean),
+        u: (p.properties['단위']?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim(),
+        t: p.properties['전체분량']?.number ?? '',
+        memo: (p.properties['메모']?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim(),
+      });
+      if (action === 'list_books') {
+        let all = [], cursor;
+        do {
+          const q = { page_size: 100, sorts: [{ property: '교재명', direction: 'ascending' }] };
+          if (cursor) q.start_cursor = cursor;
+          const r = await fetch(`https://api.notion.com/v1/databases/${DB_BOOKS}/query`, { method: 'POST', headers, body: JSON.stringify(q) });
+          const d = await r.json();
+          if (d.object === 'error') throw new Error('교재 목록을 못 읽었어요: ' + d.message);
+          all = all.concat(d.results || []);
+          cursor = d.has_more ? d.next_cursor : undefined;
+        } while (cursor);
+        return res.status(200).json({ ok: true, books: all.map(toBook).filter(x => x.b) });
+      }
+      if (action === 'delete_book') {
+        if (!body.id) return res.status(400).json({ error: '교재 id가 필요해요.' });
+        const r = await fetch(`https://api.notion.com/v1/pages/${body.id}`, { method: 'PATCH', headers, body: JSON.stringify({ archived: true }) });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        return res.status(200).json({ ok: true });
+      }
+      // save_book: { book: { id?, b, subj:[], u, t, memo } }
+      const bk = body.book || {};
+      if (!String(bk.b || '').trim()) return res.status(400).json({ error: '교재 이름이 필요해요.' });
+      const props = {
+        '교재명': { title: [{ text: { content: String(bk.b).trim() } }] },
+        '과목': { multi_select: (bk.subj || []).filter(k => SUBJ[k]).map(k => ({ name: SUBJ[k] })) },
+        '단위': { rich_text: bk.u ? [{ text: { content: String(bk.u) } }] : [] },
+        '전체분량': { number: bk.t === '' || bk.t === null || bk.t === undefined ? null : Number(bk.t) },
+        '메모': { rich_text: bk.memo ? [{ text: { content: String(bk.memo) } }] : [] },
+      };
+      const r = bk.id
+        ? await fetch(`https://api.notion.com/v1/pages/${bk.id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: props }) })
+        : await fetch('https://api.notion.com/v1/pages', { method: 'POST', headers, body: JSON.stringify({ parent: { database_id: DB_BOOKS }, properties: props }) });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true, book: toBook(d) });
+    }
+
     // 📚 교재 저장 (여러 명 한 번에): items = [{ name, type, books }]
     if (action === 'set_books') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
