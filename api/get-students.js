@@ -67,6 +67,10 @@ export default async function handler(req, res) {
           '금': p.properties['수업부_금']?.select?.name || '',
         },
         days,
+        books: (() => {   // 📚 과목별 교재 { word:{b,u,t,c,cd}, ... }
+          const raw = (p.properties['교재']?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('');
+          try { return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+        })(),
       };
     }).filter(s => s.name);
 
