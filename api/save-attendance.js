@@ -231,6 +231,45 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // 📚 교재 저장 (여러 명 한 번에): items = [{ name, type, books }]
+    if (action === 'set_books') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const items = Array.isArray(body.items) ? body.items : [];
+      if (!items.length) return res.status(400).json({ error: '저장할 학생이 없어요.' });
+      const results = [];
+      for (const it of items) {
+        try {
+          const q = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ filter: { and: [
+              { property: '학생이름', title: { equals: it.name } },
+              { property: '구분', select: { equals: it.type } }
+            ]}})
+          });
+          const qd = await q.json();
+          if (qd.object === 'error') throw new Error(qd.message);
+          const page = qd.results?.[0];
+          if (!page) throw new Error('등원일정에서 학생을 찾지 못했어요.');
+          // 비어 있는 과목은 빼고 저장
+          const clean = {};
+          Object.entries(it.books || {}).forEach(([k, v]) => { if (v && (v.b || v.t)) clean[k] = v; });
+          const json = Object.keys(clean).length ? JSON.stringify(clean) : '';
+          const chunks = [];
+          for (let i = 0; i < json.length; i += 1900) chunks.push({ text: { content: json.slice(i, i + 1900) } });
+          const r = await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ properties: { '교재': { rich_text: chunks } } })
+          });
+          const d = await r.json();
+          if (d.object === 'error') throw new Error(d.message);
+          results.push({ name: it.name, ok: true });
+        } catch (e) {
+          results.push({ name: it.name, ok: false, error: e.message });
+        }
+      }
+      const failed = results.filter(r => !r.ok);
+      return res.status(200).json({ ok: !failed.length, results, failed: failed.length });
+    }
+
     // 👋 퇴원 처리: 등원일정 DB에서 휴지통으로 (노션 휴지통에서 30일간 복구 가능)
     if (action === 'archive_student') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
