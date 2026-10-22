@@ -243,6 +243,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rc-footer { text-align: center; padding: 14px; font-size: 11px; color: #aaa; background: #fafafa; border-top: 1px solid #f0ece5; font-family: 'Pretendard', sans-serif; }
 
 /* 학생 목록 */
+/* 👤 학생 목록 (표) */
+.sl-tools { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.sl-tools input, .sl-tools select { padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-family:'Pretendard',sans-serif; width:auto !important; }
+.sl-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.sl-tbl { border-collapse:collapse; width:100%; min-width:760px; font-size:13px; }
+.sl-tbl th { background:#1e293b; color:#cbd5e1; font-size:11px; font-weight:700; padding:8px 10px; text-align:left; white-space:nowrap; position:sticky; top:0; }
+.sl-tbl td { padding:7px 10px; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
+.sl-tbl tr.sl-row:hover td { background:#f8fafc; }
+.sl-tbl tr.sl-group td { background:#e2e8f0; font-weight:800; color:#475569; font-size:11px; padding:5px 10px; }
+.sl-name { font-weight:700; cursor:pointer; color:#1e293b; }
+.sl-name:hover { color:var(--burgundy); text-decoration:underline; }
+.sl-day { display:inline-block; width:20px; text-align:center; font-size:11px; border-radius:4px; margin-right:2px; color:#cbd5e1; }
+.sl-day.on { background:#eef2ff; color:#3a5fd9; font-weight:700; }
+.sl-mini { padding:3px 8px; border:1px solid var(--border); border-radius:6px; background:#fff; font-size:11px; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.sl-mini:hover { border-color:var(--burgundy); color:var(--burgundy); }
 .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-width: 900px; }
 .student-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); }
 .student-card:hover { border-color: var(--burgundy); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
@@ -476,6 +491,27 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 #toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); color: #fff; padding: 11px 22px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9000; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* 📚 교재 관리 */
+.bm-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.bm-tbl { border-collapse:collapse; width:100%; min-width:820px; font-size:12px; }
+.bm-tbl th { background:#1e293b; color:#cbd5e1; font-weight:700; padding:8px 6px; text-align:left; white-space:nowrap; position:sticky; top:0; }
+.bm-tbl td { border-bottom:1px solid #f1f5f9; padding:6px; vertical-align:middle; }
+.bm-tbl tr.bm-group td { background:#e2e8f0; font-weight:800; color:#475569; font-size:11px; padding:5px 10px; }
+.bm-chk { width:26px; text-align:center; }
+.bm-name { font-weight:700; white-space:nowrap; width:76px; }
+.bm-cell { cursor:pointer; min-width:120px; border-left:1px solid #f1f5f9; }
+.bm-cell:hover { background:#f8fafc; }
+.bm-empty { color:#cbd5e1; text-align:center; font-size:16px; }
+.bm-sugg { background:#fffbeb; }
+.bm-book { font-weight:700; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; }
+.bm-sub { font-size:11px; color:#64748b; margin-top:2px; white-space:nowrap; }
+.bm-bar { height:6px; background:#eef0f3; border-radius:4px; overflow:hidden; margin-top:4px; max-width:170px; }
+.bm-bar i { display:block; height:100%; border-radius:4px; }
+.bm-chip { background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:3px 10px; font-size:12px; cursor:pointer; }
+.bm-tools { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.bm-tools select, .bm-tools input { padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-family:'Pretendard',sans-serif; }
+.bm-btn { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; background:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
+.bm-btn.primary { background:#3a5fd9; border-color:#3a5fd9; color:#fff; }
 </style>
 </head>
 <body>
@@ -934,8 +970,31 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     <!-- 학생 목록 패널 -->
     <div class="panel" id="panel-students">
       <div class="panel-title">학생 목록</div>
-      <div class="panel-sub">클릭하면 바로 해당 학생 보고서 화면으로 이동합니다</div>
+      <div class="panel-sub">이름을 누르면 그 학생 보고서 화면으로 가요 · 검색과 필터로 빠르게 찾을 수 있어요</div>
+      <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-bottom:14px;width:fit-content;">
+        <button class="rs-tab active" id="sv-cards" onclick="setStudentView('cards')">👤 학생 목록</button>
+        <button class="rs-tab" id="sv-books" onclick="setStudentView('books')">📚 교재 관리</button>
+      </div>
       <div id="student-list-container"><div class="loading-spinner">불러오는 중...</div></div>
+      <div id="books-view" style="display:none;">
+        <div class="bm-tools">
+          <div style="display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;">
+            <button class="rs-tab bm-lv active" data-v="all" onclick="bmSetLevel('all')">전체</button>
+            <button class="rs-tab bm-lv" data-v="low" onclick="bmSetLevel('low')">초·중등</button>
+            <button class="rs-tab bm-lv" data-v="high" onclick="bmSetLevel('high')">고등</button>
+          </div>
+          <select onchange="bmTeacher=this.value;renderBooksView()" style="width:auto !important;">
+            <option value="">담임 전체</option><option value="이유민">이유민</option><option value="성형주">성형주</option><option value="__none__">담임 미지정</option>
+          </select>
+          <input type="text" placeholder="이름 검색" style="width:100px;" oninput="bmSearch=this.value.trim();renderBooksView()">
+          <button class="bm-btn" onclick="findBookSuggestions()" title="Day·point·Unit·회 같은 단위가 있는 최근 기록에서 교재를 찾아 노란 칸으로 보여줘요">💡 지난 기록에서 교재 찾기</button>
+          <button class="bm-btn primary" id="bm-sugg-save" style="display:none;" onclick="saveAllSuggestions()">💾 제안 모두 저장</button>
+          <button class="bm-btn" onclick="openBooksView(true)">🔄 새로고침</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">칸을 눌러 교재·단위·전체 분량을 정하면, 진도 기록에서 지금 위치를 읽어 진행률을 보여줘요 · 왼쪽 ☐로 여러 명을 골라 한 번에 지정할 수 있어요 <span id="bm-checked-n" style="color:#3a5fd9;font-weight:700;margin-left:6px;"></span></div>
+        <div id="bm-alerts" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;"></div>
+        <div id="bm-table"></div>
+      </div>
     </div>
 
     <!-- 출결 관리 패널 -->
@@ -1178,6 +1237,41 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <!-- 보강 날짜 등록 팝업 -->
+    <div id="modal-book" class="modal-overlay">
+      <div class="modal-box" style="width:360px;">
+        <div class="modal-title" id="be-title">📚 교재</div>
+        <div class="modal-field">
+          <label>교재 이름</label>
+          <input type="text" id="be-b" list="be-catalog" placeholder="예: 어법끝, 자이스토리, 천일문 Grammar" oninput="beOnBookInput()">
+          <datalist id="be-catalog"></datalist>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="modal-field" style="flex:1;">
+            <label>단위</label>
+            <select id="be-u" onchange="document.getElementById('be-u-other').style.display=this.value==='__other'?'':'none'">
+              <option>Day</option><option>point</option><option>Unit</option><option>Ch.</option><option>p.</option><option>회</option><option>강</option><option>과</option><option value="__other">직접 입력</option>
+            </select>
+            <input type="text" id="be-u-other" placeholder="단위" style="display:none;margin-top:6px;">
+          </div>
+          <div class="modal-field" style="flex:1;">
+            <label>전체 분량</label>
+            <input type="number" id="be-t" min="1" placeholder="예: 50">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>지금 위치 (선택)</label>
+          <input type="number" id="be-c" min="0">
+        </div>
+        <div id="be-info" style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.6;"></div>
+        <label id="be-multi-row" style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="be-multi"> <span id="be-multi-label"></span></label>
+        <div class="modal-btn-row">
+          <button class="modal-btn primary" onclick="saveBookEditor(false)">저장</button>
+          <button class="modal-btn" id="be-del" onclick="if(confirm('이 과목 교재를 뺄까요? (진도 기록은 그대로예요)'))saveBookEditor(true)">교재 빼기</button>
+        </div>
+        <button class="modal-cancel" onclick="closeModal('modal-book')">취소</button>
+      </div>
+    </div>
+
     <div id="modal-schedule-makeup" class="modal-overlay">
       <div class="modal-box">
         <div class="modal-title">📅 보강 날짜 등록</div>
@@ -1427,11 +1521,13 @@ function nextProgress(str) {
 
 async function attachProgressSuggestions(date, seq) {
   if (!date) return;
-  let hist = batchHistCache[date];
+  const hkey = date + '|' + batchScope;
+  let hist = batchHistCache[hkey];
   if (!hist) {
-    try { hist = (await api('save-record', { action: 'get_progress_history', before: date, days: 60 })).history || {}; }
+    const days = batchScope === 'monthly' ? 150 : 60;   // 고등은 한 달에 한 번 쓰니까 더 멀리
+    try { hist = (await api('save-record', { action: 'get_progress_history', before: date, days })).history || {}; }
     catch (e) { return; }
-    batchHistCache[date] = hist;
+    batchHistCache[hkey] = hist;
   }
   if (seq !== batchRenderSeq) return; // 그 사이 다시 그려짐
   let dl = document.getElementById('batch-datalists');
@@ -1441,11 +1537,28 @@ async function attachProgressSuggestions(date, seq) {
   document.querySelectorAll('#batch-rows .batch-card').forEach(card => {
     const name = card.dataset.name, id = card.dataset.id;
     const h = hist[name] || {};
+    const stu = batchStudents.find(x => x.name === name && x.type === card.dataset.type) || {};
     SUGG_FIELDS.forEach(f => {
       const inp = document.getElementById(`b-${f}-${id}`);
-      const e = h[f];
-      if (!inp || !e) return;
-      const sugg = nextProgress(e.last);
+      const e = h[f] || { last: '', lastDate: '', recent: [], entries: [] };
+      if (!inp) return;
+      const bk = (stu.books || {})[f];
+      let sugg;
+      if (bk?.b && bk.u) {
+        // 📚 교재 기준: "어법끝 point 24-35" (지난번 분량만큼, 끝 번호는 선택돼서 바로 덮어 칠 수 있음)
+        const p = bookProgress(bk, e.entries);
+        const span = p.last ? p.last.e - p.last.s : 0;
+        if (p.pos !== null) {
+          const a = p.pos + 1, rng = span > 0 ? `${a}-${a + span}` : `${a}`;
+          sugg = SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${rng}${bk.u}` : `${bk.b} ${bk.u} ${rng}`;
+        } else sugg = `${bk.b} ${bk.u} `;
+        inp.dataset.book = '1';
+        inp.dataset.bookInfo = `📚 ${bk.b}${p.pos !== null ? ` · 지금 ${p.pos}${bk.t ? '/' + bk.t : ''} ${bk.u}${p.pct !== null ? ' (' + p.pct + '%)' : ''}` : ''}`;
+      } else {
+        if (!e.last) return;
+        sugg = nextProgress(e.last);
+        delete inp.dataset.book;
+      }
       // 최근에 쓴 진도 목록 (제안을 맨 위에)
       const list = document.createElement('datalist');
       list.id = `dl-${f}-${id}`;
@@ -1453,7 +1566,7 @@ async function attachProgressSuggestions(date, seq) {
       dl.appendChild(list);
       inp.setAttribute('list', list.id);
       inp.dataset.sugg = sugg;
-      inp.title = `지난번(${(e.lastDate || '').slice(5).replace('-', '/')}): ${e.last}`;
+      inp.title = [inp.dataset.bookInfo || '', e.last ? `지난번(${(e.lastDate || '').slice(5).replace('-', '/')}): ${e.last}` : ''].filter(Boolean).join('\n');
       if (!inp.value) { inp.placeholder = sugg; inp.classList.add('has-sugg'); n++; }
     });
   });
@@ -1466,12 +1579,23 @@ function acceptSuggestion(inp) {
   inp.value = inp.dataset.sugg;
   inp.classList.remove('has-sugg');
   inp.classList.add('sugg-filled');
+  if (inp.dataset.book && document.activeElement === inp) selectEndNumber(inp);
   return true;
+}
+// 📚 끝 번호만 선택 → 숫자만 치면 바뀜 ("어법끝 point 24-[35]")
+function selectEndNumber(inp) {
+  const v = inp.value;
+  const m = [...v.matchAll(/\d+/g)].pop();
+  if (!m) { inp.setSelectionRange(v.length, v.length); return; }
+  try { inp.setSelectionRange(m.index, m.index + m[0].length); } catch (e) {}
 }
 
 function fillAllSuggestions() {
   const filled = [];
-  document.querySelectorAll('#batch-rows input.has-sugg').forEach(inp => { if (acceptSuggestion(inp)) filled.push(inp); });
+  document.querySelectorAll('#batch-rows input.has-sugg').forEach(inp => {
+    if (/\s$/.test(inp.dataset.sugg || '')) return;   // 번호를 모르는 교재 칸("어법끝 point ")은 직접 입력
+    if (acceptSuggestion(inp)) filled.push(inp);
+  });
   if (!filled.length) { toast('채울 제안이 없어요. (지난 60일 기록이 있는 학생만 제안돼요)'); return; }
   batchFilledInputs = filled;
   document.getElementById('batch-undo-btn').style.display = '';
@@ -1493,7 +1617,8 @@ document.addEventListener('keydown', e => {
   const inp = e.target;
   if (!inp.classList || !inp.closest || !inp.closest('#batch-rows')) return;
   if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'ArrowRight' && !inp.value)) {
-    if (acceptSuggestion(inp) && e.key === 'ArrowRight') e.preventDefault();
+    const ok = acceptSuggestion(inp);
+    if (ok && (e.key === 'ArrowRight' || inp.dataset.book)) e.preventDefault();   // 교재 칸은 그 자리에서 끝 번호 고치기
   }
 });
 document.addEventListener('input', e => {
@@ -1678,7 +1803,10 @@ async function generateReport(withAI = false) {
       feedback = r.feedback;
     }
 
-    renderReport({ ...d, name, type, start, end, feedback });
+    let progress = [];
+    try { progress = await reportBookProgress(name, type, start, end); } catch (e) {}
+    lastData.progress = progress;
+    renderReport({ ...d, name, type, start, end, feedback, progress });
     status.className = 'status-msg success';
     status.textContent = `✅ ${d.count}개 기록으로 보고서 생성 완료`;
   } catch(e) {
@@ -1716,7 +1844,8 @@ function renderNewbieReport({ name, type, feedback }) {
 }
 
 
-function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback }) {
+function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback, progress }) {
+  const hasProg = !!(progress && progress.length);
   const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
   const period = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
   const isHigh = type === '고등';
@@ -1748,9 +1877,9 @@ function buildReportHTML({ name, grade, type, start, end, words, grammars, readi
       <div class="rc-section">
         <div class="rc-section-title-high">02. 학습 내용 (Contents)</div>
         <div class="rc-content-box" contenteditable="true">${contentsHTML}</div>
-      </div>
+      </div>${buildProgressSectionHTML(progress, true, '03')}
       <div class="rc-section">
-        <div class="rc-section-title-high">03. 선생님 전달사항 (Feedback)</div>
+        <div class="rc-section-title-high">${hasProg ? '04' : '03'}. 선생님 전달사항 (Feedback)</div>
         <div class="rc-feedback-high" contenteditable="true">${feedback}</div>
       </div>
       <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
@@ -1769,13 +1898,13 @@ function buildReportHTML({ name, grade, type, start, end, words, grammars, readi
       <div class="rc-section">
         <div class="rc-section-title-mid">📚 2. 학습 내용</div>
         <div class="rc-content-box" contenteditable="true">${contentsHTML}</div>
-      </div>
+      </div>${buildProgressSectionHTML(progress, false, 3)}
       <div class="rc-section">
-        <div class="rc-section-title-mid">💬 3. 선생님 전달사항</div>
+        <div class="rc-section-title-mid">💬 ${hasProg ? 4 : 3}. 선생님 전달사항</div>
         <div class="rc-feedback-mid" contenteditable="true">${feedback}</div>
       </div>
       <div class="rc-section">
-        <div class="rc-section-title-mid">🚀 4. 다음 계획</div>
+        <div class="rc-section-title-mid">🚀 ${hasProg ? 5 : 4}. 다음 계획</div>
         <div class="rc-plan-box" contenteditable="true">이번 주 학습 내용을 바탕으로 다음 수업을 진행하겠습니다.</div>
       </div>
       <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
@@ -1850,25 +1979,73 @@ async function loadStudents() {
       container.innerHTML = '<div class="loading-spinner">등록된 학생이 없습니다.</div>';
       return;
     }
-    const grid = document.createElement('div');
-    grid.className = 'student-grid';
-    allStudentsCache.forEach(s => {
-      const card = document.createElement('div');
-      card.className = 'student-card';
-      card.innerHTML = `<span class="student-badge badge-${s.type}">${s.type}</span><div class="student-name">${s.name}</div><div class="student-meta">${s.grade}</div>`;
-      card.onclick = () => {
-        document.getElementById('rep-name').value = s.name;
-        document.getElementById('rep-type').value = s.type;
-        showPanel('report');
-      };
-      grid.appendChild(card);
-    });
-    container.innerHTML = '';
-    container.appendChild(grid);
+    container.innerHTML = `
+      <div class="sl-tools">
+        <input type="text" id="sl-q" placeholder="🔍 이름·학교·학부모 카톡명" style="width:190px !important;" oninput="slQ=this.value.trim();renderStudentList()" value="${escH(slQ)}">
+        <div style="display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;">
+          ${['전체','초등','중등','고등'].map(t => `<button class="rs-tab sl-tp${slType===t?' active':''}" data-v="${t}" onclick="slType='${t}';renderStudentList()">${t}</button>`).join('')}
+        </div>
+        <select onchange="slGrade=this.value;renderStudentList()"><option value="">학년 전체</option>${['1학년','2학년','3학년','4학년','5학년','6학년'].map(g => `<option${slGrade===g?' selected':''}>${g}</option>`).join('')}</select>
+        <select onchange="slTeacher=this.value;renderStudentList()"><option value="">담임 전체</option><option value="이유민"${slTeacher==='이유민'?' selected':''}>이유민</option><option value="성형주"${slTeacher==='성형주'?' selected':''}>성형주</option><option value="__none__"${slTeacher==='__none__'?' selected':''}>담임 미지정</option></select>
+        <select onchange="slDay=this.value;renderStudentList()"><option value="">요일 전체</option>${['월','화','수','목','금'].map(d => `<option value="${d}"${slDay===d?' selected':''}>${d}요일 수업</option>`).join('')}</select>
+        <span id="sl-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
+      </div>
+      <div id="sl-table"></div>`;
+    renderStudentList();
     populateReportDropdown(allStudentsCache);
   } catch(e) {
     container.innerHTML = `<div class="loading-spinner">오류: ${e.message}</div>`;
   }
+}
+
+let slQ = '', slType = '전체', slGrade = '', slTeacher = '', slDay = '';
+function renderStudentList() {
+  const el = document.getElementById('sl-table');
+  if (!el) return;
+  document.querySelectorAll('.sl-tp').forEach(b => b.classList.toggle('active', b.dataset.v === slType));
+  const q = slQ.toLowerCase();
+  const list = allStudentsCache.filter(s =>
+    (slType === '전체' || s.type === slType) &&
+    (!slGrade || s.grade === slGrade) &&
+    (!slTeacher || (slTeacher === '__none__' ? !s.teacher : s.teacher === slTeacher)) &&
+    (!slDay || (s.days || []).includes(slDay)) &&
+    (!q || [s.name, s.school, s.parentKakao].some(v => String(v || '').toLowerCase().includes(q))));
+  const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
+  list.sort((a, b) => (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3) || (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) || a.name.localeCompare(b.name, 'ko'));
+  document.getElementById('sl-count').textContent = `총 ${allStudentsCache.length}명${list.length !== allStudentsCache.length ? ` · 보이는 ${list.length}명` : ''}`;
+  if (!list.length) { el.innerHTML = '<div class="empty" style="padding:20px;">해당 학생이 없습니다</div>'; return; }
+  const groups = {};
+  list.forEach(s => { const g = s.type === '초등' ? '초등부' : `${s.type} ${s.grade}`; (groups[g] || (groups[g] = [])).push(s); });
+  const days = ['월', '화', '수', '목', '금'];
+  let rows = '';
+  Object.entries(groups).forEach(([g, arr]) => {
+    rows += `<tr class="sl-group"><td colspan="8">${g} <span style="font-weight:600;color:#64748b;">${arr.length}명</span></td></tr>`;
+    arr.forEach(s => {
+      const a = `'${escH(s.name)}','${s.type}','${s.grade}'`;
+      const dayHtml = days.map(d => {
+        const on = (s.days || []).includes(d);
+        const per = on ? (s.periods?.[d] || s.period || '') : '';
+        return `<span class="sl-day${on ? ' on' : ''}" title="${on ? d + '요일' + (per ? ' ' + per : '') : ''}">${d}</span>`;
+      }).join('');
+      const teachers = [...new Set(days.filter(d => (s.days || []).includes(d)).map(d => s.teachers?.[d] || s.teacher).filter(Boolean))];
+      rows += `<tr class="sl-row">
+        <td><span class="sl-name" onclick="slGoReport(${a})" title="보고서 만들기">${escH(s.name)}</span></td>
+        <td style="color:#64748b;">${s.type === '초등' ? s.grade : s.grade}</td>
+        <td>${escH(s.school || '')}</td>
+        <td>${escH(teachers.join(', ') || s.teacher || '')}${!teachers.length && !s.teacher ? '<span style="color:#cbd5e1;">미지정</span>' : ''}</td>
+        <td>${dayHtml}</td>
+        <td style="color:#64748b;font-size:12px;">${s.startDate ? s.startDate.slice(2).replace(/-/g, '.') : ''}</td>
+        <td style="font-size:12px;">${escH(s.parentKakao || '')}</td>
+        <td style="text-align:right;"><button class="sl-mini" onclick="goRecord(${a})">📝 기록</button> <button class="sl-mini" onclick="slGoReport(${a})">📊 보고서</button></td>
+      </tr>`;
+    });
+  });
+  el.innerHTML = `<div class="sl-scroll"><table class="sl-tbl"><thead><tr><th>이름</th><th>학년</th><th>학교</th><th>담임</th><th>요일</th><th>등록일</th><th>학부모 카톡명</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function slGoReport(name, type) {
+  document.getElementById('rep-name').value = name;
+  document.getElementById('rep-type').value = type;
+  showPanel('report');
 }
 
 function populateReportDropdown(students) {
@@ -4366,7 +4543,12 @@ async function bgMakeOne(r, useAI) {
     const rr = await api('polish-feedback', { notes: d.notes, name: s.name, grade: d.grade || s.grade, type: s.type, attendanceInfo: d.attendanceInfo || [] });
     feedback = rr.feedback || feedback;
   }
-  const html = buildReportHTML({ ...d, grade: d.grade || s.grade, name: s.name, type: s.type, start, end: bgCtx.end, feedback });
+  let progress = [];
+  try {
+    if (!bgCtx.hist) bgCtx.hist = await getBookHistory(nextDayStr(bgCtx.end), null);   // 한 번만 불러와서 같이 씀
+    progress = await reportBookProgress(s.name, s.type, start, bgCtx.end, bgCtx.hist);
+  } catch (e) {}
+  const html = buildReportHTML({ ...d, grade: d.grade || s.grade, name: s.name, type: s.type, start, end: bgCtx.end, feedback, progress });
   await api('update-report-status', { action: 'save_draft', name: s.name, type: s.type, grade: s.grade,
     reportType: bgCtx.reportType, baseDate: bgCtx.baseDate, html, feedback });
   rsLocalSet({ name: s.name, type: s.type, grade: s.grade, reportType: bgCtx.reportType, baseDate: bgCtx.baseDate }, '생성완료', true);
@@ -4896,6 +5078,395 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+// ════════════════════════════════════════════
+// 📚 교재 관리 + 진행률
+//  · 학생별·과목별 교재 { b:교재명, u:단위, t:전체분량, c:시작 시점 위치, cd:그 날짜 }
+//  · 현재 위치 = 그 과목 최근 기록에서 단위 숫자를 읽음 (없으면 c)
+// ════════════════════════════════════════════
+const BOOK_SUBJ = [
+  { k: 'word',      label: '단어', icon: '📝' },
+  { k: 'grammar',   label: '문법', icon: '📐' },
+  { k: 'reading',   label: '독해', icon: '📖' },
+  { k: 'listening', label: '듣기', icon: '🎧' },
+  { k: 'writing',   label: '라이팅', labelHigh: '내신', icon: '✍️' },
+];
+const BOOK_UNITS = ['Day', 'point', 'Unit', 'Ch.', 'p.', '회', '강', '과'];
+const SUFFIX_UNITS = ['회', '강', '과'];   // 숫자 뒤에 붙는 단위
+const bookSubjLabel = (k, type) => { const s = BOOK_SUBJ.find(x => x.k === k); return s ? (type === '고등' && s.labelHigh ? s.labelHigh : s.label) : k; };
+const escH = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const nextDayStr = d => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + 1); return localDateStr(x); };
+const normB = v => String(v || '').replace(/\s+/g, '').toLowerCase();
+
+function unitRe(u) {
+  const R = '(\\d+)(?:\\s*[-~–～]\\s*(\\d+))?';
+  if (SUFFIX_UNITS.includes(u)) return new RegExp(R + '\\s*' + u);
+  const head = u.replace(/\.$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(head + '\\.?\\s*' + R, 'i');
+}
+
+// 기록 한 줄에서 이 교재의 {s, e} 읽기 (못 읽으면 null)
+function parseBookRange(text, book) {
+  if (!text || !book || !book.u) return null;
+  let t = String(text);
+  if (book.b) {                                  // 교재명이 있으면 그 뒤부터 봄
+    const i = normB(t).indexOf(normB(book.b));
+    if (i >= 0) {                                // 공백 무시 위치 → 원래 위치로 환산
+      let n = 0, j = 0;
+      for (; j < t.length && n < i; j++) if (!/\s/.test(t[j])) n++;
+      t = t.slice(j);
+    }
+  }
+  const m = t.match(unitRe(book.u));
+  if (m) { const s = +m[1], e = m[2] !== undefined ? +m[2] : s; return { s, e: Math.max(s, e) }; }
+  const bare = String(text).trim().match(/^(\d+)(?:\s*[-~–～]\s*(\d+))?\s*$/);   // "10~12"처럼 숫자만
+  if (bare) { const s = +bare[1], e = bare[2] !== undefined ? +bare[2] : s; return { s, e: Math.max(s, e) }; }
+  return null;
+}
+
+// entries(최신순)에서 asOf 날짜 '전'까지의 현재 위치
+function bookPosition(book, entries, beforeDate) {
+  for (const en of entries || []) {
+    if (beforeDate && en.d >= beforeDate) continue;
+    if (book.cd && en.d < book.cd) break;        // 등록 시점보다 예전 기록은 안 봄
+    const r = parseBookRange(en.v, book);
+    if (r) return { pos: r.e, last: r, date: en.d };
+  }
+  if (book.c !== undefined && book.c !== '' && book.c !== null && (!beforeDate || !book.cd || book.cd < beforeDate))
+    return { pos: +book.c, last: null, date: book.cd || '' };
+  return { pos: null, last: null, date: '' };
+}
+
+function bookProgress(book, entries, opts = {}) {
+  const now = bookPosition(book, entries, opts.before);
+  const t = +book.t || 0;
+  const pct = t && now.pos !== null ? Math.max(0, Math.min(100, Math.round(now.pos / t * 100))) : null;
+  let gain = null;
+  if (opts.since && now.pos !== null) {
+    const prev = bookPosition(book, entries, opts.since);
+    if (prev.pos !== null && now.pos >= prev.pos) gain = now.pos - prev.pos;
+  }
+  return { pos: now.pos, total: t, pct, gain, last: now.last, date: now.date };
+}
+
+const fmtBookAmount = (u, n) => SUFFIX_UNITS.includes(u) ? `${n}${u}` : `${u} ${n}`;
+
+// ── 진도 기록 불러오기 (캐시) ──
+const bookHistCache = {};
+async function getBookHistory(before, name, force) {
+  const key = before + '|' + (name || '*');
+  const c = bookHistCache[key];
+  if (!force && c && Date.now() - c.t < 3 * 60 * 1000) return c.data;   // 3분 안이면 다시 안 부름
+  const d = await api('save-record', { action: 'get_progress_history', before, days: 365, ...(name ? { name } : {}) });
+  bookHistCache[key] = { t: Date.now(), data: d.history || {} };
+  return bookHistCache[key].data;
+}
+
+// ── 보고서용 진행률 ──
+async function reportBookProgress(name, type, start, end, histAll) {
+  let st = allStudentsCache.find(x => x.name === name && x.type === type);
+  if (!st) {
+    try { const d = await api('get-students', {}); allStudentsCache = d.students || []; } catch (e) {}
+    st = allStudentsCache.find(x => x.name === name && x.type === type);
+  }
+  const books = st?.books || {};
+  const keys = BOOK_SUBJ.map(x => x.k).filter(k => books[k]?.b && +books[k]?.t > 0);
+  if (!keys.length) return [];
+  let hist;
+  try { hist = histAll ? histAll[name] : (await getBookHistory(nextDayStr(end), name))[name]; } catch (e) { return []; }
+  hist = hist || {};
+  return keys.map(k => {
+    const b = books[k];
+    const p = bookProgress(b, hist[k]?.entries, { before: nextDayStr(end), since: start });
+    return { k, label: bookSubjLabel(k, type), book: b.b, unit: b.u, ...p };
+  }).filter(p => p.pos !== null);
+}
+
+function buildProgressSectionHTML(progress, isHigh, num) {
+  if (!progress || !progress.length) return '';
+  const color = isHigh ? '#b01c2e' : '#3a5fd9';
+  const per = isHigh ? '이번 달' : '이번 주';
+  const rows = progress.map(p => `
+    <div style="margin:0 0 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;">
+        <span><b>${escH(p.label)}</b> <span style="color:#555;">${escH(p.book)}</span></span>
+        <span style="white-space:nowrap;color:#333;">${p.pos} / ${p.total} ${escH(p.unit)} · <b style="color:${color};">${p.pct}%</b></span>
+      </div>
+      <div style="height:9px;background:#eef0f3;border-radius:5px;overflow:hidden;margin-top:5px;">
+        <div style="width:${p.pct}%;height:100%;background:${color};border-radius:5px;"></div>
+      </div>
+      ${p.gain ? `<div style="font-size:11px;color:#777;margin-top:3px;">${per} +${p.gain} ${escH(p.unit)} 진행${p.pct >= 100 ? ' · 🎉 완료' : ''}</div>`
+               : (p.pct >= 100 ? `<div style="font-size:11px;color:#777;margin-top:3px;">🎉 교재 완료</div>` : '')}
+    </div>`).join('');
+  const title = isHigh ? `${num}. 교재 진행률 (Progress)` : `📈 ${num}. 교재 진행률`;
+  return `
+      <div class="rc-section">
+        <div class="rc-section-title-${isHigh ? 'high' : 'mid'}">${title}</div>
+        <div class="rc-progress" style="padding:4px 2px 0;">${rows}</div>
+      </div>`;
+}
+
+// ════════════ 교재 관리 화면 ════════════
+let bmStudents = [], bmHist = {}, bmSugg = {}, bmChecked = new Set(), bmLevel = 'all', bmTeacher = '', bmSearch = '';
+const bmKey = s => `${s.name}|${s.type}`;
+
+function setStudentView(v) {
+  document.getElementById('sv-cards').classList.toggle('active', v === 'cards');
+  document.getElementById('sv-books').classList.toggle('active', v === 'books');
+  document.getElementById('student-list-container').style.display = v === 'cards' ? '' : 'none';
+  document.getElementById('books-view').style.display = v === 'books' ? '' : 'none';
+  if (v === 'books') openBooksView();
+}
+
+async function openBooksView(force) {
+  const wrap = document.getElementById('bm-table');
+  if (!force && bmStudents.length) { renderBooksView(); return; }
+  wrap.innerHTML = '<div class="loading-spinner">학생 명단과 진도 기록을 불러오는 중... (처음엔 몇 초 걸려요)</div>';
+  try {
+    const [st, hist] = await Promise.all([
+      api('get-students', {}),
+      getBookHistory(nextDayStr(localDateStr(new Date())), null, force),
+    ]);
+    bmStudents = st.students || [];
+    allStudentsCache = bmStudents;
+    bmHist = hist;
+    renderBooksView();
+  } catch (e) {
+    wrap.innerHTML = `<div class="loading-spinner">오류: ${escH(e.message)}</div>`;
+  }
+}
+
+function bmFiltered() {
+  return bmStudents.filter(s =>
+    (bmLevel === 'all' || (bmLevel === 'high' ? s.type === '고등' : s.type !== '고등')) &&
+    (!bmTeacher || (bmTeacher === '__none__' ? !s.teacher : s.teacher === bmTeacher)) &&
+    (!bmSearch || s.name.includes(bmSearch)));
+}
+
+function bmCatalog() {   // 다른 학생들이 쓰는 교재 목록 (교재명 → 단위·분량)
+  const cat = {};
+  bmStudents.forEach(s => Object.entries(s.books || {}).forEach(([k, b]) => {
+    if (!b?.b) return;
+    const key = b.b.trim();
+    const c = cat[key] || (cat[key] = { b: key, u: b.u, t: b.t, n: 0, subj: {} });
+    c.n++; c.subj[k] = (c.subj[k] || 0) + 1;
+    if (!c.t && b.t) c.t = b.t;
+  }));
+  return Object.values(cat).sort((a, b) => b.n - a.n || a.b.localeCompare(b.b, 'ko'));
+}
+
+function bmCellHTML(s, k) {
+  const b = (s.books || {})[k];
+  const sg = bmSugg[bmKey(s)]?.[k];
+  const click = `onclick="openBookEditor('${escH(s.name)}','${s.type}','${k}')"`;
+  if (!b?.b) {
+    if (sg) return `<td class="bm-cell bm-sugg" ${click} title="지난 기록에서 찾은 제안 · 눌러서 확인">
+      <div class="bm-book">💡 ${escH(sg.b || '(교재명?)')}</div><div class="bm-sub">${escH(sg.u)}${sg.c ? ' · 지금 ' + sg.c : ''}</div></td>`;
+    return `<td class="bm-cell bm-empty" ${click}>＋</td>`;
+  }
+  const p = bookProgress(b, bmHist[s.name]?.[k]?.entries);
+  const color = p.pct >= 90 ? '#d97706' : (s.type === '고등' ? '#b01c2e' : '#3a5fd9');
+  const amount = p.pos !== null ? `${p.pos}${b.t ? ' / ' + b.t : ''} ${escH(b.u)}` : `${escH(b.u)} · 위치 모름`;
+  return `<td class="bm-cell" ${click} title="${escH(p.last ? '최근 기록(' + p.date + ')에서 읽음' : (p.pos !== null ? '시작 위치로 계산' : '기록에서 위치를 못 읽었어요'))}">
+    <div class="bm-book">${escH(b.b)}</div>
+    ${p.pct !== null ? `<div class="bm-bar"><i style="width:${p.pct}%;background:${color};"></i></div>` : ''}
+    <div class="bm-sub">${amount}${p.pct !== null ? ` · <b style="color:${color}">${p.pct}%</b>` : ''}</div></td>`;
+}
+
+function renderBooksView() {
+  const list = bmFiltered();
+  const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
+  list.sort((a, b) => (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3) || (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) || a.name.localeCompare(b.name, 'ko'));
+  const anyHigh = list.some(s => s.type === '고등'), anyLow = list.some(s => s.type !== '고등');
+  const head = BOOK_SUBJ.map(x => `<th>${x.icon} ${x.labelHigh && anyHigh && !anyLow ? x.labelHigh : x.labelHigh && anyHigh ? x.label + '/' + x.labelHigh : x.label}</th>`).join('');
+  let lastG = '', rows = '';
+  list.forEach(s => {
+    const g = s.type === '초등' ? '초등부' : `${s.type} ${s.grade}`;
+    if (g !== lastG) { lastG = g; rows += `<tr class="bm-group"><td colspan="${BOOK_SUBJ.length + 2}">${g}</td></tr>`; }
+    const key = bmKey(s);
+    rows += `<tr><td class="bm-chk"><input type="checkbox" ${bmChecked.has(key) ? 'checked' : ''} onchange="bmToggle('${escH(key)}',this.checked)"></td>
+      <td class="bm-name">${escH(s.name)}</td>${BOOK_SUBJ.map(x => bmCellHTML(s, x.k)).join('')}</tr>`;
+  });
+  document.getElementById('bm-table').innerHTML = list.length
+    ? `<div class="bm-scroll"><table class="bm-tbl"><thead><tr><th class="bm-chk"><input type="checkbox" onchange="bmToggleAll(this.checked)" title="보이는 학생 모두"></th><th>학생</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`
+    : '<div class="empty" style="padding:20px;">해당 학생이 없습니다</div>';
+  renderBookAlerts();
+  const nS = Object.values(bmSugg).reduce((a, o) => a + Object.keys(o).length, 0);
+  const sb = document.getElementById('bm-sugg-save');
+  sb.style.display = nS ? '' : 'none';
+  sb.textContent = `💾 제안 ${nS}개 모두 저장`;
+  document.getElementById('bm-checked-n').textContent = bmChecked.size ? `☑ ${bmChecked.size}명 선택됨 — 칸을 누르면 같이 지정할 수 있어요` : '';
+}
+
+function renderBookAlerts() {
+  const near = [];
+  bmStudents.forEach(s => Object.entries(s.books || {}).forEach(([k, b]) => {
+    if (!b?.b || !(+b.t)) return;
+    const p = bookProgress(b, bmHist[s.name]?.[k]?.entries);
+    if (p.pct !== null && p.pct >= 90) near.push({ s, k, b, p });
+  }));
+  near.sort((a, b) => b.p.pct - a.p.pct);
+  const el = document.getElementById('bm-alerts');
+  el.innerHTML = near.length
+    ? `<b style="color:#b45309;">⏰ 곧 끝나는 교재 (90% 이상) ${near.length}개</b> — 다음 교재를 준비하세요<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${near.map(x =>
+        `<span class="bm-chip" onclick="openBookEditor('${escH(x.s.name)}','${x.s.type}','${x.k}')">${escH(x.s.name)} · ${escH(x.b.b)} <b>${x.p.pct}%</b></span>`).join('')}</div>`
+    : '';
+  el.style.display = near.length ? '' : 'none';
+}
+
+function bmToggle(key, on) { on ? bmChecked.add(key) : bmChecked.delete(key); renderBooksView(); }
+function bmToggleAll(on) { bmFiltered().forEach(s => on ? bmChecked.add(bmKey(s)) : bmChecked.delete(bmKey(s))); renderBooksView(); }
+function bmSetLevel(v) { bmLevel = v; document.querySelectorAll('.bm-lv').forEach(b => b.classList.toggle('active', b.dataset.v === v)); renderBooksView(); }
+
+// ── 💡 지난 기록에서 교재 찾기 ──
+function guessBookFromText(text) {
+  const t = String(text || '').trim();
+  if (!t || /내신|학교\s*print|프린트|유인물/.test(t)) return null;
+  const tests = [['Day', /day\s*\d/i], ['point', /point\s*\d/i], ['Unit', /unit\.?\s*\d/i], ['Ch.', /ch\.?\s*\d/i], ['p.', /p\.\s*\d/i], ['회', /\d\s*회/], ['강', /\d\s*강/]];
+  let best = null;
+  tests.forEach(([u, re]) => { const m = t.match(re); if (m && (best === null || m.index < best.i)) best = { u, i: m.index }; });
+  if (!best) return null;
+  let name = t.slice(0, best.i);
+  if (SUFFIX_UNITS.includes(best.u)) name = name.replace(/[\d\s~\-–～,]+$/, '');
+  name = name.replace(/\[[^\]]*\]/g, ' ').replace(/[\s:·,\-~(]+$/, '').replace(/^[\s:·,\-~)]+/, '').trim();
+  if (/^\d*$/.test(name)) name = '';
+  const book = { b: name, u: best.u };
+  const r = parseBookRange(t, book);
+  return r ? { ...book, c: r.e } : null;
+}
+
+function findBookSuggestions() {
+  bmSugg = {};
+  let n = 0;
+  bmFiltered().forEach(s => {
+    const h = bmHist[s.name] || {};
+    BOOK_SUBJ.forEach(({ k }) => {
+      if ((s.books || {})[k]?.b) return;
+      const en = h[k]?.entries || [];
+      for (const e of en.slice(0, 4)) {
+        const g = guessBookFromText(e.v);
+        if (g) {
+          const cat = bmCatalog().find(c => normB(c.b) === normB(g.b) && g.b);
+          (bmSugg[bmKey(s)] || (bmSugg[bmKey(s)] = {}))[k] = { ...g, t: cat?.t || '', cd: e.d };
+          n++; break;
+        }
+      }
+    });
+  });
+  renderBooksView();
+  toast(n ? `💡 ${n}개 찾았어요 — 노란 칸을 눌러 확인하거나 한꺼번에 저장하세요` : '찾은 교재가 없어요 (Day·point·Unit·회 같은 단위가 있는 기록만 찾아요)');
+}
+
+async function saveAllSuggestions() {
+  const items = [];
+  Object.entries(bmSugg).forEach(([key, subj]) => {
+    const s = bmStudents.find(x => bmKey(x) === key);
+    if (!s) return;
+    const books = { ...(s.books || {}) };
+    Object.entries(subj).forEach(([k, g]) => { if (g.b) books[k] = { b: g.b, u: g.u, t: +g.t || '', c: g.c, cd: g.cd }; });
+    items.push({ s, books });
+  });
+  const named = items.filter(it => Object.keys(it.books).length);
+  const skipped = Object.values(bmSugg).reduce((a, o) => a + Object.values(o).filter(g => !g.b).length, 0);
+  if (!named.length) { toast('교재명이 있는 제안이 없어요. 칸을 눌러 교재명을 넣어 주세요.'); return; }
+  if (!confirm(`제안 ${named.length}명분을 저장할까요?${skipped ? `\n(교재명을 못 찾은 ${skipped}칸은 빼고 저장해요)` : ''}\n\n전체 분량은 비어 있을 수 있어요 — 칸을 눌러 채우면 진행률이 나와요.`)) return;
+  await bmSaveItems(named);
+  named.forEach(it => { const o = bmSugg[bmKey(it.s)]; if (o) Object.keys(o).forEach(k => { if (o[k].b) delete o[k]; }); if (o && !Object.keys(o).length) delete bmSugg[bmKey(it.s)]; });
+  renderBooksView();
+}
+
+async function bmSaveItems(items) {
+  const btn = document.getElementById('bm-sugg-save');
+  toast(`⏳ ${items.length}명 저장 중...`);
+  const d = await api('save-attendance', { action: 'set_books', items: items.map(it => ({ name: it.s.name, type: it.s.type, books: it.books })) });
+  (d.results || []).forEach(r => { if (r.ok) { const it = items.find(x => x.s.name === r.name); if (it) it.s.books = it.books; } });
+  const okN = (d.results || []).filter(r => r.ok).length;
+  toast(d.failed ? `저장 ${okN}명 · 실패 ${d.failed}명` : `📚 ${okN}명 교재 저장 ✓`);
+  allStudentsCache = bmStudents;
+  return d;
+}
+
+// ── 교재 편집 창 ──
+let beCtx = null;
+function openBookEditor(name, type, k) {
+  if (!bmStudents.length) bmStudents = allStudentsCache;
+  const s = bmStudents.find(x => x.name === name && x.type === type);
+  if (!s) return;
+  const cur = (s.books || {})[k] || bmSugg[bmKey(s)]?.[k] || {};
+  const fromSugg = !(s.books || {})[k]?.b && !!bmSugg[bmKey(s)]?.[k];
+  beCtx = { s, k };
+  const p = bookProgress({ u: 'Day', ...cur }, bmHist[s.name]?.[k]?.entries);
+  document.getElementById('be-title').textContent = `📚 ${s.name} · ${bookSubjLabel(k, s.type)} 교재`;
+  document.getElementById('be-b').value = cur.b || '';
+  const uSel = document.getElementById('be-u');
+  uSel.value = BOOK_UNITS.includes(cur.u) ? cur.u : (cur.u ? '__other' : 'Day');
+  document.getElementById('be-u-other').value = BOOK_UNITS.includes(cur.u) ? '' : (cur.u || '');
+  document.getElementById('be-u-other').style.display = uSel.value === '__other' ? '' : 'none';
+  document.getElementById('be-t').value = cur.t || '';
+  document.getElementById('be-c').value = '';
+  const recent = (bmHist[s.name]?.[k]?.entries || []).slice(0, 3).map(e => `${e.d.slice(5).replace('-', '/')} ${e.v}`);
+  document.getElementById('be-info').innerHTML =
+    (fromSugg ? '<div style="color:#b45309;font-weight:700;">💡 지난 기록에서 찾은 제안이에요. 맞게 고친 뒤 저장하세요.</div>' : '') +
+    (cur.b && p.pos !== null ? `<div>지금 위치: <b>${p.pos}</b> ${p.last ? `(${p.date} 기록에서 읽음)` : '(시작 위치)'}</div>` : '') +
+    (recent.length ? `<div style="margin-top:4px;">최근 기록:<br>${recent.map(escH).join('<br>')}</div>` : '<div>최근 기록 없음</div>');
+  document.getElementById('be-c').placeholder = p.pos !== null ? `비우면 기록에서 읽음 (지금 ${p.pos})` : '예: 0 (처음 시작)';
+  const others = [...bmChecked].filter(x => x !== bmKey(s));
+  document.getElementById('be-multi-row').style.display = others.length ? '' : 'none';
+  document.getElementById('be-multi').checked = false;
+  document.getElementById('be-multi-label').textContent = `체크한 학생 ${others.length}명에게도 같은 교재 지정`;
+  document.getElementById('be-del').style.display = (s.books || {})[k]?.b ? '' : 'none';
+  const dl = document.getElementById('be-catalog');
+  dl.innerHTML = bmCatalog().map(c => `<option value="${escH(c.b)}">${escH(c.u || '')}${c.t ? ' · ' + c.t : ''} · ${c.n}명</option>`).join('');
+  document.getElementById('modal-book').classList.add('open');
+  setTimeout(() => document.getElementById('be-b').focus(), 50);
+}
+
+function beOnBookInput() {   // 목록의 교재를 고르면 단위·분량 자동
+  const c = bmCatalog().find(x => x.b === document.getElementById('be-b').value.trim());
+  if (!c) return;
+  const uSel = document.getElementById('be-u');
+  if (c.u) { uSel.value = BOOK_UNITS.includes(c.u) ? c.u : '__other'; document.getElementById('be-u-other').value = BOOK_UNITS.includes(c.u) ? '' : c.u; document.getElementById('be-u-other').style.display = uSel.value === '__other' ? '' : 'none'; }
+  if (c.t && !document.getElementById('be-t').value) document.getElementById('be-t').value = c.t;
+}
+
+async function saveBookEditor(remove) {
+  if (!beCtx) return;
+  const { s, k } = beCtx;
+  const b = document.getElementById('be-b').value.trim();
+  const uSel = document.getElementById('be-u').value;
+  const u = uSel === '__other' ? document.getElementById('be-u-other').value.trim() : uSel;
+  const t = document.getElementById('be-t').value.trim();
+  const cRaw = document.getElementById('be-c').value.trim();
+  if (!remove && !b) { toast('교재 이름을 넣어 주세요.'); return; }
+  if (!remove && !u) { toast('단위를 골라 주세요.'); return; }
+  const targets = [s];
+  if (!remove && document.getElementById('be-multi').checked)
+    bmStudents.forEach(x => { if (bmChecked.has(bmKey(x)) && x !== s) targets.push(x); });
+  const sugg = bmSugg[bmKey(s)]?.[k];
+  const items = targets.map(x => {
+    const books = { ...(x.books || {}) };
+    if (remove) delete books[k];
+    else {
+      const prev = books[k] || {};
+      const sameBook = normB(prev.b) === normB(b);
+      const entry = { b, u, t: t ? +t : '' };
+      if (cRaw !== '') { entry.c = +cRaw; entry.cd = localDateStr(new Date()); }
+      else if (sameBook && prev.c !== undefined) { entry.c = prev.c; entry.cd = prev.cd; }
+      else if (x === s && sugg && normB(sugg.b) === normB(b)) { entry.c = sugg.c; entry.cd = sugg.cd; }
+      else if (!sameBook && prev.b) { entry.c = 0; entry.cd = localDateStr(new Date()); }   // 교재를 바꿈: 오늘부터 새로 셈
+      // 처음 등록: 기록에서 그대로 읽음
+      books[k] = entry;
+    }
+    return { s: x, books };
+  });
+  try {
+    await bmSaveItems(items);
+    if (bmSugg[bmKey(s)]) { delete bmSugg[bmKey(s)][k]; if (!Object.keys(bmSugg[bmKey(s)]).length) delete bmSugg[bmKey(s)]; }
+    closeModal('modal-book');
+    if (document.getElementById('books-view').style.display !== 'none') renderBooksView();
+  } catch (e) { toast('저장 실패: ' + e.message); }
+}
+
 </script>
 
 <!-- 📤 발송 모드 -->
