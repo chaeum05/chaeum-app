@@ -506,6 +506,17 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .bt-wrap { max-width:100%; }
 #batch-record-card button { white-space:nowrap; }
 #batch-filter { min-width:140px; }
+/* 📖 교재 목록 */
+.bl-tbl { border-collapse:collapse; width:100%; font-size:12px; min-width:820px; }
+.bl-tbl th { background:#1e293b; color:#cbd5e1; padding:7px 8px; text-align:left; font-weight:700; position:sticky; top:0; z-index:1; white-space:nowrap; }
+.bl-tbl td { padding:5px 6px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.bl-tbl input[type=text], .bl-tbl input[type=number], .bl-tbl select { padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:'Pretendard',sans-serif; box-sizing:border-box; width:100%; }
+.bl-tbl tr.bl-new td { background:#f0f9ff; }
+.bl-tbl tr.bl-extra td { background:#fffbeb; }
+.bl-subj { display:flex; gap:2px; flex-wrap:wrap; }
+.bl-subj label { font-size:11px; padding:2px 6px; border:1px solid var(--border); border-radius:10px; cursor:pointer; white-space:nowrap; user-select:none; }
+.bl-subj label.on { background:#eef2ff; border-color:#a5b4fc; color:#3730a3; font-weight:700; }
+.bl-subj input { display:none; }
 /* 📚 교재 관리 */
 .bm-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
 .bm-tbl { border-collapse:collapse; width:100%; min-width:820px; font-size:12px; }
@@ -1003,6 +1014,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <option value="">담임 전체</option><option value="이유민">이유민</option><option value="성형주">성형주</option><option value="__none__">담임 미지정</option>
           </select>
           <input type="text" placeholder="이름 검색" style="width:100px;" oninput="bmSearch=this.value.trim();renderBooksView()">
+          <button class="bm-btn primary" id="bm-booklist-btn" onclick="openBookList()" title="학원에서 쓰는 교재를 미리 등록해 두고 학생 교재를 고를 때 써요">📖 교재 목록</button>
           <button class="bm-btn" onclick="findBookSuggestions()" title="Day·point·Unit·회 같은 단위가 있는 최근 기록에서 교재를 찾아 노란 칸으로 보여줘요">💡 지난 기록에서 교재 찾기</button>
           <button class="bm-btn primary" id="bm-sugg-save" style="display:none;" onclick="saveAllSuggestions()">💾 제안 모두 저장</button>
           <button class="bm-btn" onclick="openBooksView(true)">🔄 새로고침</button>
@@ -1253,12 +1265,27 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <!-- 보강 날짜 등록 팝업 -->
+    <div id="modal-booklist" class="modal-overlay">
+      <div class="modal-box" style="width:min(980px,96vw);max-height:90vh;display:flex;flex-direction:column;padding:22px 22px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <div class="modal-title" style="margin:0;">📖 교재 목록</div>
+          <div style="display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;" id="bl-tabs"></div>
+          <input type="text" id="bl-q" placeholder="교재 검색" oninput="renderBookList()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;width:130px;">
+          <button class="bm-btn primary" onclick="blAddRow()" style="margin-left:auto;">＋ 새 교재</button>
+          <button class="bm-btn" onclick="closeModal('modal-booklist')">닫기</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">여기 등록한 교재가 학생 교재를 고를 때 목록으로 나와요 · 이름·단위·분량을 고치면 그 교재를 쓰는 학생들도 같이 바꿀 수 있어요</div>
+        <div id="bl-body" style="overflow:auto;flex:1;border:1px solid var(--border);border-radius:10px;"></div>
+      </div>
+    </div>
+
     <div id="modal-book" class="modal-overlay">
       <div class="modal-box" style="width:360px;">
         <div class="modal-title" id="be-title">📚 교재</div>
         <div class="modal-field">
-          <label>교재 이름</label>
-          <input type="text" id="be-b" list="be-catalog" placeholder="예: 어법끝, 자이스토리, 천일문 Grammar" oninput="beOnBookInput()">
+          <label>교재 <span style="font-weight:400;text-transform:none;color:var(--text3);">· 목록에 없으면 📖 교재 목록에서 먼저 등록하세요</span></label>
+          <select id="be-bsel" onchange="beOnSelect()"></select>
+          <input type="text" id="be-b" list="be-catalog" placeholder="교재 이름 직접 입력" oninput="beOnBookInput()" style="margin-top:6px;display:none;">
           <datalist id="be-catalog"></datalist>
         </div>
         <div style="display:flex;gap:8px;">
@@ -5282,10 +5309,14 @@ async function openBooksView(force) {
   if (!force && bmStudents.length) { renderBooksView(); return; }
   wrap.innerHTML = '<div class="loading-spinner">학생 명단과 진도 기록을 불러오는 중... (처음엔 몇 초 걸려요)</div>';
   try {
-    const [st, hist] = await Promise.all([
+    const [st, hist, bl] = await Promise.all([
       api('get-students', {}),
       getBookHistory(nextDayStr(localDateStr(new Date())), null, force),
+      api('save-attendance', { action: 'list_books' }).catch(e => ({ books: null, err: e.message })),
     ]);
+    bmBooks = bl.books || [];
+    if (bl.err) toast('교재 목록을 못 불러왔어요: ' + bl.err);
+    updateBookListBtn();
     bmStudents = st.students || [];
     allStudentsCache = bmStudents;
     bmHist = hist;
@@ -5302,16 +5333,23 @@ function bmFiltered() {
     (!bmSearch || s.name.includes(bmSearch)));
 }
 
-function bmCatalog() {   // 다른 학생들이 쓰는 교재 목록 (교재명 → 단위·분량)
+let bmBooks = [];   // 📖 교재 목록 (노션 '교재 목록' 표)
+function bmCatalog() {   // 교재 목록 + 학생에게만 등록된 교재 (사용 학생 수 포함)
   const cat = {};
+  bmBooks.forEach(x => { cat[normB(x.b)] = { ...x, n: 0, used: {}, listed: true }; });
   bmStudents.forEach(s => Object.entries(s.books || {}).forEach(([k, b]) => {
     if (!b?.b) return;
-    const key = b.b.trim();
-    const c = cat[key] || (cat[key] = { b: key, u: b.u, t: b.t, n: 0, subj: {} });
-    c.n++; c.subj[k] = (c.subj[k] || 0) + 1;
+    const key = normB(b.b);
+    const c = cat[key] || (cat[key] = { b: b.b.trim(), u: b.u, t: b.t, subj: [], n: 0, used: {}, listed: false });
+    c.n++; c.used[k] = (c.used[k] || 0) + 1;
+    if (!c.listed && !c.subj.includes(k)) c.subj.push(k);
     if (!c.t && b.t) c.t = b.t;
   }));
-  return Object.values(cat).sort((a, b) => b.n - a.n || a.b.localeCompare(b.b, 'ko'));
+  return Object.values(cat).sort((a, b) => a.b.localeCompare(b.b, 'ko'));
+}
+function updateBookListBtn() {
+  const el = document.getElementById('bm-booklist-btn');
+  if (el) el.textContent = `📖 교재 목록 (${bmBooks.length})`;
 }
 
 function bmCellHTML(s, k) {
@@ -5461,6 +5499,7 @@ function openBookEditor(name, type, k) {
   const p = bookProgress({ u: 'Day', ...cur }, bmHist[s.name]?.[k]?.entries);
   document.getElementById('be-title').textContent = `📚 ${s.name} · ${bookSubjLabel(k, s.type)} 교재`;
   document.getElementById('be-b').value = cur.b || '';
+  beFillSelect(k, cur.b || '');
   const uSel = document.getElementById('be-u');
   uSel.value = BOOK_UNITS.includes(cur.u) ? cur.u : (cur.u ? '__other' : 'Day');
   document.getElementById('be-u-other').value = BOOK_UNITS.includes(cur.u) ? '' : (cur.u || '');
@@ -5481,7 +5520,35 @@ function openBookEditor(name, type, k) {
   const dl = document.getElementById('be-catalog');
   dl.innerHTML = bmCatalog().map(c => `<option value="${escH(c.b)}">${escH(c.u || '')}${c.t ? ' · ' + c.t : ''} · ${c.n}명</option>`).join('');
   document.getElementById('modal-book').classList.add('open');
-  setTimeout(() => document.getElementById('be-b').focus(), 50);
+  setTimeout(() => document.getElementById('be-bsel').focus(), 50);
+}
+
+// 교재 고르기 칸: 이 과목 교재 → 다른 교재 → 직접 입력
+function beFillSelect(k, curB) {
+  const sel = document.getElementById('be-bsel');
+  const cat = bmCatalog();
+  const mine = cat.filter(c => (c.subj || []).includes(k));
+  const rest = cat.filter(c => !(c.subj || []).includes(k));
+  const opt = c => `<option value="${escH(c.b)}">${escH(c.b)}  (${escH(c.u || '?')}${c.t ? ' · ' + c.t : ''})${c.listed ? '' : ' ·목록에 없음'}</option>`;
+  sel.innerHTML = `<option value="">── 교재 고르기 ──</option>`
+    + (mine.length ? `<optgroup label="${bookSubjLabel(k)} 교재">${mine.map(opt).join('')}</optgroup>` : '')
+    + (rest.length ? `<optgroup label="다른 과목 교재">${rest.map(opt).join('')}</optgroup>` : '')
+    + `<option value="__direct">✏️ 목록에 없는 교재 직접 입력</option>`;
+  const hit = cat.find(c => normB(c.b) === normB(curB));
+  sel.value = hit ? hit.b : (curB ? '__direct' : '');
+  document.getElementById('be-b').style.display = sel.value === '__direct' ? '' : 'none';
+}
+function beOnSelect() {
+  const sel = document.getElementById('be-bsel');
+  const inp = document.getElementById('be-b');
+  if (sel.value === '__direct') { inp.style.display = ''; if (bmCatalog().some(c => c.b === inp.value)) inp.value = ''; inp.focus(); return; }
+  inp.style.display = 'none';
+  inp.value = sel.value;
+  const c = bmCatalog().find(x => x.b === sel.value);
+  if (!c) return;
+  const uSel = document.getElementById('be-u');
+  if (c.u) { uSel.value = BOOK_UNITS.includes(c.u) ? c.u : '__other'; document.getElementById('be-u-other').value = BOOK_UNITS.includes(c.u) ? '' : c.u; document.getElementById('be-u-other').style.display = uSel.value === '__other' ? '' : 'none'; }
+  document.getElementById('be-t').value = c.t || '';
 }
 
 function beOnBookInput() {   // 목록의 교재를 고르면 단위·분량 자동
@@ -5490,6 +5557,109 @@ function beOnBookInput() {   // 목록의 교재를 고르면 단위·분량 자
   const uSel = document.getElementById('be-u');
   if (c.u) { uSel.value = BOOK_UNITS.includes(c.u) ? c.u : '__other'; document.getElementById('be-u-other').value = BOOK_UNITS.includes(c.u) ? '' : c.u; document.getElementById('be-u-other').style.display = uSel.value === '__other' ? '' : 'none'; }
   if (c.t && !document.getElementById('be-t').value) document.getElementById('be-t').value = c.t;
+}
+
+// ════════════ 📖 교재 목록 관리 ════════════
+let blTab = 'all', blNewRows = 0;
+async function openBookList() {
+  if (!bmStudents.length) { await openBooksView(); }
+  document.getElementById('modal-booklist').classList.add('open');
+  renderBookList();
+}
+function blTabs() {
+  const tabs = [['all', '전체'], ...BOOK_SUBJ.map(x => [x.k, x.label])];
+  document.getElementById('bl-tabs').innerHTML = tabs.map(([k, l]) => `<button class="rs-tab${blTab === k ? ' active' : ''}" onclick="blTab='${k}';renderBookList()">${l}</button>`).join('');
+}
+function blRowHTML(c, i, kind) {
+  const subjBox = BOOK_SUBJ.map(x => {
+    const on = (c.subj || []).includes(x.k);
+    return `<label class="${on ? 'on' : ''}"><input type="checkbox" data-k="${x.k}" ${on ? 'checked' : ''} onchange="this.parentNode.classList.toggle('on',this.checked)">${x.label}</label>`;
+  }).join('');
+  const uOpts = BOOK_UNITS.map(u => `<option${c.u === u ? ' selected' : ''}>${u}</option>`).join('') + (c.u && !BOOK_UNITS.includes(c.u) ? `<option selected>${escH(c.u)}</option>` : '');
+  const used = c.n ? `<span title="${escH(Object.entries(c.used || {}).map(([k, n]) => bookSubjLabel(k) + ' ' + n + '명').join(', '))}">${c.n}명</span>` : '<span style="color:#cbd5e1;">0</span>';
+  return `<tr class="${kind === 'new' ? 'bl-new' : kind === 'extra' ? 'bl-extra' : ''}" data-i="${i}" data-id="${c.id || ''}" data-orig="${escH(c.b || '')}">
+    <td style="min-width:220px;"><input type="text" class="bl-b" value="${escH(c.b || '')}" placeholder="교재 이름"></td>
+    <td><div class="bl-subj">${subjBox}</div></td>
+    <td style="width:86px;"><select class="bl-u">${uOpts}</select></td>
+    <td style="width:76px;"><input type="number" class="bl-t" value="${c.t ?? ''}" min="1" placeholder="분량"></td>
+    <td style="min-width:140px;"><input type="text" class="bl-memo" value="${escH(c.memo || '')}" placeholder="메모 (선택)"></td>
+    <td style="text-align:center;white-space:nowrap;">${kind === 'new' ? '' : used}</td>
+    <td style="white-space:nowrap;"><button class="bm-btn primary" onclick="blSave(this)">${kind === 'extra' ? '목록에 추가' : '저장'}</button>
+      ${kind === 'listed' ? `<button class="bm-btn" onclick="blDelete(this)" title="목록에서 빼기 (학생에게 등록된 교재는 그대로)">🗑</button>` : kind === 'new' ? `<button class="bm-btn" onclick="this.closest('tr').remove()">✕</button>` : ''}</td>
+  </tr>`;
+}
+function renderBookList() {
+  blTabs();
+  const q = normB(document.getElementById('bl-q').value);
+  const keep = [...document.querySelectorAll('#bl-body tr.bl-new')].map(tr => tr.outerHTML).join('');   // 쓰던 새 줄 유지
+  const cat = bmCatalog().filter(c => (blTab === 'all' || (c.subj || []).includes(blTab) || (c.used || {})[blTab]) && (!q || normB(c.b).includes(q)));
+  const listed = cat.filter(c => c.listed), extra = cat.filter(c => !c.listed);
+  let html = `<table class="bl-tbl"><thead><tr><th>교재 이름</th><th>과목</th><th>단위</th><th>전체 분량</th><th>메모</th><th>사용</th><th></th></tr></thead><tbody>${keep}`;
+  html += listed.map((c, i) => blRowHTML(c, i, 'listed')).join('');
+  if (extra.length) html += `<tr><td colspan="7" style="background:#fef3c7;font-weight:700;font-size:11px;color:#92400e;">목록에 없는 교재 ${extra.length}개 — 학생에게만 등록돼 있어요. '목록에 추가'를 누르면 다음부터 고를 수 있어요</td></tr>` + extra.map((c, i) => blRowHTML(c, i, 'extra')).join('');
+  if (!listed.length && !extra.length && !keep) html += `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">교재가 없어요 — ＋ 새 교재로 추가하세요</td></tr>`;
+  document.getElementById('bl-body').innerHTML = html + '</tbody></table>';
+}
+function blAddRow() {
+  const tb = document.querySelector('#bl-body tbody');
+  if (!tb) return;
+  tb.insertAdjacentHTML('afterbegin', blRowHTML({ subj: blTab !== 'all' ? [blTab] : [], u: 'Day' }, 'n' + (blNewRows++), 'new'));
+  tb.querySelector('tr.bl-new .bl-b').focus();
+}
+async function blSave(btn) {
+  const tr = btn.closest('tr');
+  const book = {
+    id: tr.dataset.id || undefined,
+    b: tr.querySelector('.bl-b').value.trim(),
+    subj: [...tr.querySelectorAll('.bl-subj input:checked')].map(x => x.dataset.k),
+    u: tr.querySelector('.bl-u').value,
+    t: tr.querySelector('.bl-t').value.trim(),
+    memo: tr.querySelector('.bl-memo').value.trim(),
+  };
+  if (!book.b) { toast('교재 이름을 넣어 주세요.'); return; }
+  if (!book.subj.length) { toast('과목을 하나 이상 골라 주세요.'); return; }
+  const origName = tr.dataset.orig || '';
+  if (!book.id && bmBooks.some(x => normB(x.b) === normB(book.b))) { toast('같은 이름의 교재가 이미 목록에 있어요.'); return; }
+  btn.disabled = true;
+  try {
+    const d = await api('save-attendance', { action: 'save_book', book });
+    const i = bmBooks.findIndex(x => x.id === d.book.id);
+    if (i >= 0) bmBooks[i] = d.book; else bmBooks.push(d.book);
+    updateBookListBtn();
+    // 이 교재를 쓰는 학생들도 바꿀지 (이름·단위·분량이 바뀐 경우)
+    if (origName) {
+      const users = [];
+      bmStudents.forEach(s => Object.entries(s.books || {}).forEach(([k, b]) => {
+        if (b?.b && normB(b.b) === normB(origName) && (b.b !== book.b || b.u !== book.u || String(b.t ?? '') !== String(book.t ?? ''))) users.push({ s, k });
+      }));
+      if (users.length && confirm(`이 교재를 쓰는 학생 ${users.length}명의 교재 정보도 똑같이 바꿀까요?\n(교재명 "${book.b}" · ${book.u} · 전체 ${book.t || '?'})`)) {
+        const byS = new Map();
+        users.forEach(({ s, k }) => {
+          const books = byS.get(s) || { ...(s.books || {}) };
+          books[k] = { ...books[k], b: book.b, u: book.u, t: book.t ? +book.t : '' };
+          byS.set(s, books);
+        });
+        await bmSaveItems([...byS.entries()].map(([s, books]) => ({ s, books })));
+      }
+    }
+    toast(`📖 "${book.b}" 저장 ✓`);
+    tr.remove();
+    renderBookList();
+    if (document.getElementById('books-view').style.display !== 'none') renderBooksView();
+  } catch (e) { toast('저장 실패: ' + e.message); btn.disabled = false; }
+}
+async function blDelete(btn) {
+  const tr = btn.closest('tr');
+  const name = tr.dataset.orig;
+  const c = bmCatalog().find(x => x.b === name);
+  if (!confirm(`"${name}"을(를) 교재 목록에서 뺄까요?${c?.n ? `\n\n이 교재를 쓰는 학생 ${c.n}명의 교재는 그대로 남아요.` : ''}\n(노션 휴지통에서 30일 안에 되살릴 수 있어요)`)) return;
+  try {
+    await api('save-attendance', { action: 'delete_book', id: tr.dataset.id });
+    bmBooks = bmBooks.filter(x => x.id !== tr.dataset.id);
+    updateBookListBtn();
+    renderBookList();
+    toast('목록에서 뺐어요');
+  } catch (e) { toast('삭제 실패: ' + e.message); }
 }
 
 async function saveBookEditor(remove) {
