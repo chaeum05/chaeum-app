@@ -46,17 +46,24 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: `${start} ~ ${end} 기간에 ${name} 학생 기록이 없습니다.` });
     }
 
-    const words=[], grammars=[], readings=[], listenings=[], writings=[], notes=[];
+    // 2026-10-24 이전에 만든 고등부 기록은 '라이팅' 칸에 내신대비가 들어 있어서 내신대비로 읽음 (노션 데이터는 그대로)
+    const LEGACY_NAESIN_BEFORE = '2026-10-23T15:00:00.000Z';
+    const words=[], grammars=[], readings=[], listenings=[], writings=[], naesins=[], notes=[];
     let grade = '';
     queryData.results.forEach(p => {
       const props = p.properties;
       grade = props['학년']?.select?.name || grade;
-      const g = k => props[k]?.rich_text?.[0]?.text?.content || '';
+      const g = k => (props[k]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+      const legacy = props['구분']?.select?.name === '고등' && (p.created_time || '') < LEGACY_NAESIN_BEFORE && !g('내신대비') && !!g('라이팅');
       if (g('단어'))     words.push(g('단어'));
       if (g('문법'))     grammars.push(g('문법'));
       if (g('독해'))     readings.push(g('독해'));
       if (g('듣기'))     listenings.push(g('듣기'));
-      if (g('라이팅'))   writings.push(g('라이팅'));
+      if (legacy)        naesins.push(g('라이팅'));
+      else {
+        if (g('라이팅'))   writings.push(g('라이팅'));
+        if (g('내신대비')) naesins.push(g('내신대비'));
+      }
       if (g('특이사항')) notes.push(g('특이사항'));
     });
 
@@ -105,7 +112,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      ok: true, grade, words, grammars, readings, listenings, writings, notes,
+      ok: true, grade, words, grammars, readings, listenings, writings, naesins, notes,
       attendanceInfo,
       count: queryData.results.length
     });
