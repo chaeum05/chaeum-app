@@ -5184,7 +5184,7 @@ async function reportBookProgress(name, type, start, end, histAll) {
 
 function buildProgressSectionHTML(progress, isHigh, num) {
   if (!progress || !progress.length) return '';
-  const color = isHigh ? '#b01c2e' : '#3a5fd9';
+  const color = isHigh ? '#b01c2e' : '#3498db';
   const per = isHigh ? '이번 달' : '이번 주';
   const rows = progress.map(p => `
     <div style="margin:0 0 10px;">
@@ -5383,6 +5383,10 @@ async function bmSaveItems(items) {
   const okN = (d.results || []).filter(r => r.ok).length;
   toast(d.failed ? `저장 ${okN}명 · 실패 ${d.failed}명` : `📚 ${okN}명 교재 저장 ✓`);
   allStudentsCache = bmStudents;
+  if (typeof batchStudents !== 'undefined' && batchStudents.length) {   // 일괄입력 화면에도 바로 반영
+    batchStudents = bmStudents;
+    if (document.getElementById('batch-record-card')?.style.display === 'block') renderBatchRows();
+  }
   return d;
 }
 
