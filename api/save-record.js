@@ -117,7 +117,7 @@ export default async function handler(req, res) {
   if (data.action === 'get_progress_history') {
     try {
       const before = data.before;               // 이 날짜 '전'까지
-      const days = Math.min(Number(data.days) || 60, 120);
+      const days = Math.min(Number(data.days) || 60, 400);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(before || '')) return res.status(400).json({ error: '기준일이 필요해요.' });
       const from = new Date(before + 'T00:00:00Z'); from.setUTCDate(from.getUTCDate() - days);
       const fromStr = from.toISOString().slice(0, 10);
@@ -127,6 +127,7 @@ export default async function handler(req, res) {
           filter: { and: [
             { property: '날짜', date: { on_or_after: fromStr } },
             { property: '날짜', date: { before: before } },
+            ...(data.name ? [{ property: '이름', rich_text: { equals: data.name } }] : []),
           ]},
           sorts: [{ property: '날짜', direction: 'descending' }],
           page_size: 100
@@ -151,8 +152,9 @@ export default async function handler(req, res) {
         Object.entries(FIELDS).forEach(([f, col]) => {
           const v = (p.properties[col]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
           if (!v) return;
-          const e = h[f] || (h[f] = { last: v, lastDate: date, recent: [] });
+          const e = h[f] || (h[f] = { last: v, lastDate: date, recent: [], entries: [] });
           if (!e.recent.includes(v) && e.recent.length < 6) e.recent.push(v);
+          if (e.entries.length < 40) e.entries.push({ d: date, v });   // 📚 교재 진행률 계산용 (최신순)
         });
       });
       return res.status(200).json({ ok: true, history });
