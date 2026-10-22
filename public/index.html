@@ -627,7 +627,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <div class="subject-item"><label>📐 문법</label><input type="text" id="r-grammar" placeholder="천일문 Ch.1"></div>
           <div class="subject-item"><label>📖 독해</label><input type="text" id="r-reading" placeholder="리딩마스터 3-1"></div>
           <div class="subject-item"><label>🎧 듣기</label><input type="text" id="r-listening" placeholder="수능듣기 Day1"></div>
-          <div class="subject-item"><label id="r-writing-label">✍️ 라이팅</label><input type="text" id="r-writing" placeholder="쓰작 Unit1"></div>
+          <div class="subject-item"><label id="r-writing-label">✍️ 라이팅</label><input type="text" id="r-writing" placeholder="천일문 Writing Ch.1"></div>
+          <div class="subject-item"><label>🏫 내신대비</label><input type="text" id="r-naesin" placeholder="내신대비 7과 문제풀이"></div>
         </div>
         <div class="form-group">
           <label>수업 메모 / 특이사항</label>
@@ -1325,11 +1326,6 @@ function updateGrades() {
   const max = type === '초등' ? 6 : 3;
   for (let i = 1; i <= max; i++) sel.innerHTML += `<option>${i}학년</option>`;
 
-  // 고등부는 라이팅 → 내신대비
-  const wLabel = document.getElementById('r-writing-label');
-  const wInput = document.getElementById('r-writing');
-  if (wLabel) wLabel.textContent = type === '고등' ? '📋 내신대비' : '✍️ 라이팅';
-  if (wInput) wInput.placeholder = type === '고등' ? '내신 문제풀이' : '쓰작 Unit1';
 }
 
 async function api(endpoint, body) {
@@ -1421,8 +1417,8 @@ async function renderBatchRows() {
   batchMonthRec = monthRec;
 
   const isHigh = batchScope === 'monthly';
-  const writingLabel = isHigh ? '📋 내신대비' : '✍️ 라이팅';
-  const writingPh    = isHigh ? '내신 문제풀이' : '쓰작';
+  const writingLabel = '✍️ 라이팅';
+  const writingPh    = 'Writing';
 
   // 컬럼 헤더 (한 줄, flex 비율)
   const headerRow = `
@@ -1434,6 +1430,7 @@ async function renderBatchRows() {
       <span style="flex:1;">📖 독해</span>
       <span style="flex:1;">🎧 듣기</span>
       <span style="flex:1;">${writingLabel}</span>
+      <span style="flex:1;">🏫 내신대비</span>
       <span style="flex:1.4;">💬 메모</span>
     </div>`;
 
@@ -1448,7 +1445,7 @@ async function renderBatchRows() {
     }
     const id = encodeURIComponent(`${s.name}_${s.type}_${s.grade}`);
     const ex = existing[s.name] || {};
-    const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.note;
+    const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.naesin||ex.note;
     const val = v => (v||'').replace(/"/g,'&quot;');
     const inp = (field, ph, flex) => `<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}" data-orig="${val(ex[field])}"
       style="flex:${flex};min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'Pretendard',sans-serif;box-sizing:border-box;">`;
@@ -1465,6 +1462,7 @@ async function renderBatchRows() {
         ${inp('reading','리딩',1)}
         ${inp('listening','듣기',1)}
         ${inp('writing',writingPh,1)}
+        ${inp('naesin','내신',1)}
         ${inp('note','태도·특이사항',1.4)}
       </div>`;
   });
@@ -1490,7 +1488,7 @@ function toggleBatchMonth(id) {
   if (next && next.classList.contains('batch-month')) { next.remove(); return; }
   const r = batchMonthRec[card.dataset.name] || {};
   const esc = v => String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  const labels = [['word','📝 단어'],['grammar','📐 문법'],['reading','📖 독해'],['listening','🎧 듣기'],['writing','📋 내신대비'],['note','💬 메모']];
+  const labels = [['word','📝 단어'],['grammar','📐 문법'],['reading','📖 독해'],['listening','🎧 듣기'],['writing','✍️ 라이팅'],['naesin','🏫 내신대비'],['note','💬 메모']];
   const rows = labels.filter(([k]) => r[k]).map(([k, l]) =>
     `<div style="display:flex;gap:8px;"><b style="flex:0 0 74px;color:#475569;">${l}</b><span style="flex:1;white-space:pre-wrap;">${esc(r[k])}</span></div>`).join('');
   const box = document.createElement('div');
@@ -1501,7 +1499,7 @@ function toggleBatchMonth(id) {
 }
 const batchHistCache = {};       // date → history
 let batchFilledInputs = [];      // 되돌리기용
-const SUGG_FIELDS = ['word', 'grammar', 'reading', 'listening', 'writing'];
+const SUGG_FIELDS = ['word', 'grammar', 'reading', 'listening', 'writing', 'naesin'];
 
 // "Day 7~8" → "Day 9~10", "유형 12~18" → "유형 19~25", "Unit 3" → "Unit 4", 숫자 없으면 그대로
 function nextProgress(str) {
@@ -1640,7 +1638,7 @@ async function saveBatchRecords() {
     const get = f => (el(f)?.value || '').trim();
     const orig = f => (el(f)?.dataset.orig || '').trim();
 
-    const fields = ['word','grammar','reading','listening','writing','note'];
+    const fields = ['word','grammar','reading','listening','writing','naesin','note'];
     const vals = {};
     fields.forEach(f => vals[f] = get(f));
 
@@ -1653,7 +1651,7 @@ async function saveBatchRecords() {
       payloads.push({
         date, name: card.dataset.name, type: card.dataset.type, grade: card.dataset.grade,
         word: vals.word, grammar: vals.grammar, reading: vals.reading,
-        listening: vals.listening, writing: vals.writing, note: vals.note, _id: id
+        listening: vals.listening, writing: vals.writing, naesin: vals.naesin, note: vals.note, _id: id
       });
     }
   });
@@ -1701,11 +1699,12 @@ async function saveRecord() {
       reading:   document.getElementById('r-reading').value,
       listening: document.getElementById('r-listening').value,
       writing:   document.getElementById('r-writing').value,
+      naesin:    document.getElementById('r-naesin').value,
       note:      document.getElementById('r-note').value
     });
     status.className = 'status-msg success';
     status.textContent = result.message;
-    ['r-name','r-word','r-grammar','r-reading','r-listening','r-writing','r-note']
+    ['r-name','r-word','r-grammar','r-reading','r-listening','r-writing','r-naesin','r-note']
       .forEach(id => document.getElementById(id).value = '');
     // 드롭다운도 초기화
     const recSel = document.getElementById('rec-student-select');
@@ -1719,7 +1718,7 @@ async function saveRecord() {
 
 function smartRange(arr) {
   const unique = [...new Set(arr)].filter(Boolean);
-  if (!unique.length) return '완료';
+  if (!unique.length) return '';
   const days = unique.map(s => { const m = s.match(/\d+/); return m ? +m[0] : null; }).filter(n => n !== null).sort((a,b)=>a-b);
   if (days.length > 1) return `Day ${Math.min(...days)} ~ ${Math.max(...days)}`;
   return unique.join(', ');
@@ -1774,7 +1773,7 @@ async function generateReport(withAI = false) {
 
       const today = localDateStr(new Date());
       lastData = { name, type, grade, start: today, end: today, feedback, isNewbie:true,
-                   words:[], grammars:[], readings:[], listenings:[], writings:[] };
+                   words:[], grammars:[], readings:[], listenings:[], writings:[], naesins:[] };
       renderNewbieReport({ name, type, feedback });
       status.className = 'status-msg success';
       status.textContent = '✅ 신규생 첫 피드백 생성 완료';
@@ -1844,21 +1843,26 @@ function renderNewbieReport({ name, type, feedback }) {
 }
 
 
-function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, feedback, progress }) {
+function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, naesins, feedback, progress }) {
   const hasProg = !!(progress && progress.length);
-  const clean = arr => [...new Set(arr)].filter(Boolean).join(', ') || '완료';
+  const clean = arr => [...new Set(arr || [])].filter(Boolean).join(', ');
   const period = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
   const isHigh = type === '고등';
   const isMid  = type === '중등';
   const typeTitle = isHigh ? 'Premium Monthly Report' : isMid ? 'Weekly Middle Report' : 'Weekly Elementary Report';
 
-  const writingLbl = isHigh ? '내신대비' : '라이팅';
-  const contentsHTML =
-    `<span class="rc-item">· 단어: ${smartRange(words)}</span>` +
-    `<span class="rc-item">· 문법: ${clean(grammars)}</span>` +
-    `<span class="rc-item">· 독해: ${clean(readings)}</span>` +
-    `<span class="rc-item">· 듣기: ${clean(listenings)}</span>` +
-    `<span class="rc-item">· ${writingLbl}: ${clean(writings)}</span>`;
+  // 이번 기간에 기록이 있는 항목만 보여줌 (안 하는 과목은 줄 자체를 뺌)
+  const items = [
+    ['단어', smartRange(words || [])],
+    ['문법', clean(grammars)],
+    ['독해', clean(readings)],
+    ['듣기', clean(listenings)],
+    ['라이팅', clean(writings)],
+    ['내신대비', clean(naesins)],
+  ].filter(([, v]) => v);
+  const contentsHTML = items.length
+    ? items.map(([l, v]) => `<span class="rc-item">· ${l}: ${v}</span>`).join('')
+    : '<span class="rc-item">· 이번 기간 진도 기록이 없어요</span>';
 
   let html = '';
 
@@ -5089,11 +5093,12 @@ const BOOK_SUBJ = [
   { k: 'grammar',   label: '문법', icon: '📐' },
   { k: 'reading',   label: '독해', icon: '📖' },
   { k: 'listening', label: '듣기', icon: '🎧' },
-  { k: 'writing',   label: '라이팅', labelHigh: '내신', icon: '✍️' },
+  { k: 'writing',   label: '라이팅', icon: '✍️' },
+  { k: 'naesin',    label: '내신', icon: '🏫' },
 ];
 const BOOK_UNITS = ['Day', 'point', 'Unit', 'Ch.', 'p.', '회', '강', '과'];
 const SUFFIX_UNITS = ['회', '강', '과'];   // 숫자 뒤에 붙는 단위
-const bookSubjLabel = (k, type) => { const s = BOOK_SUBJ.find(x => x.k === k); return s ? (type === '고등' && s.labelHigh ? s.labelHigh : s.label) : k; };
+const bookSubjLabel = k => { const s = BOOK_SUBJ.find(x => x.k === k); return s ? s.label : k; };
 const escH = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const nextDayStr = d => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + 1); return localDateStr(x); };
 const normB = v => String(v || '').replace(/\s+/g, '').toLowerCase();
@@ -5278,7 +5283,7 @@ function renderBooksView() {
   const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
   list.sort((a, b) => (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3) || (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) || a.name.localeCompare(b.name, 'ko'));
   const anyHigh = list.some(s => s.type === '고등'), anyLow = list.some(s => s.type !== '고등');
-  const head = BOOK_SUBJ.map(x => `<th>${x.icon} ${x.labelHigh && anyHigh && !anyLow ? x.labelHigh : x.labelHigh && anyHigh ? x.label + '/' + x.labelHigh : x.label}</th>`).join('');
+  const head = BOOK_SUBJ.map(x => `<th>${x.icon} ${x.label}</th>`).join('');
   let lastG = '', rows = '';
   list.forEach(s => {
     const g = s.type === '초등' ? '초등부' : `${s.type} ${s.grade}`;
