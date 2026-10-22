@@ -22,6 +22,22 @@ export default async function handler(req, res) {
     'Notion-Version': '2022-06-28'
   };
 
+
+  // ── 기록 한 줄 읽기 (라이팅 / 내신대비 분리) ──
+  // 2026-10-24 이전에 만든 고등부 기록은 '라이팅' 칸에 내신대비가 들어 있어서 내신대비로 읽음 (노션 데이터는 그대로)
+  const LEGACY_NAESIN_BEFORE = '2026-10-23T15:00:00.000Z';
+  const txt = (p, col) => (p.properties[col]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+  const isLegacyHigh = p => p.properties['구분']?.select?.name === '고등' && (p.created_time || '') < LEGACY_NAESIN_BEFORE && !txt(p, '내신대비') && !!txt(p, '라이팅');
+  const readLog = p => {
+    const legacy = isLegacyHigh(p);
+    return {
+      word: txt(p, '단어'), grammar: txt(p, '문법'), reading: txt(p, '독해'), listening: txt(p, '듣기'),
+      writing: legacy ? '' : txt(p, '라이팅'),
+      naesin:  legacy ? txt(p, '라이팅') : txt(p, '내신대비'),
+      note: txt(p, '특이사항'),
+    };
+  };
+
   // ── 기간 내 학생별 기록 건수 (보고서 현황용) ──
   if (data.action === 'get_record_counts') {
     try {
@@ -92,11 +108,10 @@ export default async function handler(req, res) {
       all.forEach(p => {
         const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
         if (!name) return;
-        const g = f => (p.properties[f]?.rich_text?.[0]?.text?.content || '').trim();
-        if (!merged[name]) merged[name] = { word:[], grammar:[], reading:[], listening:[], writing:[], note:[] };
-        const fields = { word:'단어', grammar:'문법', reading:'독해', listening:'듣기', writing:'라이팅', note:'특이사항' };
-        for (const [k, kr] of Object.entries(fields)) {
-          const v = g(kr);
+        const L = readLog(p);
+        if (!merged[name]) merged[name] = { word:[], grammar:[], reading:[], listening:[], writing:[], naesin:[], note:[] };
+        for (const k of Object.keys(merged[name])) {
+          const v = L[k];
           if (v && !merged[name][k].includes(v)) merged[name][k].push(v);
         }
       });
@@ -142,15 +157,16 @@ export default async function handler(req, res) {
         cursor = d.has_more ? d.next_cursor : undefined;
       } while (cursor);
 
-      const FIELDS = { word: '단어', grammar: '문법', reading: '독해', listening: '듣기', writing: '라이팅' };
+      const FIELDS = ['word', 'grammar', 'reading', 'listening', 'writing', 'naesin'];
       const history = {};   // name → { field: { last, lastDate, recent: [] } }
       all.forEach(p => {   // 최신순
         const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
         if (!name) return;
         const date = p.properties['날짜']?.date?.start || '';
         const h = history[name] || (history[name] = {});
-        Object.entries(FIELDS).forEach(([f, col]) => {
-          const v = (p.properties[col]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+        const L = readLog(p);
+        FIELDS.forEach(f => {
+          const v = L[f];
           if (!v) return;
           const e = h[f] || (h[f] = { last: v, lastDate: date, recent: [], entries: [] });
           if (!e.recent.includes(v) && e.recent.length < 6) e.recent.push(v);
@@ -185,14 +201,7 @@ export default async function handler(req, res) {
       all.forEach(p => {
         const name = p.properties['이름']?.rich_text?.[0]?.text?.content || '';
         if (!name) return;
-        records[name] = {
-          word:      p.properties['단어']?.rich_text?.[0]?.text?.content || '',
-          grammar:   p.properties['문법']?.rich_text?.[0]?.text?.content || '',
-          reading:   p.properties['독해']?.rich_text?.[0]?.text?.content || '',
-          listening: p.properties['듣기']?.rich_text?.[0]?.text?.content || '',
-          writing:   p.properties['라이팅']?.rich_text?.[0]?.text?.content || '',
-          note:      p.properties['특이사항']?.rich_text?.[0]?.text?.content || '',
-        };
+        records[name] = readLog(p);
       });
       return res.status(200).json({ ok: true, records });
     } catch(e) {
@@ -244,9 +253,10 @@ export default async function handler(req, res) {
     }
 
     // 2. 학습기록 DB에 행 추가 (같은 날짜+이름 있으면 덮어쓰기)
-    const subjects = ['word','grammar','reading','listening','writing']
+    const SUBJ_KR = { word:'단어', grammar:'문법', reading:'독해', listening:'듣기', writing:'라이팅', naesin:'내신대비' };
+    const subjects = Object.keys(SUBJ_KR)
       .filter(k => data[k])
-      .map(k => ({ word:'단어', grammar:'문법', reading:'독해', listening:'듣기', writing:'라이팅' }[k]))
+      .map(k => SUBJ_KR[k])
       .join(' · ');
     const title = `${data.name} — ${subjects || '수업기록'} (${data.date})`;
 
@@ -261,6 +271,7 @@ export default async function handler(req, res) {
       '독해':     { rich_text: [{ text: { content: data.reading || '' } }] },
       '듣기':     { rich_text: [{ text: { content: data.listening || '' } }] },
       '라이팅':   { rich_text: [{ text: { content: data.writing || '' } }] },
+      '내신대비': { rich_text: [{ text: { content: data.naesin || '' } }] },
       '특이사항': { rich_text: [{ text: { content: data.note || '' } }] }
     };
 
@@ -280,19 +291,20 @@ export default async function handler(req, res) {
 
     // 업데이트 시: 새 값이 비어있으면 기존 값 유지 (덮어쓰기로 지워지지 않도록)
     if (existingId) {
-      const getField = f => existingPage.properties[f]?.rich_text?.[0]?.text?.content || '';
-      const merge = (newVal, field) => (newVal && newVal.trim()) ? newVal : getField(field);
+      const old = readLog(existingPage);   // 예전 고등부 기록이면 라이팅 → 내신대비로 옮겨 저장 (내용 그대로)
+      const merge = (newVal, key) => (newVal && newVal.trim()) ? newVal : (old[key] || '');
 
-      const mergedWord      = merge(data.word,      '단어');
-      const mergedGrammar   = merge(data.grammar,   '문법');
-      const mergedReading   = merge(data.reading,   '독해');
-      const mergedListening = merge(data.listening, '듣기');
-      const mergedWriting   = merge(data.writing,   '라이팅');
-      const mergedNote      = merge(data.note,      '특이사항');
+      const mergedWord      = merge(data.word,      'word');
+      const mergedGrammar   = merge(data.grammar,   'grammar');
+      const mergedReading   = merge(data.reading,   'reading');
+      const mergedListening = merge(data.listening, 'listening');
+      const mergedWriting   = merge(data.writing,   'writing');
+      const mergedNaesin    = merge(data.naesin,    'naesin');
+      const mergedNote      = merge(data.note,      'note');
 
       const mergedSubjects = [
         mergedWord&&'단어', mergedGrammar&&'문법', mergedReading&&'독해',
-        mergedListening&&'듣기', mergedWriting&&'라이팅'
+        mergedListening&&'듣기', mergedWriting&&'라이팅', mergedNaesin&&'내신대비'
       ].filter(Boolean).join(' · ');
 
       logProps[''] = { title: [{ text: { content: `${data.name} — ${mergedSubjects || '수업기록'} (${data.date})` } }] };
@@ -301,6 +313,7 @@ export default async function handler(req, res) {
       logProps['독해']     = { rich_text: [{ text: { content: mergedReading } }] };
       logProps['듣기']     = { rich_text: [{ text: { content: mergedListening } }] };
       logProps['라이팅']   = { rich_text: [{ text: { content: mergedWriting } }] };
+      logProps['내신대비'] = { rich_text: [{ text: { content: mergedNaesin } }] };
       logProps['특이사항'] = { rich_text: [{ text: { content: mergedNote } }] };
     }
 
@@ -330,6 +343,7 @@ export default async function handler(req, res) {
         data.reading   && `📖 독해: ${data.reading}`,
         data.listening && `🎧 듣기: ${data.listening}`,
         data.writing   && `✍️ 라이팅: ${data.writing}`,
+        data.naesin    && `🏫 내신대비: ${data.naesin}`,
         data.note      && `💬 메모: ${data.note}`
       ].filter(Boolean);
 
