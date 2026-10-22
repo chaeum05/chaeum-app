@@ -5277,6 +5277,16 @@ function bookProgress(book, entries, opts = {}) {
   if (opts.since && now.pos !== null) {
     const prev = bookPosition(book, entries, opts.since, opts.others, opts.needName);
     if (prev.pos !== null && now.pos >= prev.pos) gain = now.pos - prev.pos;
+    else if (prev.pos === null) {
+      // 기간 시작 전 위치를 모르면 (이번에 교재를 처음 등록 등) → 이번 기간 첫 기록의 시작 번호부터 셈
+      let first = null;
+      for (const en of entries || []) {
+        if (en.d < opts.since || (opts.before && en.d >= opts.before) || (book.cd && en.d < book.cd)) continue;
+        const r = parseBookRange(en.v, book, opts.others || [], !!opts.needName);
+        if (r) first = r;   // 최신순이라 마지막에 남는 게 가장 이른 기록
+      }
+      if (first && now.pos >= first.s - 1) gain = now.pos - (first.s - 1);
+    }
   }
   return { pos: now.pos, total: t, pct, gain, last: now.last, date: now.date };
 }
@@ -5317,7 +5327,6 @@ async function reportBookProgress(name, type, start, end, histAll) {
 function buildProgressSectionHTML(progress, isHigh, num) {
   if (!progress || !progress.length) return '';
   const color = isHigh ? '#b01c2e' : '#3498db';
-  const per = isHigh ? '이번 달' : '이번 주';
   const rows = progress.map(p => `
     <div style="margin:0 0 10px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;">
@@ -5327,8 +5336,7 @@ function buildProgressSectionHTML(progress, isHigh, num) {
       <div style="height:9px;background:#eef0f3;border-radius:5px;overflow:hidden;margin-top:5px;">
         <div style="width:${p.pct}%;height:100%;background:${color};border-radius:5px;"></div>
       </div>
-      ${p.gain ? `<div style="font-size:11px;color:#777;margin-top:3px;">${per} +${p.gain} ${escH(p.unit)} 진행${p.pct >= 100 ? ' · 🎉 완료' : ''}</div>`
-               : (p.pct >= 100 ? `<div style="font-size:11px;color:#777;margin-top:3px;">🎉 교재 완료</div>` : '')}
+      ${p.pct >= 100 ? `<div style="font-size:11px;color:#777;margin-top:3px;">🎉 교재 완료</div>` : ''}
     </div>`).join('');
   const title = isHigh ? `${num}. 교재 진행률 (Progress)` : `📈 ${num}. 교재 진행률`;
   return `
