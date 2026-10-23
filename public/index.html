@@ -500,6 +500,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .bt-f { flex:1 0 158px; min-width:158px; }
 .bt-memo { flex:1.5 0 190px; min-width:190px; }
 .bt-row input { width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:5px; font-size:13px; font-family:'Pretendard',sans-serif; box-sizing:border-box; }
+.bt-book { font-size:10px; color:#64748b; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 2px 2px; line-height:1.3; }
 .bt-group { font-size:11px; font-weight:800; color:#475569; padding:6px 10px; background:#e2e8f0; position:sticky; left:0; }
 #batch-record-card { max-width:100% !important; min-width:0; box-sizing:border-box; padding:22px 22px; }
 #panel-record { min-width:0; max-width:100%; }
@@ -1497,7 +1498,12 @@ async function renderBatchRows() {
     const ex = existing[s.name] || {};
     const hasRecord = ex.word||ex.grammar||ex.reading||ex.listening||ex.writing||ex.naesin||ex.note;
     const val = v => (v||'').replace(/"/g,'&quot;');
-    const inp = (field, ph, flex) => `<span class="${field === 'note' ? 'bt-memo' : 'bt-f'}"><input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(ex[field])}" data-orig="${val(ex[field])}"></span>`;
+    const inp = (field, ph, flex) => {
+      const list = field === 'note' ? [] : fieldBooks(s.books, field);
+      const lab = list.length ? `<div class="bt-book" title="${val(list.map(x => x.b).join(' / '))}">📚 ${val(list.map(x => x.b).join(' · '))}</div>` : '';
+      const shown = list.length ? stripBooks(ex[field], list) : ex[field];
+      return `<span class="${field === 'note' ? 'bt-memo' : 'bt-f'}">${lab}<input type="text" id="b-${field}-${id}" placeholder="${ph}" value="${val(shown)}" data-orig="${val(ex[field])}"></span>`;
+    };
 
     rowsHtml += `
       <div class="batch-card bt-row" data-name="${s.name}" data-type="${s.type}" data-grade="${s.grade}" data-id="${id}" data-prefilled="${hasRecord?'1':'0'}"
@@ -1605,7 +1611,7 @@ async function attachProgressSuggestions(date, seq) {
           } else parts.push(`${bk.b} ${bk.u} `);
           infos.push(`📚 ${bk.b}${p.pos !== null ? ` · 지금 ${p.pos}${bk.t ? '/' + bk.t : ''} ${bk.u}${p.pct !== null ? ' (' + p.pct + '%)' : ''}` : ''}`);
         });
-        sugg = parts.join(', ');
+        sugg = stripBooks(parts.join(', '), bkKeys.map(k => stu.books[k]));
         inp.dataset.book = '1';
         inp.dataset.bookInfo = infos.join('\n');
       } else {
@@ -1661,6 +1667,37 @@ function expandWithBook(v, bk) {
   }
   return t;
 }
+// 글에서 교재 이름 위치 찾기 (띄어쓰기 달라도) → [시작, 끝] 또는 null
+function locateBookName(t, name) {
+  const nt = normB(t), nn = normB(name);
+  const i = nt.indexOf(nn);
+  if (!nn || i < 0) return null;
+  let n = 0, a = -1, j = 0;
+  for (; j < t.length; j++) {
+    if (/\s/.test(t[j])) continue;
+    if (n === i && a < 0) a = j;
+    n++;
+    if (n === i + nn.length) { j++; break; }
+  }
+  return a < 0 ? null : [a, j];
+}
+// 칸에 보여줄 때: 첫 번째 교재 이름만 빼고 범위만 ("WordMaster 중등 실력 Day 15-20" → "Day 15-20")
+function stripFirstBook(v, bk) {
+  const t = String(v || '');
+  if (!t || !bk?.b) return t;
+  const r = locateBookName(t, bk.b);
+  if (!r) return t;
+  return (t.slice(0, r[0]) + ' ' + t.slice(r[1])).replace(/\s{2,}/g, ' ').replace(/^[\s:·]+/, '').trim();
+}
+// 교재가 2권이면: "A Day 26-30, B Day 11-15" → "Day 26-30, Day 11-15" (쉼표 순서 = 교재 순서)
+//   한 권만 쓴 날("B Day 11-15")은 이름을 남겨서 다시 붙일 때 헷갈리지 않게
+function stripBooks(v, list) {
+  if (!list || !list.length) return String(v || '');
+  if (list.length < 2) return stripFirstBook(v, list[0]);
+  const parts = String(v || '').split(/\s*[,，]\s*/);
+  if (parts.length < 2) return stripFirstBook(v, list[0]);
+  return parts.map((x, i) => list[i] ? stripFirstBook(x, list[i]) : x).join(', ');
+}
 function expandWithBooks(v, list) {
   if (!list || !list.length) return v;
   const parts = String(v || '').split(/\s*[,，]\s*/);
@@ -1689,8 +1726,9 @@ document.addEventListener('focusout', e => {
   if (!inp.closest || !inp.closest('#batch-rows') || inp.tagName !== 'INPUT') return;
   const bk = bookOfInput(inp);
   if (!bk) return;
-  const nv = expandWithBooks(inp.value, bk);
-  if (nv !== inp.value) { inp.value = nv; inp.classList.add('sugg-filled'); }
+  // 교재 이름은 칸 위 라벨로 보이고, 저장할 때 자동으로 붙음 → 칸에는 범위만 남김
+  const nv = stripBooks(expandWithBooks(inp.value, bk), bk);
+  if (nv !== inp.value) inp.value = nv;
 });
 
 // 📚 끝 번호만 선택 → 숫자만 치면 바뀜 ("어법끝 point 24-[35]")
@@ -1757,7 +1795,9 @@ async function saveBatchRecords() {
 
     const anyValue  = fields.some(f => vals[f]);
     // 원래 프리필 값과 하나라도 달라졌는지
-    const changed   = fields.some(f => get(f) !== orig(f));
+    // 교재 이름 붙인 모양끼리 비교 (칸에 범위만 보여도 원래 기록과 같으면 '안 바뀜')
+    const origX = f => { const e = el(f); const bk = e && bookOfInput(e); const o = orig(f); return bk ? expandWithBooks(o, bk) : o; };
+    const changed   = fields.some(f => normB(get(f)) !== normB(origX(f)));
 
     // 값이 있고 + 변경된 경우만 저장 (그대로면 스킵 → 중복 방지)
     if (anyValue && changed) {
@@ -1978,11 +2018,11 @@ function buildReportHTML({ name, grade, type, start, end, words, grammars, readi
 
   // 이번 기간에 기록이 있는 항목만 보여줌 (안 하는 과목은 줄 자체를 뺌)
   const items = [
-    ['단어', smartRange(words || [])],
-    ['문법', clean(grammars)],
-    ['독해', clean(readings)],
-    ['듣기', clean(listenings)],
-    ['라이팅', clean(writings)],
+    ['단어', smartRange(words || [])],         // 같은 교재끼리 "Unit 1 ~ 4"처럼 합침 (다르면 나열)
+    ['문법', smartRange(grammars || [])],
+    ['독해', smartRange(readings || [])],
+    ['듣기', smartRange(listenings || [])],
+    ['라이팅', smartRange(writings || [])],
     ['내신대비', clean(naesins)],
   ].filter(([, v]) => v);
   const contentsHTML = items.length
