@@ -1645,13 +1645,27 @@ function expandWithBook(v, bk) {
   if (RNG.test(t)) return SUFFIX_UNITS.includes(bk.u) ? `${bk.b} ${t}${bk.u}` : `${bk.b} ${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${t}`;   // Ch.9 · p.90 · Day 15
   if (SUFFIX_UNITS.includes(bk.u) && new RegExp('^\\d+(\\s*[-~–～]\\s*\\d+)?\\s*' + bk.u + '$').test(t)) return `${bk.b} ${t}`;   // "12-14회"
   if (unitRe(bk.u).test(t) && t.search(unitRe(bk.u)) === 0) return `${bk.b} ${t}`;                       // "Day 15-20"
+  // "내신학습 이후 ~ Day 31" / "내신학습이후 31" → "내신학습 이후 ~ WordMaster 수능2000 Day 31"
+  // (앞말에 '이후·부터·~'가 있을 때만 — 다른 글은 건드리지 않음)
+  const LEAD = /(이후|부터|~|～)/;
+  const ui = t.search(unitRe(bk.u));
+  if (ui > 0) {
+    const head = t.slice(0, ui);
+    if (!/\d/.test(head) && LEAD.test(head)) return `${head.replace(/\s*[~～]?\s*$/, '')} ~ ${bk.b} ${t.slice(ui)}`;
+  }
+  const m = t.match(/^(\D+?)\s*(\d+(?:\s*[-~–～]\s*\d+)?)\s*$/);
+  if (m && LEAD.test(m[1])) {
+    const head = m[1].replace(/\s*[~～]?\s*$/, '');
+    const amt = SUFFIX_UNITS.includes(bk.u) ? `${m[2]}${bk.u}` : `${bk.u}${/\.$/.test(bk.u) ? '' : ' '}${m[2]}`;
+    return `${head} ~ ${bk.b} ${amt}`;
+  }
   return t;
 }
 function expandWithBooks(v, list) {
   if (!list || !list.length) return v;
   const parts = String(v || '').split(/\s*[,，]\s*/);
   if (list.length < 2 || parts.length < 2) return expandWithBook(v, list[0]);
-  return parts.map((x, i) => list[i] ? expandWithBook(x, list[i]) : x).join(', ');   // "30-40, 1-4" → A …, B …
+  return parts.map((x, i) => list[i] ? expandWithBook(x, list[i]) : x).filter(x => String(x).trim()).join(', ');   // "30-40, 1-4" → A …, B … · ", 1-4" → B만
 }
 const FIELD_ARR = { word: 'words', grammar: 'grammars', reading: 'readings', listening: 'listenings', writing: 'writings', naesin: 'naesins' };
 // 보고서용: 예전에 숫자만 저장된 기록도 교재 이름 붙여 보여줌
@@ -2740,6 +2754,21 @@ async function rsUpdateStatus(name, type, grade, newStatus, baseDate, reportType
   } catch(e) { toast('오류: '+e.message); }
 }
 
+// 📅 월간: 지난달 보고서를 안 보냈으면 '마지막으로 보낸 월간 보고서' 다음 날부터 기간을 잡음
+//    예) 8월 보고서 전송 → 9월 안 보냄 → 10월 보고서는 8/29(8월 마지막 금요일 다음 날)부터
+async function getLastSentMap(defaultStart) {
+  try { return (await api('update-report-status', { action: 'get_last_sent', reportType: '월간', before: defaultStart })).last || {}; }
+  catch (e) { return {}; }
+}
+function monthlyStartFor(s, defaultStart, lastMap) {
+  const last = lastMap[`${s.name}_${s.type}`];
+  if (!last) return defaultStart;
+  const d = new Date(defaultStart + 'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth() - 1);
+  if (last >= localDateStr(d)) return defaultStart;   // 지난달 보고서를 보냈으면 평소대로 (1일부터)
+  const from = nextDayStr(getScopeRange(last, 'monthly').end);
+  return from < defaultStart ? from : defaultStart;
+}
+
 function rsGoReport(name, type, grade, baseDate, reportType) {
   showPanel('report');
   document.getElementById('rep-name').value = name;
@@ -2757,6 +2786,15 @@ function rsGoReport(name, type, grade, baseDate, reportType) {
     const lastFriday = getLastFridayOfMonth(baseDate);
     document.getElementById('rep-start').value = first;
     document.getElementById('rep-end').value   = lastFriday;
+    // 지난달 보고서를 안 보냈으면 마지막 보낸 보고서 다음 날부터
+    getLastSentMap(first).then(map => {
+      const from = monthlyStartFor({ name, type }, first, map);
+      if (from < first && document.getElementById('rep-name').value === name) {
+        document.getElementById('rep-start').value = from;
+        clampReportStart();
+        toast(`📅 지난 보고서 이후(${from.slice(5).replace('-', '/')})부터로 잡았어요`);
+      }
+    });
   }
   clampReportStart();
   toast(`${name} 보고서 생성 탭으로 이동`);
@@ -4622,6 +4660,16 @@ function openBulkGen() {
   document.getElementById('bg-outbox').style.display = 'none';
   renderBulkRows();
   document.getElementById('bulk-gen').classList.add('open');
+  if (tab === 'monthly') {
+    getLastSentMap(start).then(map => {
+      let n = 0;
+      bgRows.forEach(r => {
+        const from = monthlyStartFor(r.s, start, map);
+        if (from < start) { r.from = from; n++; if (r.state === 'idle') r.msg = `📅 ${from.slice(5).replace('-', '/')}부터 (지난 보고서 이후)${r.msg ? ' · ' + r.msg : ''}`; }
+      });
+      if (n) { renderBulkRows(); document.getElementById('bg-summary').textContent = `📅 ${n}명은 지난달 보고서를 안 보내서, 마지막 보낸 보고서 다음 날부터 기간을 잡아요`; }
+    });
+  }
 }
 
 function closeBulkGen() {
@@ -4659,7 +4707,8 @@ function bgSelect(mode) {
 
 async function bgMakeOne(r, useAI) {
   const { s } = r;
-  const start = s.startDate && s.startDate > bgCtx.start ? s.startDate : bgCtx.start;
+  const base = r.from || bgCtx.start;   // 지난달을 건너뛴 학생은 마지막 보낸 보고서 다음 날부터
+  const start = s.startDate && s.startDate > base ? s.startDate : base;
   let d;
   try {
     d = await api('get-report', { name: s.name, type: s.type, start, end: bgCtx.end });
@@ -4935,10 +4984,54 @@ function smStartEdit() {
   const card = document.getElementById('sm-card');
   card.classList.add('editing');
   card.querySelectorAll(SM_EDITABLE).forEach(e => e.setAttribute('contenteditable', 'true'));
+  smProgressEditOn(card);
   document.getElementById('sm-actions').style.display = 'none';
   document.getElementById('sm-hint').textContent = '';
   smRenderEditBar();
   card.querySelector('.rc-feedback-high, .rc-feedback-mid')?.focus();
+}
+
+// 📈 진행률 칸 수정: "22 / 50 point · 44%" → 숫자 칸 2개 + 줄 빼기(✕), 막대·% 바로 바뀜
+function smProgressEditOn(card) {
+  card.querySelectorAll('.rc-progress > div').forEach(row => {
+    const head = row.children[0], bar = row.children[1];
+    const amt = head && head.children[1];
+    const fill = bar && bar.firstElementChild;
+    if (!amt || !fill || amt.querySelector('input')) return;
+    const m = amt.textContent.match(/(\d+)\s*\/\s*(\d+)\s*(.*?)\s*·\s*(\d+)%/);
+    if (!m) return;
+    const color = amt.querySelector('b')?.style.color || '#3498db';
+    Object.assign(row.dataset, { unit: m[3], color });
+    const inS = 'width:52px;padding:2px 4px;border:1.5px solid #93c5fd;border-radius:5px;font-size:13px;text-align:right;font-family:inherit;';
+    amt.innerHTML = `<input type="number" class="rc-pe-pos" min="0" value="${m[1]}" style="${inS}"> / <input type="number" class="rc-pe-tot" min="1" value="${m[2]}" style="${inS}"> ${escH(m[3])} · <b style="color:${color};">${m[4]}%</b>
+      <button type="button" class="rc-pe-del" title="이 줄 빼기" style="margin-left:4px;border:none;background:#fee2e2;color:#b91c1c;border-radius:5px;cursor:pointer;font-size:11px;padding:2px 6px;">✕</button>`;
+    const upd = () => {
+      const pos = +amt.querySelector('.rc-pe-pos').value || 0, tot = +amt.querySelector('.rc-pe-tot').value || 0;
+      const pct = tot ? Math.max(0, Math.min(100, Math.round(pos / tot * 100))) : 0;
+      amt.querySelector('b').textContent = pct + '%';
+      fill.style.width = pct + '%';
+    };
+    amt.querySelectorAll('input').forEach(i => i.addEventListener('input', upd));
+    amt.querySelector('.rc-pe-del').onclick = () => {
+      const sec = row.closest('.rc-section');
+      row.remove();
+      if (sec && !sec.querySelector('.rc-progress > div')) sec.remove();   // 다 빼면 진행률 칸 자체를 뺌
+    };
+  });
+}
+function smProgressEditOff(card) {
+  card.querySelectorAll('.rc-progress > div').forEach(row => {
+    const amt = row.children[0]?.children[1];
+    if (!amt || !amt.querySelector('input')) return;
+    const pos = +amt.querySelector('.rc-pe-pos').value || 0, tot = +amt.querySelector('.rc-pe-tot').value || 0;
+    const pct = tot ? Math.max(0, Math.min(100, Math.round(pos / tot * 100))) : 0;
+    amt.innerHTML = `${pos} / ${tot} ${escH(row.dataset.unit || '')} · <b style="color:${row.dataset.color};">${pct}%</b>`;
+    // 완료 표시 맞추기
+    const done = [...row.children].find(x => /교재 완료/.test(x.textContent));
+    if (pct >= 100 && !done) row.insertAdjacentHTML('beforeend', '<div style="font-size:11px;color:#777;margin-top:3px;">🎉 교재 완료</div>');
+    if (pct < 100 && done) done.remove();
+    delete row.dataset.unit; delete row.dataset.color;
+  });
 }
 
 function smCancelEdit() {
@@ -4951,6 +5044,7 @@ async function smSaveEdit() {
   if (!it) return;
   const btn = document.getElementById('sm-edit-save');
   btn.disabled = true; btn.textContent = '⏳ 저장 중...';
+  smProgressEditOff(document.getElementById('sm-card'));   // 숫자 입력칸 → 글자로
   const clone = document.getElementById('sm-card').cloneNode(true);
   clone.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
   const html = clone.innerHTML;
