@@ -90,6 +90,14 @@ export default async function handler(req, res) {
     }
   }
 
+  // 📌 2026년 10월 고등부 월간 보고서 한정 첫 문장 (10/30까지 만드는 것만 · 10/31부터 자동으로 원래대로)
+  const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const OCT_OPENING = '이번 달 수업은 중간고사 학습 이후로 오답을 정리 및 회고지를 작성하여 틀린 유형에 대한 점검을 하였으며,';
+  const useOctOpening = type === '고등' && todayKST <= '2026-10-30';
+  const openingRule = useOctOpening
+    ? `- 첫 문장은 반드시 다음 문구 그대로 시작하고, 이어서 이번 달 학습 내용을 자연스럽게 연결해 한 문장으로 마무리: "${OCT_OPENING}"`
+    : `- 반드시 "이번 달 수업에서"로 시작 ("이번 수업에서", "이번 주"는 쓰지 않음)`;
+
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -110,7 +118,7 @@ export default async function handler(req, res) {
 ${notes.join('\n')}${attendanceText}
 
 ${type === '고등' ? `[작성 규칙 — 고등부 월간 보고서 (한 달에 한 번 보내므로 충분히 자세하게)]
-- 반드시 "이번 달 수업에서"로 시작 ("이번 수업에서", "이번 주"는 쓰지 않음)
+${openingRule}
 - 7~10문장, 두 문단으로 작성
   · 첫 문단: 이번 달에 학습한 구체적인 내용(교재명, 단원, 문법 항목, 내신 대비 범위 등)과 그 과정에서 보인 학습 태도·이해도
   · 둘째 문단: 잘한 점과 보완이 필요한 점을 구체적으로, 그리고 다음 달 학습 방향·목표
