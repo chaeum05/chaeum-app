@@ -60,12 +60,15 @@ export default async function handler(req, res) {
         // 그날 요일의 수업부 (수업부_월 등), 없으면 기본 수업부
         period: p.properties[`수업부_${dayName}`]?.select?.name || p.properties['수업부']?.select?.name || '',
         startDate: p.properties['등록일']?.date?.start?.slice(0, 10) || '',
+        lessonType: p.properties['수업형태']?.select?.name === '회차' ? '회차' : '',
         isMakeup: false,
       };
-    }).filter(s => s.name && (!s.startDate || s.startDate <= today)); // 등록일 이전 날짜엔 안 나옴
+    }).filter(s => s.name && (!s.startDate || s.startDate <= today) && s.lessonType !== '회차'); // 등록일 이전 날짜엔 안 나옴 · 회차 학생은 아래 따로
 
     // 1-1. 재원생 명단 (등원일정 전체) — 퇴원 처리된 학생은 여기 없음
     const activeNames = new Set();
+    const sessionStudents = [];   // 🎫 회차 수업 학생 (그날 수업 요일인 학생만 따로 보여줌)
+    const allSessionNames = new Set();   // 회차 학생 전체 (보강 대기·보강 줄에서 빼는 용도)
     let cursor;
     do {
       const q = { page_size: 100 };
@@ -78,10 +81,24 @@ export default async function handler(req, res) {
       (d.results || []).forEach(p => {
         const n = p.properties['학생이름']?.title?.[0]?.text?.content?.trim();
         if (n) activeNames.add(n);
+        const sd = p.properties['등록일']?.date?.start?.slice(0, 10) || '';
+        // 회차 학생: 수업 요일(예: 금)이 정해져 있으면 그날만, 요일이 없으면 매일 보여줌
+        if (n && p.properties['수업형태']?.select?.name === '회차') allSessionNames.add(n);
+        const anyDay = ['월','화','수','목','금'].some(k => p.properties[k]?.checkbox);
+        const onToday = !anyDay || !!p.properties[dayName]?.checkbox;
+        if (n && p.properties['수업형태']?.select?.name === '회차' && onToday && (!sd || sd <= today)) sessionStudents.push({
+          id: p.id, name: n,
+          type: p.properties['구분']?.select?.name || '',
+          grade: p.properties['학년']?.select?.name || '',
+          school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '',
+          teacher: p.properties['담임']?.select?.name || '',
+          lessonType: '회차', isMakeup: false,
+        });
       });
       cursor = d.has_more ? d.next_cursor : undefined;
     } while (cursor);
     const isActive = n => activeNames.has(String(n || '').trim());
+    const sessionNames = allSessionNames;
 
     // 2. 오늘 날짜 출결 기록 조회 (timezone 안전하게 on_or_after + on_or_before)
     const attendRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
@@ -111,7 +128,7 @@ export default async function handler(req, res) {
     const studentKeys = new Set(students.map(s => `${s.name}_${s.type}_${s.grade}`));
     attendance.forEach(a => {
       const key = `${a.name}_${a.type}_${a.grade}`;
-      if (a.name && !studentKeys.has(key) && isActive(a.name)) { // 퇴원생 보강 기록은 제외
+      if (a.name && !studentKeys.has(key) && isActive(a.name) && !sessionNames.has(a.name)) { // 퇴원생 보강 기록·회차 학생은 제외
         students.push({ id: '', name: a.name, type: a.type, grade: a.grade, isMakeup: true });
         studentKeys.add(key);
       }
@@ -212,10 +229,10 @@ export default async function handler(req, res) {
         absentDate: p.properties['날짜']?.date?.start || '',
         memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }))
-      .filter(m => m.name && isActive(m.name) && !hasMakeup(m.name, m.absentDate)) // 퇴원생 제외
+      .filter(m => m.name && isActive(m.name) && !sessionNames.has(m.name) && !hasMakeup(m.name, m.absentDate)) // 퇴원생·회차 학생 제외
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
-    return res.status(200).json({ students, attendance, makeupList, date: today, dayName });
+    return res.status(200).json({ students, attendance, makeupList, sessionStudents, date: today, dayName });
 
   } catch (e) {
     return res.status(500).json({ error: e.message });
