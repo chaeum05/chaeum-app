@@ -56,9 +56,9 @@ export default async function handler(req, res) {
   // ── 일반 보고서 모드 ──
   if (!notes || !notes.length) return res.status(400).json({ error: '메모가 없습니다.' });
 
-  // 출결 정보 텍스트 구성
+  // 출결(결석·보강)은 피드백에 넣지 않음
   let attendanceText = '';
-  if (attendanceInfo && attendanceInfo.length) {
+  if (false && attendanceInfo && attendanceInfo.length) {
     const dayKor = d => {
       const day = new Date(d+'T00:00:00').getDay();
       return ['일','월','화','수','목','금','토'][day];
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 600,
+        max_tokens: type === '고등' ? 1100 : 600,
         messages: [{
           role: 'user',
           content: `당신은 채움영어학원의 원장입니다. 아래 수업 메모를 바탕으로 학부모에게 전달할 피드백을 작성해주세요.
@@ -109,13 +109,19 @@ export default async function handler(req, res) {
 수업 메모:
 ${notes.join('\n')}${attendanceText}
 
-[작성 규칙]
+${type === '고등' ? `[작성 규칙 — 고등부 월간 보고서 (한 달에 한 번 보내므로 충분히 자세하게)]
+- 반드시 "이번 달 수업에서"로 시작 ("이번 수업에서", "이번 주"는 쓰지 않음)
+- 7~10문장, 두 문단으로 작성
+  · 첫 문단: 이번 달에 학습한 구체적인 내용(교재명, 단원, 문법 항목, 내신 대비 범위 등)과 그 과정에서 보인 학습 태도·이해도
+  · 둘째 문단: 잘한 점과 보완이 필요한 점을 구체적으로, 그리고 다음 달 학습 방향·목표
+- 한 달 동안의 흐름(초반 → 후반의 변화)이 드러나게 서술
+- 결석·보강·출결 이야기는 쓰지 않음
+- 마크다운 기호 없이 본문만, 인사말/서명 불필요` : `[작성 규칙]
 - 3~5문장으로 작성 (너무 길지 않게, 핵심만 간결하게)
 - 이번 주 수업에서 배운 구체적인 내용(교재명, 문법 항목 등)을 반드시 언급
 - 잘한 점과 보완이 필요한 점을 균형 있게 서술
-- 출결 정보가 있는 경우: 결석일, 보강 예정일을 자연스럽게 문장에 녹여서 마지막에 안내 (예: "X월 X일(X요일)에 결석하여 X월 X일(X요일)에 보강 수업을 진행할 예정입니다.")
-- 보강 미정인 경우: "보강 일정은 추후 안내드리겠습니다" 식으로 부드럽게 안내
-- 마크다운 기호 없이 본문만, 인사말/서명 불필요
+- 결석·보강·출결 이야기는 쓰지 않음
+- 마크다운 기호 없이 본문만, 인사말/서명 불필요`}
 
 [반드시 지켜야 할 어투]
 - "숙제" → "과제"
