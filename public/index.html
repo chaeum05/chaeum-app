@@ -1176,7 +1176,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <!-- 기준일 -->
         <div style="display:flex;align-items:center;gap:6px;">
           <label style="font-size:12px;color:var(--text2);">기준일</label>
-          <input type="date" id="rs-base-date" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
+          <input type="date" id="rs-base-date" onchange="snapRsBaseDate();loadReportStatus(false)" title="아무 날짜나 골라도 주간은 그 주 월요일, 월간은 그달 1일로 맞춰져요" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
         </div>
         <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
         <button onclick="resetReportStatus()" style="padding:7px 14px;background:#fdecea;color:var(--burgundy);border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔁 전체 초기화</button>
@@ -1967,7 +1967,7 @@ async function generateReport(withAI = false) {
     if (withAI && d.notes.length) {
       const r = await api('polish-feedback', {
         notes: d.notes, name, grade: d.grade, type,
-        attendanceInfo: d.attendanceInfo || []
+        attendanceInfo: []   // 피드백에 결석·보강 안내는 넣지 않음
       });
       feedback = r.feedback;
     }
@@ -2102,7 +2102,7 @@ async function regenFeedback() {
     const r = await api('polish-feedback', {
         notes: lastData.notes, name: lastData.name,
         grade: lastData.grade, type: lastData.type,
-        attendanceInfo: lastData.attendanceInfo || []
+        attendanceInfo: []   // 피드백에 결석·보강 안내는 넣지 않음
       });
     const feedbackEl = document.querySelector('.rc-feedback-high, .rc-feedback-mid');
     if (feedbackEl) feedbackEl.textContent = r.feedback;
@@ -2537,8 +2537,16 @@ async function syncReportStatus() {
   } catch(e) {}
 }
 
+// 기준일은 늘 주간=그 주 월요일 · 월간=그달 1일 (보고서가 그 날짜로 저장돼서)
+function snapRsBaseDate() {
+  const el = document.getElementById('rs-base-date');
+  if (!el.value) return '';
+  const v = rsCurrentTab === 'weekly' ? getWeekMonday(el.value) : getMonthFirst(el.value);
+  if (v !== el.value) el.value = v;
+  return v;
+}
 async function loadReportStatus(forceRefresh = true) {
-  const baseDate   = document.getElementById('rs-base-date').value;
+  const baseDate   = snapRsBaseDate();
   const reportType = rsCurrentTab==='weekly' ? '주간' : '월간';
   const grid       = document.getElementById('rs-grid');
   grid.innerHTML   = '<div class="loading-spinner">불러오는 중...</div>';
@@ -4812,7 +4820,7 @@ async function bgMakeOne(r, useAI) {
   let feedback = [...new Set(d.notes || [])].join(' ') || '성실하게 학습 중입니다.';
   if (useAI && (d.notes || []).length) {
     r.msg = 'AI 피드백 쓰는 중…'; renderBulkRows();
-    const rr = await api('polish-feedback', { notes: d.notes, name: s.name, grade: d.grade || s.grade, type: s.type, attendanceInfo: d.attendanceInfo || [] });
+    const rr = await api('polish-feedback', { notes: d.notes, name: s.name, grade: d.grade || s.grade, type: s.type, attendanceInfo: [] });   // 결석·보강 안내 빼기
     feedback = rr.feedback || feedback;
   }
   let progress = [];
