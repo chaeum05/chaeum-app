@@ -231,6 +231,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // 🎫 수업 형태 (정규 / 회차)
+    if (action === 'set_lesson_type') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const q = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ filter: { and: [
+          { property: '학생이름', title: { equals: name } },
+          { property: '구분', select: { equals: type } }
+        ]}})
+      });
+      const qd = await q.json();
+      if (qd.object === 'error') throw new Error(qd.message);
+      const page = qd.results?.[0];
+      if (!page) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      const v = body.lessonType === '회차' ? { select: { name: '회차' } } : { select: { name: '정규' } };
+      const r = await fetch(`https://api.notion.com/v1/pages/${page.id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: { '수업형태': v } }) });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true });
+    }
+
     // 📖 교재 목록 (학원 교재 카탈로그)
     if (action === 'list_books' || action === 'save_book' || action === 'delete_book') {
       const DB_BOOKS = process.env.NOTION_DB_BOOKS || '53209d1a69c84234bb890d61d0f81b3b';
