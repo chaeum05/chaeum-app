@@ -83,6 +83,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-overlay.open { display: flex; }
 .sm-box { background: var(--surface, #fff); width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); font-family: 'Pretendard', sans-serif; }
 .sm-top { position: sticky; top: 0; z-index: 2; background: #1e293b; color: #fff; padding: 12px 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-radius: 16px 16px 0 0; }
+.sm-tabs { display: flex; gap: 6px; padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
+.sm-tab { flex: 1 0 auto; padding: 8px 10px; border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; font-family: 'Pretendard', sans-serif; white-space: nowrap; }
+.sm-tab small { display: block; font-size: 10.5px; font-weight: 600; color: #94a3b8; margin-top: 1px; }
+.sm-tab b { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 6px; border-radius: 9px; background: #e2e8f0; color: #334155; font-size: 11.5px; }
+.sm-tab.on { border-color: #1e293b; background: #1e293b; color: #fff; }
+.sm-tab.on small { color: #cbd5e1; }
+.sm-tab.on b { background: #FEE500; color: #1e293b; }
+.sm-tab.empty { opacity: .5; }
+.sm-empty-go { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.sm-empty-go button { padding: 9px 14px; border: none; border-radius: 10px; background: #1e293b; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
 .sm-top select { width: auto !important; flex: 0 0 auto; margin: 0; padding: 5px 8px; border-radius: 7px; border: none; font-size: 12px; font-family: 'Pretendard', sans-serif; }
 .sm-close { margin-left: auto; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
 .sm-info { padding: 12px 16px 4px; }
@@ -4897,8 +4907,7 @@ function stopBulkGen() {
 
 function bgOpenOutbox() {
   document.getElementById('bulk-gen').classList.remove('open');
-  document.getElementById('sm-filter-type').value = bgCtx?.reportType || '';
-  openSendMode();
+  openSendMode(undefined, bgCtx?.reportType || '');
 }
 
 // 📥 발송함에 담기
@@ -4928,7 +4937,7 @@ async function saveAndSendNow() {
 }
 
 // 발송 모드 열기 (items 주면 그것만, 없으면 발송함 전체)
-async function openSendMode(items) {
+async function openSendMode(items, presetType) {
   document.getElementById('send-mode').classList.add('open');
   document.body.style.overflow = 'hidden';
   const body = document.getElementById('sm-body');
@@ -4954,7 +4963,46 @@ async function openSendMode(items) {
     (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) ||
     a.name.localeCompare(b.name, 'ko'));
   await smLoadExamMap();
+  // 처음 열 때: 바로 보내기는 전체, 아니면 주간(초·중등) → 월간(고등) → 신규 중 보낼 게 있는 곳부터
+  const sel = document.getElementById('sm-filter-type');
+  if (items) sel.value = '';
+  else if (presetType !== undefined && presetType !== null) sel.value = presetType;
+  else sel.value = SM_TYPE_TABS.map(t => t.v).find(v => v && smQueue.some(it => it.reportType === v)) || '';
   smApplyFilter();
+}
+
+// 📑 보고서 종류 탭 (주간 = 초·중등, 월간 = 고등)
+const SM_TYPE_TABS = [
+  { v: '주간', label: '주간', sub: '초·중등' },
+  { v: '월간', label: '월간', sub: '고등' },
+  { v: '신규', label: '신규', sub: '첫 수업' },
+  { v: '',     label: '전체', sub: '섞어서' },
+];
+function smTeacherOk(it) {
+  const tc = document.getElementById('sm-filter-teacher').value;
+  if (!tc) return true;
+  const t = findStudent(it.name, it.type)?.teacher || '';
+  return tc === '__none__' ? !t : t === tc;
+}
+function smTypeCount(v) { return smQueue.filter(it => (!v || it.reportType === v) && smTeacherOk(it)).length; }
+function smSetType(v) {
+  document.getElementById('sm-filter-type').value = v;
+  smApplyFilter();
+}
+function smRenderTabs() {
+  const box = document.getElementById('sm-tabs');
+  if (!box) return;
+  const cur = document.getElementById('sm-filter-type').value;
+  box.innerHTML = '';
+  SM_TYPE_TABS.forEach(t => {
+    const n = smTypeCount(t.v);
+    if (t.v === '신규' && !n && cur !== '신규') return; // 신규생이 없으면 탭 숨김
+    const b = document.createElement('button');
+    b.className = 'sm-tab' + (t.v === cur ? ' on' : '') + (n ? '' : ' empty');
+    b.innerHTML = `${t.label}<b>${n}</b><small>${t.sub}</small>`;
+    b.onclick = () => smSetType(t.v);
+    box.appendChild(b);
+  });
 }
 
 function closeSendMode() {
@@ -4966,15 +5014,7 @@ function closeSendMode() {
 
 function smApplyFilter() {
   const rt = document.getElementById('sm-filter-type').value;
-  const tc = document.getElementById('sm-filter-teacher').value;
-  smList = smQueue.filter(it => {
-    if (rt && it.reportType !== rt) return false;
-    if (tc) {
-      const t = findStudent(it.name, it.type)?.teacher || '';
-      if (tc === '__none__' ? t : t !== tc) return false;
-    }
-    return true;
-  });
+  smList = smQueue.filter(it => (!rt || it.reportType === rt) && smTeacherOk(it));
   smShow(smList[0] || null);
 }
 
@@ -4991,12 +5031,28 @@ function smShow(it) {
   const prog = document.getElementById('sm-progress');
   prog.textContent = smList.length ? `남은 ${smList.length}명` : '';
   document.getElementById('sm-hint').textContent = '';
+  smRenderTabs();
 
   if (!it) {
     actions.style.display = 'none';
-    body.innerHTML = smQueue.length
-      ? '<div class="sm-empty">이 조건에 해당하는 보고서가 없어요.<br>위에서 필터를 바꿔보세요.</div>'
-      : '<div class="sm-empty">🎉 발송함이 비었어요!<br>보낼 보고서를 모두 보냈습니다.</div>';
+    const cur = document.getElementById('sm-filter-type').value;
+    const curTab = SM_TYPE_TABS.find(t => t.v === cur);
+    const others = SM_TYPE_TABS.filter(t => t.v && t.v !== cur && smTypeCount(t.v));
+    if (!smQueue.length) {
+      body.innerHTML = '<div class="sm-empty">🎉 발송함이 비었어요!<br>보낼 보고서를 모두 보냈습니다.</div>';
+    } else if (others.length) {
+      body.innerHTML = `<div class="sm-empty">${cur ? `✅ ${curTab.label}(${curTab.sub}) 보고서는 다 보냈어요!` : '이 조건에 해당하는 보고서가 없어요.'}
+        <br>남은 보고서가 있어요.<div class="sm-empty-go"></div></div>`;
+      const go = body.querySelector('.sm-empty-go');
+      others.forEach(t => {
+        const b = document.createElement('button');
+        b.textContent = `${t.label}(${t.sub}) ${smTypeCount(t.v)}건 보내기 →`;
+        b.onclick = () => smSetType(t.v);
+        go.appendChild(b);
+      });
+    } else {
+      body.innerHTML = '<div class="sm-empty">이 조건에 해당하는 보고서가 없어요.<br>위에서 담임 필터를 바꿔보세요.</div>';
+    }
     return;
   }
 
@@ -6194,7 +6250,7 @@ async function saveBookEditor(remove) {
     <div class="sm-top">
       <b style="font-size:15px;">📤 발송 모드</b>
       <span id="sm-progress" style="font-size:12px;color:#FEE500;font-weight:700;"></span>
-      <select id="sm-filter-type" onchange="smApplyFilter()">
+      <select id="sm-filter-type" onchange="smApplyFilter()" style="display:none;">
         <option value="">전체 보고서</option>
         <option value="주간">주간 (초·중등)</option>
         <option value="월간">월간 (고등)</option>
@@ -6208,6 +6264,7 @@ async function saveBookEditor(remove) {
       </select>
       <button class="sm-close" onclick="closeSendMode()">✕ 닫기</button>
     </div>
+    <div class="sm-tabs" id="sm-tabs"></div>
     <div id="sm-body"></div>
     <div class="sm-hint" id="sm-hint"></div>
     <div class="sm-actions" id="sm-actions" style="display:none;">
