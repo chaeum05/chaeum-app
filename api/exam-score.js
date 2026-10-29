@@ -220,6 +220,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 학생별 가장 최근 시험 결과 (월간보고서와 같이 보내기용) ──
+    // names: 학생 이름 배열, days: 최근 며칠 안에 저장된 결과만 (기본 75일)
+    if (action === 'get_latest_results') {
+      const names = new Set((body.names || []).map(n => String(n).trim()).filter(Boolean));
+      const days = Math.min(Math.max(Number(body.days) || 75, 1), 365);
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      const rows = await queryDB(DB_RESULTS,
+        { timestamp: 'created_time', created_time: { on_or_after: since } },
+        [{ timestamp: 'created_time', direction: 'descending' }]);
+      const latest = {};
+      rows.forEach(p => {
+        const name = (p.properties['학생이름']?.rich_text?.[0]?.text?.content || '').trim();
+        const examId = p.properties['시험명']?.rich_text?.[0]?.text?.content || '';
+        if (!name || !examId || (names.size && !names.has(name))) return;
+        if (latest[name]) return; // 최신순 정렬이라 처음 것이 가장 최근
+        let answers = {};
+        try { answers = JSON.parse(p.properties['유형']?.rich_text?.[0]?.text?.content || '{}'); } catch {}
+        if (answers._manual) return; // 점수만 직접 입력한 기록은 리포트가 없음
+        latest[name] = {
+          examId,
+          sent: !!p.properties['전송완료']?.checkbox,
+          hasFeedback: !!(p.properties['피드백']?.rich_text?.[0]?.text?.content || '').trim(),
+          created: p.created_time,
+        };
+      });
+      return res.status(200).json({ ok: true, latest });
+    }
+
     // ── 리포트 전송완료 표시 / 해제 ──
     if (action === 'set_sent') {
       const { studentName, examId, sent } = body;
