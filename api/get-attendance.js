@@ -27,8 +27,41 @@ export default async function handler(req, res) {
   const dayOfWeek = new Date(today + 'T00:00:00').getDay();
   const dayName = dayMap[dayOfWeek];
 
+  // 주말: 정규 수업은 없지만 주말 보강·출석 체크 기록은 보여줌
   if (!dayName) {
-    return res.status(200).json({ students: [], attendance: [], date: today, dayName: '주말' });
+    try {
+      const r = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          filter: { and: [
+            { property: '날짜', date: { on_or_after:  today } },
+            { property: '날짜', date: { on_or_before: today } },
+          ]},
+          sorts: [{ property: '학생이름', direction: 'ascending' }]
+        })
+      });
+      const d = await r.json();
+      const attendance = (d.results || []).map(p => ({
+        id:     p.id,
+        name:   p.properties['학생이름']?.rich_text?.[0]?.text?.content || '',
+        status: p.properties['출결상태']?.select?.name || '',
+        memo:   p.properties['메모']?.rich_text?.[0]?.text?.content || '',
+        type:   p.properties['구분']?.select?.name || '',
+        grade:  p.properties['학년']?.select?.name || '',
+        inTime:  (p.properties['등원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+        outTime: (p.properties['하원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+      })).filter(a => a.name);
+      const seen = new Set();
+      const students = [];
+      attendance.forEach(a => {
+        const k = `${a.name}_${a.type}_${a.grade}`;
+        if (seen.has(k)) return; seen.add(k);
+        students.push({ id: '', name: a.name, type: a.type, grade: a.grade, isMakeup: true });
+      });
+      return res.status(200).json({ students, attendance, makeupList: [], sessionStudents: [], date: today, dayName: '주말' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   try {
