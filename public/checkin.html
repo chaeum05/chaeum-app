@@ -135,18 +135,19 @@ function drawDots() {
   document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i < pin.length));
 }
 
-async function submit(pick) {
+async function submit(pick, mode) {
   busy = true;
   document.getElementById('wrap').classList.add('busy');
   document.getElementById('hint').textContent = '확인 중...';
   try {
     const r = await fetch('/api/checkin', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin', pin, pick, testKind })
+      body: JSON.stringify({ action: 'checkin', pin, pick, mode, testKind })
     });
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error || '오류가 났어요');
     if (d.choose) { showChoose(d.choose); return; }
+    if (d.ask) { showAsk(d, pick); return; }
     if (d.test) testKind = d.kind === 'in' ? 'out' : 'in';   // 테스트 번호는 누를 때마다 등원↔하원
     showResult(d);
   } catch (e) {
@@ -174,16 +175,54 @@ function showChoose(list) {
   box.classList.add('show');
 }
 
+// 수업 시작하고 한참 뒤 처음 누른 경우: 지금 온 건지, 집에 가는 건지 물어보기
+function showAsk(d, pick) {
+  const box = document.getElementById('choose');
+  const short = (d.name || '').replace(/\s*\(.*?\)\s*/g, '');
+  box.innerHTML = `<div class="q">${esc(short)} 학생, 지금…</div>`;
+  const mk = (html, bg, mode) => {
+    const b = document.createElement('button');
+    b.innerHTML = html; b.style.background = bg; b.style.padding = '26px';
+    b.onclick = () => { box.classList.remove('show'); submit(pick, mode); };
+    box.appendChild(b);
+  };
+  mk('🏫 학원에 왔어요<small>등원</small>', '#16a34a', 'in');
+  // 하원은 한 번 더 확인 (잘못 누르면 부모님께 하원 알림이 가니까)
+  const b2 = document.createElement('button');
+  b2.innerHTML = '🏠 집에 가요<small>하원 (올 때 등원을 안 눌렀어요)</small>';
+  b2.style.background = '#2563eb'; b2.style.padding = '26px';
+  b2.onclick = () => {
+    box.innerHTML = `<div class="q">정말 집에 가는 거 맞아요?</div><div style="color:#cbd5e1;font-size:18px;margin-bottom:6px;">부모님께 <b>하원</b> 알림이 가요</div>`;
+    const yes = document.createElement('button');
+    yes.innerHTML = '네, 집에 가요 🏠'; yes.style.background = '#2563eb'; yes.style.padding = '22px';
+    yes.onclick = () => { box.classList.remove('show'); submit(pick, 'out'); };
+    const no = document.createElement('button');
+    no.innerHTML = '아니요, 지금 왔어요 🏫'; no.style.background = '#16a34a'; no.style.padding = '22px';
+    no.onclick = () => { box.classList.remove('show'); submit(pick, 'in'); };
+    box.append(yes, no);
+  };
+  box.appendChild(b2);
+  const c = document.createElement('button');
+  c.className = 'cancel'; c.textContent = '취소';
+  c.onclick = () => { box.classList.remove('show'); pin = ''; drawDots(); };
+  box.appendChild(c);
+  box.classList.add('show');
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(() => { if (box.classList.contains('show')) { box.classList.remove('show'); pin = ''; drawDots(); } }, 20000);
+}
+
 function showResult(d) {
   const el = document.getElementById('result');
   const cls = { in: 'in', out: 'out', dup: 'warn', done: 'warn', err: 'err' }[d.kind] || 'warn';
   const short = (d.name || '').replace(/\s*\(.*?\)\s*/g, '');
   let html;
   if (d.kind === 'in') {
-    html = `<div class="mid">어서 와요! 👋</div><div class="big">${esc(short)}</div><div class="mid">등원 ${esc(d.time)}</div>`;
+    const tag = d.status === '보강완료' ? ' · 보강' : d.status === '시험기간보강' ? ' · 시험기간 보강' : '';
+    html = `<div class="mid">어서 와요! 👋</div><div class="big">${esc(short)}</div><div class="mid">등원 ${esc(d.time)}${tag}</div>`;
     speak(`${short} 학생이 등원하였습니다`);
   } else if (d.kind === 'out') {
-    html = `<div class="mid">수고했어요! 🙌</div><div class="big">${esc(short)}</div><div class="mid">하원 ${esc(d.time)}</div>`;
+    html = `<div class="mid">수고했어요! 🙌</div><div class="big">${esc(short)}</div><div class="mid">하원 ${esc(d.time)}</div>` +
+      (d.noIn ? '<div class="small">다음부터는 올 때도 꼭 눌러주세요 🙏</div>' : '');
     speak(`${short} 학생이 하원하였습니다`);
   } else {
     html = `<div class="mid">${d.kind === 'err' ? '⚠️' : 'ℹ️'}</div><div class="mid">${esc(d.message || '')}</div>`;
