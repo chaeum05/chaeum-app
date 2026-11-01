@@ -3349,7 +3349,8 @@ function renderAttGrid() {
         const attendAction = isMakeup
           ? `doAttend('${s.name}','${s.type}','${s.grade}','보강완료')`
           : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
-        const isPresent = isMakeup ? (st==='보강완료') : (st==='출석');
+        // 보강 줄: 출석 체크 화면에서 '출석'으로 찍힌 경우도 온 것으로 표시
+        const isPresent = isMakeup ? ['보강완료', '출석', '시험기간보강'].includes(st) : (st==='출석');
         const pchip = isMakeup ? '' :
           `<select class="pchip ${s.period==='1부'?'p1':s.period==='2부'?'p2':''}" title="수업 시간 고르기 (이 요일)"
             onchange="setStudentPeriod('${s.name}','${s.type}','${s.grade}',this.value)">
