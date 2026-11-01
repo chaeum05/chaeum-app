@@ -3170,7 +3170,10 @@ function getStatus(name, type, grade) {
 function getTimeChip(name, type, grade) {
   const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   if (!r || (!r.inTime && !r.outTime)) return '';
-  const t = [r.inTime ? `등원 ${r.inTime}` : '', r.outTime ? `하원 ${r.outTime}` : ''].filter(Boolean).join(' · ');
+  const m = x => { const v = String(x || '').match(/^(\d{1,2}):(\d{2})/); return v ? +v[1] * 60 + +v[2] : null; };
+  const d = r.inTime && r.outTime ? m(r.outTime) - m(r.inTime) : null;
+  const dur = d !== null && d >= 0 ? ` (${Math.floor(d / 60) ? Math.floor(d / 60) + '시간' + (d % 60 ? ' ' + d % 60 + '분' : '') : d % 60 + '분'})` : '';
+  const t = [r.inTime ? `등원 ${r.inTime}` : '', r.outTime ? `하원 ${r.outTime}${dur}` : ''].filter(Boolean).join(' · ');
   return `<span class="att-time" title="출석 체크 화면 기록">${t}</span>`;
 }
 function getMemo(name, type, grade) {
