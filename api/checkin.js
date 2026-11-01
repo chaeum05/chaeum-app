@@ -107,6 +107,19 @@ export default async function handler(req, res) {
       const pin = String(body.pin || '').replace(/\D/g, '');
       if (pin.length < 4) return res.status(400).json({ error: '번호 4자리를 눌러주세요.' });
 
+      // 🧪 테스트 번호 0000: 출결 기록은 남기지 않고 등원·하원을 번갈아 보여줌
+      //    (Vercel 환경변수 SOLAPI_TEST_PHONE이 있으면 그 번호로 알림톡도 실제로 보냄)
+      if (pin === '0000') {
+        const kind = body.testKind === 'out' ? 'out' : 'in';
+        let alim = { skipped: true };
+        try {
+          alim = await sendAlim(phonesOf(process.env.SOLAPI_TEST_PHONE), kind === 'in' ? SOL.tplIn : (SOL.tplOut || ''),
+            { '#{학생명}': '테스트', '#{시각}': hhmm });
+        } catch (e) { alim = { error: e.message }; }
+        return res.status(200).json({ ok: true, test: true, kind, name: '테스트', time: hhmm,
+          message: `테스트 ${kind === 'in' ? '등원' : '하원'} ${hhmm}`, alim });
+      }
+
       // 1. 번호로 학생 찾기
       const rows = await queryAll(DB_SCHEDULE, { property: '출석번호', rich_text: { contains: pin } });
       let cands = rows.map(p => ({
