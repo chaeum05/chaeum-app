@@ -366,6 +366,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
+.att-time { font-size:10.5px; font-weight:700; color:#0f766e; background:#ccfbf1; border-radius:5px; padding:1px 6px; white-space:nowrap; flex-shrink:0; }
 .att-row-memo { width:200px; flex:0 0 200px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
 .att-row-memo::placeholder { color:#ccc; }
 .att-row-memo:focus { background:#fff8e1; border-color:#d4af37; }
@@ -3153,6 +3154,13 @@ function getStatus(name, type, grade) {
   const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   return r ? r.status : null;
 }
+// 🚪 출석 체크 화면에서 찍힌 등원·하원 시각
+function getTimeChip(name, type, grade) {
+  const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
+  if (!r || (!r.inTime && !r.outTime)) return '';
+  const t = [r.inTime ? `등원 ${r.inTime}` : '', r.outTime ? `하원 ${r.outTime}` : ''].filter(Boolean).join(' · ');
+  return `<span class="att-time" title="출석 체크 화면 기록">${t}</span>`;
+}
 function getMemo(name, type, grade) {
   const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   return r ? (r.memo||'') : '';
@@ -3309,6 +3317,7 @@ function renderAttGrid() {
           <div class="att-row${isOn ? ' s-출석' : ''}" id="arow-${enc}">
             <span class="att-row-name">${s.name}</span>
             <span class="att-row-meta" style="color:var(--text3);font-size:11px;">${s.school||''}</span>
+            ${getTimeChip(s.name, s.type, s.grade)}
             <div class="att-row-btns">
               <button class="amini p ${isOn?'on':''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','시험기간보강')" style="${isOn?'':'opacity:.7'}">
                 📚 ${isOn?'보강출석':'보강왔어요'}
@@ -3337,6 +3346,7 @@ function renderAttGrid() {
           <div class="att-row s-${st||''}" id="arow-${enc}">
             <span class="att-row-name">${s.name}${pchip}</span>
             <span class="att-row-meta">${s.grade}</span>
+            ${getTimeChip(s.name, s.type, s.grade)}
             <div class="att-row-btns">
               <button class="amini p ${isPresent?'on':''}" onclick="${attendAction}">✅ ${isMakeup?'보강완료':'출석'}</button>
               <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
@@ -3391,6 +3401,7 @@ function renderAttGrid() {
       html += `<div class="att-row s-${st || ''}" id="arow-${enc}">
         <span class="att-row-name">${s.name}</span>
         <span class="att-row-meta" style="font-size:11px;">${s.type} ${s.grade}${s.school ? ' · ' + s.school : ''}</span>
+        ${getTimeChip(s.name, s.type, s.grade)}
         <div class="att-row-btns">
           <button class="amini p ${st === '출석' ? 'on' : ''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ ${st === '출석' ? '출석' : '왔어요'}</button>
           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
