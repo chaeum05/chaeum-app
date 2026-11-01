@@ -38,6 +38,30 @@ html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-
 .choose .cancel { background:transparent; color:var(--sub); font-size:18px; }
 .busy { opacity:.5; pointer-events:none; }
 .status { position:fixed; bottom:8px; right:12px; font-size:11px; color:#475569; }
+.hbtn { position:fixed; top:12px; right:14px; padding:8px 12px; border:1px solid #334155; background:transparent; color:#64748b; border-radius:10px; font-size:13px; font-family:inherit; cursor:pointer; }
+.hist { position:fixed; inset:0; background:#f8fafc; color:#0f172a; display:none; flex-direction:column; }
+.hist.show { display:flex; }
+.hist-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 16px; background:#0f172a; color:#fff; }
+.hist-top b { font-size:18px; margin-right:6px; }
+.hist-top button, .hist-top input { padding:8px 12px; border:none; border-radius:8px; font-size:15px; font-family:inherit; }
+.hist-top button { background:#334155; color:#fff; cursor:pointer; }
+.hist-top .close { margin-left:auto; background:#FEE500; color:#111; font-weight:700; }
+.hist-sum { display:flex; gap:8px; flex-wrap:wrap; padding:10px 16px; }
+.hist-sum span { padding:6px 12px; border-radius:20px; font-size:14px; font-weight:700; background:#e2e8f0; }
+.hist-sum .s-in { background:#dcfce7; color:#166534; } .hist-sum .s-out { background:#dbeafe; color:#1e40af; } .hist-sum .s-no { background:#fef3c7; color:#92400e; } .hist-sum .s-ab { background:#fee2e2; color:#991b1b; }
+.hist-body { flex:1; overflow-y:auto; padding:0 16px 20px; }
+.hist-sec { font-size:13px; font-weight:800; color:#475569; margin:14px 0 6px; }
+.hist-tbl { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; font-size:15px; }
+.hist-tbl th { background:#f1f5f9; color:#64748b; font-size:12px; text-align:left; padding:8px 10px; }
+.hist-tbl td { padding:9px 10px; border-top:1px solid #f1f5f9; }
+.hist-tbl td.t { font-weight:700; font-variant-numeric:tabular-nums; }
+.hist-tbl .muted { color:#cbd5e1; font-weight:400; }
+.tag { display:inline-block; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:700; }
+.tag.출석 { background:#dcfce7; color:#166534; } .tag.결석 { background:#fee2e2; color:#991b1b; } .tag.보강, .tag.보강완료, .tag.시험기간보강 { background:#fef3c7; color:#92400e; } .tag.none { background:#f1f5f9; color:#94a3b8; }
+.pinbox { position:fixed; inset:0; background:rgba(15,23,42,.96); display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+.pinbox.show { display:flex; }
+.pinbox input { font-size:32px; width:200px; text-align:center; letter-spacing:.4em; padding:10px; border-radius:12px; border:none; font-family:inherit; }
+.pinbox button { padding:12px 22px; border:none; border-radius:10px; font-size:17px; font-family:inherit; }
 </style>
 </head>
 <body>
@@ -54,6 +78,27 @@ html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-
 <div class="result" id="result"></div>
 <div class="choose" id="choose"></div>
 <div class="status" id="status"></div>
+<button class="hbtn" onclick="histAsk()">📋 출결 이력</button>
+<div class="pinbox" id="pinbox">
+  <div style="font-size:22px;font-weight:800;">선생님 비밀번호</div>
+  <input type="password" inputmode="numeric" id="pin-in" maxlength="8" onkeydown="if(event.key==='Enter')histCheck()">
+  <div style="display:flex;gap:10px;"><button onclick="histCheck()" style="background:#FEE500;font-weight:700;">확인</button><button onclick="histPinClose()" style="background:#334155;color:#fff;">취소</button></div>
+  <div id="pin-err" style="color:#fca5a5;min-height:1.2em;"></div>
+</div>
+<div class="hist" id="hist">
+  <div class="hist-top">
+    <b>📋 출결 이력</b>
+    <button onclick="histMove(-1)">◀ 전날</button>
+    <input type="date" id="hist-date" onchange="histLoad()">
+    <button onclick="histMove(1)">다음날 ▶</button>
+    <button onclick="histToday()">오늘</button>
+    <button onclick="histLoad()">🔄</button>
+    <button class="close" onclick="histClose()">✕ 출석 화면으로</button>
+  </div>
+  <div class="hist-sum" id="hist-sum"></div>
+  <div class="hist-body" id="hist-body"></div>
+</div>
+
 
 <script>
 let pin = '';
@@ -71,6 +116,7 @@ const pad = document.getElementById('pad');
   pad.appendChild(b);
 });
 document.addEventListener('keydown', e => {
+  if (document.getElementById('pinbox').classList.contains('show') || document.getElementById('hist').classList.contains('show')) return;
   if (/^\d$/.test(e.key)) press(e.key);
   else if (e.key === 'Backspace') press('← 한 칸');
   else if (e.key === 'Escape') press('지우기');
@@ -162,6 +208,83 @@ function speak(t) {
   } catch (e) {}
 }
 function esc(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+
+// ── 📋 출결 이력 (선생님용) ──
+// ⚠️ 선생님 비밀번호: 바꾸려면 아래 숫자만 고치세요
+const ADMIN_PIN = '7773';
+let histTimer = null;
+const kstToday = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+function histAsk() {
+  let ok = false; try { ok = sessionStorage.getItem('chaeum-hist-ok') === '1'; } catch (e) {}
+  if (ok) return histOpen();
+  document.getElementById('pin-in').value = ''; document.getElementById('pin-err').textContent = '';
+  document.getElementById('pinbox').classList.add('show');
+  setTimeout(() => document.getElementById('pin-in').focus(), 50);
+}
+function histPinClose() { document.getElementById('pinbox').classList.remove('show'); }
+function histCheck() {
+  if (document.getElementById('pin-in').value !== ADMIN_PIN) { document.getElementById('pin-err').textContent = '비밀번호가 달라요'; return; }
+  try { sessionStorage.setItem('chaeum-hist-ok', '1'); } catch (e) {}
+  histPinClose(); histOpen();
+}
+function histOpen() {
+  document.getElementById('hist').classList.add('show');
+  if (!document.getElementById('hist-date').value) document.getElementById('hist-date').value = kstToday();
+  histLoad(); histIdle();
+}
+function histClose() {
+  document.getElementById('hist').classList.remove('show');
+  try { sessionStorage.removeItem('chaeum-hist-ok'); } catch (e) {}
+  clearTimeout(histTimer);
+}
+// 2분 동안 아무것도 안 하면 출석 화면으로 돌아가기 (학생들이 보지 않게)
+function histIdle() { clearTimeout(histTimer); histTimer = setTimeout(histClose, 120000); }
+['click', 'touchstart', 'keydown'].forEach(ev => document.getElementById('hist').addEventListener(ev, histIdle));
+function histToday() { document.getElementById('hist-date').value = kstToday(); histLoad(); }
+function histMove(n) {
+  const el = document.getElementById('hist-date');
+  const d = new Date((el.value || kstToday()) + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  el.value = d.toISOString().slice(0, 10);
+  histLoad();
+}
+async function histLoad() {
+  const date = document.getElementById('hist-date').value || kstToday();
+  const body = document.getElementById('hist-body'), sum = document.getElementById('hist-sum');
+  body.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;">불러오는 중...</div>'; sum.innerHTML = '';
+  try {
+    const r = await fetch('/api/get-attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || '불러오기 실패');
+    if (d.dayName === '주말') { body.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;">주말이에요 🌿</div>'; return; }
+    const key = s => `${s.name}|${s.type}|${s.grade}`;
+    const recs = {}; (d.attendance || []).forEach(a => recs[key(a)] = a);
+    const people = new Map();
+    [...(d.students || []), ...(d.sessionStudents || [])].forEach(s => people.set(key(s), { name: s.name, type: s.type, grade: s.grade, session: (d.sessionStudents || []).includes(s) }));
+    (d.attendance || []).forEach(a => { if (!people.has(key(a))) people.set(key(a), { name: a.name, type: a.type, grade: a.grade }); });
+    const rows = [...people.values()].map(p => ({ ...p, rec: recs[key(p)] }));
+    const came = rows.filter(r => r.rec && (r.rec.inTime || ['출석', '보강완료', '시험기간보강'].includes(r.rec.status)))
+      .sort((a, b) => (a.rec.inTime || '99').localeCompare(b.rec.inTime || '99') || a.name.localeCompare(b.name, 'ko'));
+    const absent = rows.filter(r => r.rec && r.rec.status === '결석' && !r.rec.inTime);
+    const notYet = rows.filter(r => !came.includes(r) && !absent.includes(r) && !r.session)
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    const outN = came.filter(r => r.rec.outTime).length;
+    sum.innerHTML = `<span class="s-in">등원 ${came.length}명</span><span class="s-out">하원 ${outN}명</span><span class="s-no">아직 안 옴 ${notYet.length}명</span><span class="s-ab">결석 ${absent.length}명</span>`;
+    const t = v => v ? esc(v) : '<span class="muted">—</span>';
+    const tbl = (list, withTime) => `<table class="hist-tbl"><tr><th>이름</th><th>학년</th><th>상태</th>${withTime ? '<th>등원</th><th>하원</th>' : ''}</tr>` +
+      list.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.type)} ${esc(r.grade)}</td>
+        <td><span class="tag ${r.rec ? esc(r.rec.status) : 'none'}">${r.rec ? esc(r.rec.status) : '미체크'}</span>${r.rec && r.rec.memo ? ` <span style="font-size:12px;color:#64748b;">${esc(r.rec.memo)}</span>` : ''}</td>
+        ${withTime ? `<td class="t">${t(r.rec && r.rec.inTime)}</td><td class="t">${t(r.rec && r.rec.outTime)}</td>` : ''}</tr>`).join('') + '</table>';
+    let html = '';
+    if (came.length) html += `<div class="hist-sec">✅ 등원 (${came.length})</div>` + tbl(came, true);
+    if (notYet.length) html += `<div class="hist-sec">⏳ 아직 안 옴 (${notYet.length})</div>` + tbl(notYet, false);
+    if (absent.length) html += `<div class="hist-sec">❌ 결석 (${absent.length})</div>` + tbl(absent, false);
+    body.innerHTML = html || '<div style="padding:30px;text-align:center;color:#94a3b8;">이 날은 등원 예정 학생이 없어요</div>';
+  } catch (e) {
+    body.innerHTML = `<div style="padding:30px;text-align:center;color:#ef4444;">${esc(e.message)}</div>`;
+  }
+}
 
 // 시계
 function tick() {
