@@ -222,6 +222,7 @@ function showResult(d) {
     speak(`${short} 학생이 등원하였습니다`);
   } else if (d.kind === 'out') {
     html = `<div class="mid">수고했어요! 🙌</div><div class="big">${esc(short)}</div><div class="mid">하원 ${esc(d.time)}</div>` +
+      (d.inTime ? `<div class="mid">오늘 학습 시간 ${esc(durText(d.inTime, d.time))} 👏</div>` : '') +
       (d.noIn ? '<div class="small">다음부터는 올 때도 꼭 눌러주세요 🙏</div>' : '');
     speak(`${short} 학생이 하원하였습니다`);
   } else {
@@ -245,6 +246,14 @@ function speak(t) {
     u.lang = 'ko-KR'; u.rate = 1.05;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) {}
+}
+// 학습 시간: "18:02","20:15" → "2시간 13분"
+function durText(a, b) {
+  const m = t => { const x = String(t || '').match(/^(\d{1,2}):(\d{2})/); return x ? +x[1] * 60 + +x[2] : null; };
+  const d = (m(b) ?? NaN) - (m(a) ?? NaN);
+  if (!(d >= 0)) return '';
+  const h = Math.floor(d / 60), mm = d % 60;
+  return h ? `${h}시간${mm ? ' ' + mm + '분' : ''}` : `${mm}분`;
 }
 function esc(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
@@ -310,10 +319,10 @@ async function histLoad() {
     const outN = came.filter(r => r.rec.outTime).length;
     sum.innerHTML = `<span class="s-in">등원 ${came.length}명</span><span class="s-out">하원 ${outN}명</span><span class="s-no">아직 안 옴 ${notYet.length}명</span><span class="s-ab">결석 ${absent.length}명</span>`;
     const t = v => v ? esc(v) : '<span class="muted">—</span>';
-    const tbl = (list, withTime) => `<table class="hist-tbl"><tr><th>이름</th><th>학년</th><th>상태</th>${withTime ? '<th>등원</th><th>하원</th>' : ''}</tr>` +
+    const tbl = (list, withTime) => `<table class="hist-tbl"><tr><th>이름</th><th>학년</th><th>상태</th>${withTime ? '<th>등원</th><th>하원</th><th>학습 시간</th>' : ''}</tr>` +
       list.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.type)} ${esc(r.grade)}</td>
         <td><span class="tag ${r.rec ? esc(r.rec.status) : 'none'}">${r.rec ? esc(r.rec.status) : '미체크'}</span>${r.rec && r.rec.memo ? ` <span style="font-size:12px;color:#64748b;">${esc(r.rec.memo)}</span>` : ''}</td>
-        ${withTime ? `<td class="t">${t(r.rec && r.rec.inTime)}</td><td class="t">${t(r.rec && r.rec.outTime)}</td>` : ''}</tr>`).join('') + '</table>';
+        ${withTime ? `<td class="t">${t(r.rec && r.rec.inTime)}</td><td class="t">${t(r.rec && r.rec.outTime)}</td><td class="t">${t(r.rec && r.rec.inTime && r.rec.outTime ? durText(r.rec.inTime, r.rec.outTime) : '')}</td>` : ''}</tr>`).join('') + '</table>';
     let html = '';
     if (came.length) html += `<div class="hist-sec">✅ 등원 (${came.length})</div>` + tbl(came, true);
     if (notYet.length) html += `<div class="hist-sec">⏳ 아직 안 옴 (${notYet.length})</div>` + tbl(notYet, false);
