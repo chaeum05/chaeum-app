@@ -91,6 +91,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-auto button { margin-top: 6px; padding: 7px 14px; border: none; border-radius: 8px; background: #b91c1c; color: #fff; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
 .sm-auto ul { margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; }
 @media (pointer: coarse) { .pc-only { display: none !important; } }
+.sl-pin { display:inline-block; padding:2px 8px; border-radius:6px; background:#ecfeff; color:#0e7490; font-weight:800; font-size:12px; cursor:pointer; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.sl-pin.phone { background:#f1f5f9; color:#334155; font-weight:600; }
+.sl-pin.empty { background:transparent; color:#cbd5e1; border:1px dashed #cbd5e1; font-weight:600; }
 .kf-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 9px 6px; border-bottom: 1px solid #f1f5f9; font-size: 13px; align-items: start; }
 .kf-row .kf-name { font-weight: 800; color: #1e293b; }
 .kf-row .kf-name small { display: block; font-weight: 600; color: #94a3b8; font-size: 11px; }
@@ -1076,6 +1079,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <input type="text" id="add-name" placeholder="이름" style="width:72px;">
           <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:88px;" title="예: 형곡, 본교 등">
           <input type="text" id="add-school" placeholder="학교 (예:형곡고)" style="width:100px;" title="보고서 성적표 그룹핑용">
+          <span style="display:inline-flex;align-items:center;gap:2px;">
+            <input type="text" id="add-pin" inputmode="numeric" maxlength="4" placeholder="출석번호" style="width:76px;" title="출석 체크 화면에서 누를 4자리 (다른 학생과 겹치면 안 돼요)" oninput="this.value=this.value.replace(/\D/g,'');addPinCheck()">
+            <button type="button" class="att-action-btn" style="padding:4px 7px;" title="안 겹치는 번호 자동으로" onclick="addPinRandom()">🎲</button>
+          </span>
+          <input type="text" inputmode="tel" id="add-phone" placeholder="학부모 연락처" style="width:120px;" title="알림톡 받을 번호 (여러 개면 쉼표)">
+          <span id="add-pin-msg" style="font-size:11px;font-weight:700;"></span>
           <label style="font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px;" title="이 날부터 출결·보고서·일괄입력에 나와요">등록일
             <input type="date" id="add-start" style="width:132px;"></label>
           <select id="add-type" onchange="updateAddGrades()" style="width:58px;">
@@ -2205,7 +2214,8 @@ async function loadStudents() {
         <select onchange="slLesson=this.value;renderStudentList()"><option value="">수업 전체</option><option value="정규"${slLesson==='정규'?' selected':''}>정규만</option><option value="회차"${slLesson==='회차'?' selected':''}>🏫 특목고(회차)만</option></select>
         <select onchange="slDay=this.value;renderStudentList()"><option value="">요일 전체</option>${['월','화','수','목','금'].map(d => `<option value="${d}"${slDay===d?' selected':''}>${d}요일 수업</option>`).join('')}</select>
         <span id="sl-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
-        <button class="pc-only" onclick="kfOpen()" style="margin-left:auto;padding:7px 12px;border:1.5px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🔍 카톡방 자동 찾기</button>
+        <button onclick="slAutoPins()" style="margin-left:auto;padding:7px 12px;border:1.5px solid #a5f3fc;background:#ecfeff;color:#0e7490;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🎲 출석번호 자동 배정</button>
+        <button class="pc-only" onclick="kfOpen()" style="padding:7px 12px;border:1.5px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🔍 카톡방 자동 찾기</button>
       </div>
       <div id="sl-table"></div>`;
     renderStudentList();
@@ -2249,7 +2259,7 @@ function renderStudentList() {
   const days = ['월', '화', '수', '목', '금'];
   let rows = '';
   Object.entries(groups).forEach(([g, arr]) => {
-    rows += `<tr class="sl-group"><td colspan="9">${g} <span style="font-weight:600;color:#64748b;">${arr.length}명</span></td></tr>`;
+    rows += `<tr class="sl-group"><td colspan="11">${g} <span style="font-weight:600;color:#64748b;">${arr.length}명</span></td></tr>`;
     arr.forEach(s => {
       const a = `'${escH(s.name)}','${s.type}','${s.grade}'`;
       const dayHtml = days.map(d => {
@@ -2268,11 +2278,13 @@ function renderStudentList() {
           <option value="정규"${isSession(s) ? '' : ' selected'}>정규</option><option value="회차"${isSession(s) ? ' selected' : ''}>🏫 특목고</option></select></td>
         <td style="color:#64748b;font-size:12px;">${s.startDate ? s.startDate.slice(2).replace(/-/g, '.') : ''}</td>
         <td style="font-size:12px;">${escH(s.parentKakao || '')}</td>
+        <td><span class="sl-pin${s.pin ? '' : ' empty'}" onclick="slEditPin('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.pin ? escH(s.pin) : '+ 번호'}</span></td>
+        <td><span class="sl-pin phone${s.parentPhone ? '' : ' empty'}" onclick="slEditPhone('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.parentPhone ? escH(s.parentPhone) : '+ 연락처'}</span></td>
         <td style="text-align:right;"><button class="sl-mini" onclick="goRecord(${a})">📝 기록</button> <button class="sl-mini" onclick="slGoReport(${a})">📊 보고서</button></td>
       </tr>`;
     });
   });
-  el.innerHTML = `<div class="sl-scroll"><table class="sl-tbl"><thead><tr><th>이름</th><th>학년</th><th>학교</th><th>담임</th><th>요일</th><th>수업</th><th>등록일</th><th>학부모 카톡명</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  el.innerHTML = `<div class="sl-scroll"><table class="sl-tbl"><thead><tr><th>이름</th><th>학년</th><th>학교</th><th>담임</th><th>요일</th><th>수업</th><th>등록일</th><th>학부모 카톡명</th><th>출석번호</th><th>학부모 연락처</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function slGoReport(name, type) {
   document.getElementById('rep-name').value = name;
@@ -3584,6 +3596,17 @@ async function addStudentManually() {
   const exists = attStudents.find(s => s.name === name);
   if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
 
+  // 🚪 출석번호 중복 확인
+  const pinIn   = (document.getElementById('add-pin')?.value || '').trim();
+  const phoneIn = (document.getElementById('add-phone')?.value || '').trim();
+  if (pinIn) {
+    if (!/^\d{4}$/.test(pinIn)) { toast('출석번호는 숫자 4자리로 적어주세요.'); return; }
+    if (pinIn === '0000') { toast('0000은 테스트용 번호예요. 다른 번호를 써주세요.'); return; }
+    await ensureStudentsCache();
+    const dup = pinOwner(pinIn);
+    if (dup) { toast(`출석번호 ${pinIn}은 이미 ${dup.name} 학생이 써요. 🎲로 다른 번호를 받아보세요.`); return; }
+  }
+
   const school  = document.getElementById('add-school')?.value.trim() || '';
   const teacher = document.getElementById('add-teacher')?.value || '';
   const period  = document.getElementById('add-period')?.value || '';
@@ -3601,7 +3624,13 @@ async function addStudentManually() {
     await api('save-attendance', { action:'save_schedule', name, type, grade, days, school, teacher, period, startDate });
     // 앱 전체 학생 명단에도 바로 반영 (보고서·발송함·일괄입력에서 바로 찾을 수 있게)
     const dayList = Object.entries(days).filter(([, v]) => v).map(([d]) => d);
-    const entry = { name, type, grade, school, teacher, period, startDate, periods: Object.fromEntries(dayList.map(d => [d, period])), parentKakao: '', teachers: {}, days: dayList };
+    const entry = { name, type, grade, school, teacher, period, startDate, periods: Object.fromEntries(dayList.map(d => [d, period])), parentKakao: '', teachers: {}, days: dayList, pin: '', parentPhone: '' };
+    if (pinIn || phoneIn) {
+      try {
+        await api('save-attendance', { action: 'set_contact', name, type, pin: pinIn, parentPhone: phoneIn });
+        entry.pin = pinIn; entry.parentPhone = phoneIn;
+      } catch(e) { toast(`${name} 등록은 됐는데 출석번호·연락처 저장 실패: ${e.message}`); }
+    }
     const i = allStudentsCache.findIndex(s => s.name === name && s.type === type);
     if (i >= 0) allStudentsCache[i] = { ...allStudentsCache[i], ...entry };
     else allStudentsCache.push(entry);
@@ -3618,6 +3647,9 @@ async function addStudentManually() {
   document.getElementById('add-name').value  = '';
   document.getElementById('add-name2').value = '';
   if (document.getElementById('add-school'))  document.getElementById('add-school').value = '';
+  if (document.getElementById('add-pin'))   document.getElementById('add-pin').value = '';
+  if (document.getElementById('add-phone')) document.getElementById('add-phone').value = '';
+  if (document.getElementById('add-pin-msg')) document.getElementById('add-pin-msg').textContent = '';
   if (document.getElementById('add-teacher')) document.getElementById('add-teacher').value = '';
   if (document.getElementById('add-period'))  document.getElementById('add-period').value = '';
   if (document.getElementById('add-start'))   document.getElementById('add-start').value = attDate;
@@ -5563,6 +5595,72 @@ function smAutoStop() {
 }
 function escapeHtmlSafe(t) {
   return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── 🚪 출석번호 (출석 체크 화면용 4자리, 학생끼리 안 겹치게) ──
+function pinOwner(pin, except) {
+  return allStudentsCache.find(s => s !== except && String(s.pin || '').split(/[,\s]+/).includes(pin));
+}
+function newPin() {
+  const used = new Set(allStudentsCache.flatMap(s => String(s.pin || '').split(/[,\s]+/)).filter(Boolean));
+  used.add('0000');
+  for (let i = 0; i < 2000; i++) {
+    const p = String(1000 + Math.floor(Math.random() * 9000));
+    if (!used.has(p) && !/^(\d)\1{3}$/.test(p) && !['1234', '4321', '2580'].includes(p)) return p;
+  }
+  return '';
+}
+async function addPinRandom() {
+  await ensureStudentsCache();
+  const el = document.getElementById('add-pin');
+  el.value = newPin(); addPinCheck();
+}
+async function addPinCheck() {
+  const el = document.getElementById('add-pin'), msg = document.getElementById('add-pin-msg');
+  const v = el.value.trim();
+  if (!v) { msg.textContent = ''; return; }
+  if (v.length < 4) { msg.textContent = ''; return; }
+  await ensureStudentsCache();
+  const dup = v === '0000' ? { name: '테스트' } : pinOwner(v);
+  msg.textContent = dup ? `⚠️ ${dup.name} 학생이 쓰는 번호` : '✅ 사용 가능';
+  msg.style.color = dup ? '#b91c1c' : '#15803d';
+}
+// 학생 목록에서 출석번호·연락처 고치기
+async function slEditPin(name, type) {
+  const s = findStudent(name, type); if (!s) return;
+  const v = prompt(`${name} 학생 출석번호 (숫자 4자리, 비우면 지움)\n안 겹치는 추천 번호: ${newPin()}`, s.pin || '');
+  if (v === null) return;
+  const pin = v.replace(/\D/g, '');
+  if (pin && pin.length !== 4) { toast('숫자 4자리로 적어주세요.'); return; }
+  const dup = pin && pinOwner(pin, s);
+  if (dup) { toast(`${pin}은 이미 ${dup.name} 학생이 써요.`); return; }
+  try {
+    await api('save-attendance', { action: 'set_contact', name, type, pin });
+    s.pin = pin; renderStudentList(); toast(`${name} 출석번호 ${pin || '지움'}`);
+  } catch(e) { toast('저장 실패: ' + e.message); }
+}
+async function slEditPhone(name, type) {
+  const s = findStudent(name, type); if (!s) return;
+  const v = prompt(`${name} 학부모 연락처 (알림톡 받을 번호, 여러 개면 쉼표)`, s.parentPhone || '');
+  if (v === null) return;
+  try {
+    await api('save-attendance', { action: 'set_contact', name, type, parentPhone: v.trim() });
+    s.parentPhone = v.trim(); renderStudentList(); toast(`${name} 연락처 저장`);
+  } catch(e) { toast('저장 실패: ' + e.message); }
+}
+// 출석번호 없는 학생에게 한 번에 배정
+async function slAutoPins() {
+  const targets = (slVisible.length ? slVisible : allStudentsCache).filter(s => !String(s.pin || '').trim());
+  if (!targets.length) { toast('지금 목록의 학생은 모두 출석번호가 있어요.'); return; }
+  if (!confirm(`출석번호가 없는 ${targets.length}명에게 안 겹치는 4자리 번호를 자동으로 줄까요?\n(학생 폰 뒷번호처럼 정하고 싶으면 목록에서 하나씩 눌러 고치면 돼요)`)) return;
+  let ok = 0, fail = 0;
+  for (const s of targets) {
+    const pin = newPin();
+    try { await api('save-attendance', { action: 'set_contact', name: s.name, type: s.type, pin }); s.pin = pin; ok++; }
+    catch(e) { fail++; }
+    renderStudentList();
+  }
+  toast(`출석번호 ${ok}명 배정${fail ? ` · ${fail}명 실패` : ''}`);
 }
 
 // ── 🔍 학부모 카톡방 자동 찾기 (PC 도우미의 /find 사용) ──
