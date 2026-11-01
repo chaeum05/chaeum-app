@@ -59,6 +59,7 @@ html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-
 let pin = '';
 let busy = false;
 let resultTimer = null;
+let testKind = 'in';   // 🧪 0000 테스트용
 
 // 키패드
 const pad = document.getElementById('pad');
@@ -95,11 +96,12 @@ async function submit(pick) {
   try {
     const r = await fetch('/api/checkin', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin', pin, pick })
+      body: JSON.stringify({ action: 'checkin', pin, pick, testKind })
     });
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error || '오류가 났어요');
     if (d.choose) { showChoose(d.choose); return; }
+    if (d.test) testKind = d.kind === 'in' ? 'out' : 'in';   // 테스트 번호는 누를 때마다 등원↔하원
     showResult(d);
   } catch (e) {
     showResult({ kind: 'err', message: e.message });
@@ -140,6 +142,7 @@ function showResult(d) {
   } else {
     html = `<div class="mid">${d.kind === 'err' ? '⚠️' : 'ℹ️'}</div><div class="mid">${esc(d.message || '')}</div>`;
   }
+  if (d.test) html += `<div class="small">🧪 테스트 번호예요 — 출결 기록은 남지 않아요${d.alim && d.alim.sent ? ' · 테스트 알림톡 보냄' : ''}</div>`;
   if (d.alim && d.alim.error) html += `<div class="small">학부모 알림을 못 보냈어요 (${esc(d.alim.error)})</div>`;
   el.className = 'result show ' + cls;
   el.innerHTML = html;
