@@ -5470,6 +5470,17 @@ async function smAutoStart() {
     if (!byKakao.has(k)) { const g = { kakao: k, items: [] }; byKakao.set(k, g); groups.push(g); }
     byKakao.get(k).items.push(it);
   });
+  // 안전장치: 김민재(형남)·김민재(형곡)처럼 이름이 같은 학생이 같은 카톡방으로 묶이면 잘못 보낼 수 있어 둘 다 건너뜀
+  const baseName = n => String(n).replace(/\s*\(.*?\)\s*/g, '').trim();
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const g = groups[i];
+    const seen = {};
+    g.items.forEach(it => { const b = baseName(it.name); seen[b] = (seen[b] || 0) + 1; });
+    if (Object.values(seen).some(c => c > 1)) {
+      g.items.forEach(it => smAuto.skipped.push([it.name, `동명이인인데 학부모 카톡 이름이 '${g.kakao}'(으)로 같아요 — 카톡방 이름을 서로 다르게 바꿔주세요`]));
+      groups.splice(i, 1);
+    }
+  }
   for (let gi = 0; gi < groups.length; gi++) {
     const g = groups[gi];
     if (smAuto.stop) break;
