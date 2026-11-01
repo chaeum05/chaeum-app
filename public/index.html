@@ -83,6 +83,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-overlay.open { display: flex; }
 .sm-box { background: var(--surface, #fff); width: min(640px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); font-family: 'Pretendard', sans-serif; }
 .sm-top { position: sticky; top: 0; z-index: 2; background: #1e293b; color: #fff; padding: 12px 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-radius: 16px 16px 0 0; }
+.sm-auto-row { grid-column: 1 / -1; display: flex; gap: 8px; }
+.sm-auto-row button { background: #ede9fe !important; color: #5b21b6 !important; }
+@media (pointer: coarse) { .sm-auto-row { display: none !important; } }
+.sm-auto { margin: 0 16px 8px; padding: 10px 12px; border-radius: 10px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; color: #3b0764; line-height: 1.6; }
+.sm-auto b { color: #5b21b6; }
+.sm-auto button { margin-top: 6px; padding: 7px 14px; border: none; border-radius: 8px; background: #b91c1c; color: #fff; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
+.sm-auto ul { margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; }
 .sm-tabs { display: flex; gap: 6px; padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
 .sm-tab { flex: 1 0 auto; padding: 8px 10px; border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; font-family: 'Pretendard', sans-serif; white-space: nowrap; }
 .sm-tab small { display: block; font-size: 10.5px; font-weight: 600; color: #94a3b8; margin-top: 1px; }
@@ -5008,6 +5015,8 @@ function smRenderTabs() {
 function closeSendMode() {
   document.getElementById('send-mode').classList.remove('open');
   document.body.style.overflow = '';
+  if (smAuto) smAuto.stop = true;
+  smAutoPanel('');
   smCur = null; smBlob = null; smExamBlob = null;
   refreshOutboxCount();
 }
@@ -5240,6 +5249,7 @@ let smExamMap = {};               // 학생 이름 → { examId, sent, hasFeedba
 const smExamOff = new Set();      // 이번에 빼기로 한 것 ("이름|시험명")
 const smExamBlobs = new Map();    // "이름|시험명" → Promise<Blob>
 let smExamBlob = null;            // 지금 학생의 성적 리포트 이미지
+let smExamErr = false;            // 지금 학생의 성적 리포트를 못 그렸는지
 let smExamFrameP = null;
 let smExamChain = Promise.resolve();
 
@@ -5333,7 +5343,7 @@ function smRenderExamBox(it) {
 }
 
 async function smExamPrepare(it) {
-  smExamBlob = null;
+  smExamBlob = null; smExamErr = false;
   smUpdateShareBtns();
   if (!smExamOn(it)) return;
   const e = smExamOf(it);
@@ -5356,6 +5366,7 @@ async function smExamPrepare(it) {
     if (nx && smExamOn(nx)) smExamImage(nx.name, smExamOf(nx).examId).catch(() => {});
   } catch(err) {
     if (smCur !== it) return;
+    smExamErr = true;
     wrap.innerHTML = '';
     const m = document.createElement('div');
     m.className = 'sm-exam-load';
@@ -5377,6 +5388,121 @@ function smUpdateShareBtns() {
                     : (smBlob && exam ? '⏳ 성적 리포트 준비 중...' : '⏳ 이미지 준비 중...');
 }
 
+
+// ── 🤖 PC 카톡 자동발송 (내 PC에서 켜 둔 kakao_sender 도우미와 연결) ──
+const SM_AUTO_URL = 'http://127.0.0.1:8765';
+let smAuto = null;   // 진행 중이면 { stop, sent, skipped: [[이름, 이유]] }
+
+async function smAutoPing() {
+  try {
+    const r = await fetch(SM_AUTO_URL + '/ping', { cache: 'no-store' });
+    return await r.json();
+  } catch(e) { return null; }
+}
+function smAutoPanel(html) {
+  const el = document.getElementById('sm-auto');
+  if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block'; el.innerHTML = html;
+}
+const SM_AUTO_OFF = '🤖 내 PC의 <b>카톡 자동발송 도우미</b>가 꺼져 있어요.<br>kakao-sender 폴더의 <b>run.bat</b>을 실행한 뒤 다시 눌러주세요.<br><span style="font-size:12px;">(크롬이 "로컬 네트워크 접근"을 물어보면 <b>허용</b>을 눌러주세요)</span>';
+function smKakaoOf(it) { return (findStudent(it.name, it.type)?.parentKakao || '').trim(); }
+function smBlobToDataURL(b) {
+  return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); });
+}
+async function smWaitReady(it, ms = 90000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (smCur !== it) return 'moved';
+    if (smBlob && (!smExamOn(it) || smExamBlob)) return 'ok';
+    if (smExamOn(it) && smExamErr) return 'exam';
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return 'timeout';
+}
+async function smAutoSend(chat, text, images, dry) {
+  const r = await fetch(SM_AUTO_URL + '/send', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat, text, images, dry: !!dry })
+  });
+  return await r.json();
+}
+
+// 🧪 연결 테스트: 원하는 채팅방(예: 나와의 채팅)에 지금 보고서를 한 번 보내보기
+async function smAutoTest() {
+  if (smAuto) return;
+  const p = await smAutoPing();
+  if (!p) { smAutoPanel(SM_AUTO_OFF); return; }
+  if (!p.kakao) { smAutoPanel('⚠️ 도우미는 켜져 있는데 <b>PC 카카오톡</b>을 못 찾았어요. 카카오톡에 로그인해 주세요.'); return; }
+  const chat = prompt('테스트로 보낼 채팅방 이름을 정확히 적어주세요.\n(예: 나와의 채팅방 이름 = 내 카톡 이름)');
+  if (!chat || !chat.trim()) return;
+  smAutoPanel(`🧪 <b>${escapeHtmlSafe(chat)}</b> 채팅방에 테스트 중... 마우스·키보드를 건드리지 마세요.`);
+  try {
+    const images = smBlob ? [await smBlobToDataURL(smBlob)] : [];
+    const r = await smAutoSend(chat.trim(), '[채움 자동발송 테스트] 이 메시지와 이미지가 보이면 연결 성공이에요.', images);
+    smAutoPanel(r.ok ? '✅ 테스트 성공! 카톡에서 메시지와 이미지가 제대로 갔는지 확인해 주세요.'
+                     : `❌ 테스트 실패: ${escapeHtmlSafe(r.error || '알 수 없는 오류')}`);
+  } catch(e) { smAutoPanel(SM_AUTO_OFF); }
+}
+
+async function smAutoStart() {
+  if (smAuto) return;
+  const p = await smAutoPing();
+  if (!p) { smAutoPanel(SM_AUTO_OFF); return; }
+  if (!p.kakao) { smAutoPanel('⚠️ 도우미는 켜져 있는데 <b>PC 카카오톡</b>을 못 찾았어요. 카카오톡에 로그인해 주세요.'); return; }
+  const targets = smList.slice();
+  if (!targets.length) { toast('보낼 보고서가 없어요.'); return; }
+  const noKakao = targets.filter(it => !smKakaoOf(it)).length;
+  if (!confirm(`지금 탭의 ${targets.length}명에게 PC 카톡으로 자동 발송할까요?\n\n` +
+    `· 채팅방 이름이 학부모 카톡 이름과 정확히 같을 때만 보내요.\n` +
+    (noKakao ? `· 학부모 카톡 이름이 없는 ${noKakao}명은 건너뛰어요.\n` : '') +
+    `· 보내는 동안 마우스·키보드를 건드리지 마세요.`)) return;
+
+  smAuto = { stop: false, sent: 0, skipped: [] };
+  const btn = document.getElementById('sm-auto-btn');
+  btn.disabled = true;
+  const panel = (msg) => smAutoPanel(`${msg}<br><button onclick="smAutoStop()">⏹ 멈추기</button>`);
+  for (let i = 0; i < targets.length; i++) {
+    const it = targets[i];
+    if (smAuto.stop) break;
+    if (!smQueue.includes(it)) continue;
+    const kakao = smKakaoOf(it);
+    if (!kakao) { smAuto.skipped.push([it.name, '학부모 카톡 이름이 없어요']); continue; }
+    panel(`🤖 <b>${escapeHtmlSafe(it.name)}</b> 보고서 준비 중... (${i + 1}/${targets.length}) · 보냄 ${smAuto.sent}`);
+    if (smCur !== it) smShow(it);
+    const ready = await smWaitReady(it);
+    if (ready !== 'ok') {
+      smAuto.skipped.push([it.name, ready === 'exam' ? '성적 리포트 이미지를 못 만들었어요' : '이미지를 못 만들었어요']);
+      continue;
+    }
+    if (smAuto.stop) break;
+    const images = [await smBlobToDataURL(smBlob)];
+    if (smExamOn(it)) images.push(await smBlobToDataURL(smExamBlob));
+    panel(`📤 <b>${escapeHtmlSafe(it.name)}</b> → 카톡 '${escapeHtmlSafe(kakao)}' 보내는 중... (${i + 1}/${targets.length}) · 보냄 ${smAuto.sent}`);
+    let r;
+    try { r = await smAutoSend(kakao, smGreeting(it), images); }
+    catch(e) { r = { ok: false, error: '도우미와 연결이 끊겼어요 (run.bat 창이 닫혔나요?)' }; smAuto.stop = true; }
+    if (r.ok) {
+      await smMarkSent();
+      smAuto.sent++;
+    } else {
+      smAuto.skipped.push([it.name, r.error || '보내기 실패']);
+    }
+  }
+  const a = smAuto; smAuto = null;
+  btn.disabled = false;
+  smAutoPanel(`${a.stop ? '⏹ 멈췄어요.' : '✅ 자동발송 끝!'} 보냄 <b>${a.sent}명</b>` +
+    (a.skipped.length ? ` · 못 보냄 <b>${a.skipped.length}명</b> (발송함에 그대로 남아 있어요)<ul>` +
+      a.skipped.map(([n, why]) => `<li>${escapeHtmlSafe(n)} — ${escapeHtmlSafe(why)}</li>`).join('') + '</ul>' : ''));
+  smShow(smList[0] || null);
+}
+function smAutoStop() {
+  if (!smAuto) return;
+  smAuto.stop = true;
+  smAutoPanel('⏹ 지금 학생까지만 보내고 멈출게요...');
+}
+function escapeHtmlSafe(t) {
+  return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function smFileName(it) {
   return `${it.baseDate}_${it.name}_채움${it.type}리포트.png`;
@@ -6266,6 +6392,7 @@ async function saveBookEditor(remove) {
     </div>
     <div class="sm-tabs" id="sm-tabs"></div>
     <div id="sm-body"></div>
+    <div class="sm-auto" id="sm-auto" style="display:none;"></div>
     <div class="sm-hint" id="sm-hint"></div>
     <div class="sm-actions" id="sm-actions" style="display:none;">
       <button class="sm-btn-share" id="sm-share" onclick="smShare()">📱 카톡으로 보내기</button>
@@ -6275,6 +6402,10 @@ async function saveBookEditor(remove) {
         <button class="sm-btn-sub" style="flex:1;" onclick="smSkip()">⏭ 나중에 보내기</button>
         <button class="sm-btn-sub" style="flex:1;" id="sm-save" onclick="smDownload()">💾 이미지로 저장</button>
         <button class="sm-btn-sub" style="flex:1;color:#b91c1c !important;" id="sm-remove" onclick="smRemove()">🗑 발송함에서 빼기</button>
+      </div>
+      <div class="sm-auto-row">
+        <button class="sm-btn-sub" style="flex:2;" id="sm-auto-btn" onclick="smAutoStart()">🤖 PC 카톡 자동발송 (이 탭 전체)</button>
+        <button class="sm-btn-sub" style="flex:1;" onclick="smAutoTest()">🧪 연결 테스트</button>
       </div>
     </div>
   </div>
