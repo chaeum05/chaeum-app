@@ -418,6 +418,42 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 출석번호·학부모연락처 저장 (출석번호는 다른 학생과 겹치면 막음) ──
+    if (action === 'set_contact') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const pin = body.pin === undefined ? undefined : String(body.pin || '').replace(/\D/g, '');
+      const parentPhone = body.parentPhone === undefined ? undefined : String(body.parentPhone || '').trim();
+      if (pin !== undefined && pin && !/^\d{4}$/.test(pin)) return res.status(400).json({ error: '출석번호는 숫자 4자리예요.' });
+      if (pin === '0000') return res.status(400).json({ error: '0000은 테스트용 번호라 쓸 수 없어요.' });
+      const q = async filter => {
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, { method: 'POST', headers, body: JSON.stringify({ filter }) });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        return d.results || [];
+      };
+      const mine = await q({ and: [
+        { property: '학생이름', title: { equals: name } },
+        { property: '구분', select: { equals: type } }
+      ]});
+      if (!mine.length) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      if (pin) {
+        const same = (await q({ property: '출석번호', rich_text: { contains: pin } }))
+          .filter(p => p.id !== mine[0].id)
+          .filter(p => (p.properties['출석번호']?.rich_text || []).map(t => t.plain_text || '').join('').split(/[,\s]+/).includes(pin));
+        if (same.length) {
+          const who = same.map(p => (p.properties['학생이름']?.title || []).map(t => t.plain_text || '').join('')).join(', ');
+          return res.status(409).json({ error: `출석번호 ${pin}은(는) 이미 ${who} 학생이 쓰고 있어요.` });
+        }
+      }
+      const props = {};
+      if (pin !== undefined) props['출석번호'] = { rich_text: pin ? [{ text: { content: pin } }] : [] };
+      if (parentPhone !== undefined) props['학부모연락처'] = { rich_text: parentPhone ? [{ text: { content: parentPhone } }] : [] };
+      const r = await fetch(`https://api.notion.com/v1/pages/${mine[0].id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: props }) });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true });
+    }
+
     return res.status(400).json({ error: '알 수 없는 action' });
 
   } catch (e) {
