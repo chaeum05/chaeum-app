@@ -296,7 +296,6 @@ async function histLoad() {
     const r = await fetch('/api/get-attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error || '불러오기 실패');
-    if (d.dayName === '주말') { body.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;">주말이에요 🌿</div>'; return; }
     const key = s => `${s.name}|${s.type}|${s.grade}`;
     const recs = {}; (d.attendance || []).forEach(a => recs[key(a)] = a);
     const people = new Map();
@@ -319,7 +318,7 @@ async function histLoad() {
     if (came.length) html += `<div class="hist-sec">✅ 등원 (${came.length})</div>` + tbl(came, true);
     if (notYet.length) html += `<div class="hist-sec">⏳ 아직 안 옴 (${notYet.length})</div>` + tbl(notYet, false);
     if (absent.length) html += `<div class="hist-sec">❌ 결석 (${absent.length})</div>` + tbl(absent, false);
-    body.innerHTML = html || '<div style="padding:30px;text-align:center;color:#94a3b8;">이 날은 등원 예정 학생이 없어요</div>';
+    body.innerHTML = html || `<div style="padding:30px;text-align:center;color:#94a3b8;">${d.dayName === '주말' ? '주말 — 아직 출결 기록이 없어요 🌿' : '이 날은 등원 예정 학생이 없어요'}</div>`;
   } catch (e) {
     body.innerHTML = `<div style="padding:30px;text-align:center;color:#ef4444;">${esc(e.message)}</div>`;
   }
