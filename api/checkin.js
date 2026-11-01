@@ -56,6 +56,12 @@ export default async function handler(req, res) {
   const kst = new Date(Date.now() + 9 * 3600 * 1000);
   const today = kst.toISOString().slice(0, 10);
   const hhmm = kst.toISOString().slice(11, 16);
+  const dayName = '일월화수목금토'[kst.getUTCDay()];
+  // 수업 시작 시각 (학원 시간표): 중등 1부 3:30 / 2부 6:00, 고등 1부 6:00 / 2부 8:30
+  const SLOT_START = { '중등': { '1부': '15:30', '2부': '18:00' }, '초등': { '1부': '15:30', '2부': '18:00' }, '고등': { '1부': '18:00', '2부': '20:30' } };
+  // 수업 시작 후 90분이 지나서 그날 처음 누를 때만 "등원? 하원?"을 물어봄
+  // (그 전에는 늦게 온 것으로 보고 항상 등원 처리 → 지각생에게 하원 알림이 갈 일이 없음)
+  const LATE_MIN = 90;
   const toMin = t => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
 
   // 솔라피 알림톡
@@ -129,6 +135,10 @@ export default async function handler(req, res) {
         grade: p.properties['학년']?.select?.name || '',
         pins: txt(p.properties['출석번호']).split(/[,\s]+/).map(x => x.replace(/\D/g, '')),
         phones: txt(p.properties['학부모연락처']),
+        slot: p.properties[`수업부_${dayName}`]?.select?.name || p.properties['수업부']?.select?.name || '',
+        school: txt(p.properties['학교']),
+        regularToday: !!p.properties[dayName]?.checkbox,
+        session: p.properties['수업형태']?.select?.name === '회차',
       })).filter(s => s.name && s.pins.includes(pin));
       if (!cands.length) return res.status(404).json({ error: '등록되지 않은 번호예요. 선생님께 말씀해 주세요.' });
       if (body.pick) cands = cands.filter(s => s.name === body.pick);
@@ -137,6 +147,30 @@ export default async function handler(req, res) {
       }
       if (!cands.length) return res.status(404).json({ error: '학생을 찾지 못했어요.' });
       const s = cands[0];
+
+      // 오늘 처음 기록을 만들 때 출결상태 정하기
+      //  - 시험기간인 학교·학년 → 시험기간보강
+      //  - 정규 요일이 아닌 날 온 정규 학생 → 보강완료 (앱이 이번 달 결석과 자동으로 짝지어 줌)
+      //  - 그 밖(정규 요일, 특목고 회차) → 출석
+      const newStatus = async () => {
+        const DB_EXAM = process.env.NOTION_DB_EXAM;
+        if (DB_EXAM && s.school) {
+          try {
+            const ex = await queryAll(DB_EXAM, { and: [
+              { property: '시험기간_시작', date: { on_or_before: today } },
+              { property: '시험기간_종료', date: { on_or_after: today } },
+            ]});
+            const hit = ex.some(e => {
+              const sc = (e.properties['학교명']?.title || []).map(t => t.plain_text || '').join('').trim();
+              const gr = e.properties['학년']?.select?.name || '';
+              return sc && (sc.includes(s.school) || s.school.includes(sc)) && (!gr || !s.grade || gr === s.grade);
+            });
+            if (hit) return '시험기간보강';
+          } catch (e) { /* 시험정보를 못 읽으면 아래 규칙으로 */ }
+        }
+        if (!s.session && !s.regularToday) return '보강완료';
+        return '출석';
+      };
 
       // 2. 오늘 출결 기록
       const recs = await queryAll(DB_ATTENDANCE, { and: [
@@ -149,27 +183,76 @@ export default async function handler(req, res) {
       const inT  = rec ? txt(rec.properties['등원시각']) : '';
       const outT = rec ? txt(rec.properties['하원시각']) : '';
 
-      let kind, msg;
+      // 등원을 안 누르고 하원할 때 처음 누른 경우: 수업 시작 90분 뒤부터는 등원/하원을 물어봄
+      const mode = body.mode === 'in' || body.mode === 'out' ? body.mode : '';
+      const start = SLOT_START[s.type]?.[s.slot] || '';
+      const firstTap = !rec || !inT;
+      if (firstTap && !outT && !mode && start && toMin(hhmm) - toMin(start) >= LATE_MIN) {
+        return res.status(200).json({ ok: true, ask: true, name: s.name, time: hhmm, start });
+      }
+      if (firstTap && !outT && mode === 'out') {
+        // 등원 체크 없이 하원: 출석으로 두고 하원 시각만 남김 + 하원 알림톡
+        const props = {
+          '하원시각': { rich_text: [{ text: { content: hhmm } }] },
+          '메모': { rich_text: [{ text: { content: [rec ? txt(rec.properties['메모']) : '', '등원 체크 안 함'].filter(Boolean).join(' · ') } }] },
+        };
+        if (!rec) {
+          await nFetch('https://api.notion.com/v1/pages', 'POST', {
+            parent: { database_id: DB_ATTENDANCE },
+            properties: {
+              '기록제목': { title: [{ text: { content: `${s.name} — 출석 (${today})` } }] },
+              '날짜':     { date: { start: today } },
+              '학생이름': { rich_text: [{ text: { content: s.name } }] },
+              '구분':     { select: { name: s.type } },
+              ...(s.grade ? { '학년': { select: { name: s.grade } } } : {}),
+              '출결상태': { select: { name: await newStatus() } },
+              ...props,
+            }
+          });
+        } else {
+          const st = rec.properties['출결상태']?.select?.name || '';
+          await nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: {
+            ...props,
+            ...(st === '결석' ? { '출결상태': { select: { name: '출석' } } } : st === '보강' ? { '출결상태': { select: { name: '보강완료' } } } : {}),
+          }});
+        }
+        let alim = { skipped: true };
+        try {
+          alim = await sendAlim(phonesOf(s.phones), SOL.tplOut || '', { '#{학생명}': s.name.replace(/\s*\(.*?\)\s*/g, ''), '#{시각}': hhmm });
+        } catch (e) { alim = { error: e.message }; }
+        return res.status(200).json({ ok: true, kind: 'out', name: s.name, time: hhmm, noIn: true,
+          message: `${s.name} 학생 하원 ${hhmm}`, alim });
+      }
+
+      if (rec && !inT && outT) {
+        return res.status(200).json({ ok: true, kind: 'done', name: s.name,
+          message: `${s.name} 학생은 오늘 하원(${outT})까지 기록됐어요.` });
+      }
+
+      let kind, msg, st0 = '';
       if (!rec) {
+        st0 = await newStatus();
         await nFetch('https://api.notion.com/v1/pages', 'POST', {
           parent: { database_id: DB_ATTENDANCE },
           properties: {
-            '기록제목': { title: [{ text: { content: `${s.name} — 출석 (${today})` } }] },
+            '기록제목': { title: [{ text: { content: `${s.name} — ${st0} (${today})` } }] },
             '날짜':     { date: { start: today } },
             '학생이름': { rich_text: [{ text: { content: s.name } }] },
             '구분':     { select: { name: s.type } },
             ...(s.grade ? { '학년': { select: { name: s.grade } } } : {}),
-            '출결상태': { select: { name: '출석' } },
+            '출결상태': { select: { name: st0 } },
             '등원시각': { rich_text: [{ text: { content: hhmm } }] },
           }
         });
         kind = 'in';
       } else if (!inT) {
-        // 미리 결석으로 표시돼 있었는데 왔으면 출석으로 바꿈 (보강 등 다른 상태는 그대로)
+        // 미리 결석으로 표시돼 있었는데 왔으면 출석, 오늘로 잡아둔 보강이면 보강완료로 바꿈
         const st = rec.properties['출결상태']?.select?.name || '';
+        const to = st === '결석' ? '출석' : st === '보강' ? '보강완료' : '';
+        st0 = to || st;
         await nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: {
           '등원시각': { rich_text: [{ text: { content: hhmm } }] },
-          ...(st === '결석' ? { '출결상태': { select: { name: '출석' } }, '기록제목': { title: [{ text: { content: `${s.name} — 출석 (${today})` } }] } } : {}),
+          ...(to ? { '출결상태': { select: { name: to } }, '기록제목': { title: [{ text: { content: `${s.name} — ${to} (${today})` } }] } } : {}),
         }});
         kind = 'in';
       } else if (!outT) {
@@ -195,7 +278,7 @@ export default async function handler(req, res) {
       } catch (e) {
         alim = { error: e.message };
       }
-      return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm,
+      return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status: st0 || undefined,
         message: kind === 'in' ? `${s.name} 학생 등원 ${hhmm}` : `${s.name} 학생 하원 ${hhmm}`, alim });
     }
 
