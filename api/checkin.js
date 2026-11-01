@@ -278,7 +278,8 @@ export default async function handler(req, res) {
       } catch (e) {
         alim = { error: e.message };
       }
-      return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status: st0 || undefined,
+      const studyMin = kind === 'out' && inT ? toMin(hhmm) - toMin(inT) : null;
+      return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status: st0 || undefined, inTime: inT || undefined, studyMin,
         message: kind === 'in' ? `${s.name} 학생 등원 ${hhmm}` : `${s.name} 학생 하원 ${hhmm}`, alim });
     }
 
