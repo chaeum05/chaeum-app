@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>채움영어 출석 체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#0f172a; --card:#1e293b; --key:#334155; --keyh:#475569; --txt:#f8fafc; --sub:#94a3b8; --in:#22c55e; --out:#3b82f6; --warn:#f59e0b; --err:#ef4444; --brand:#FEE500; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family:'Noto Sans KR',sans-serif; user-select:none; -webkit-user-select:none; overflow:hidden; }
+.wrap { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:16px; }
+.head { text-align:center; }
+.head .acad { font-size:clamp(14px,2.2vw,18px); color:var(--sub); letter-spacing:.2em; }
+.head .ttl { font-size:clamp(26px,5vw,42px); font-weight:900; margin-top:2px; }
+.head .clock { font-size:clamp(16px,2.6vw,22px); color:var(--brand); font-weight:700; margin-top:4px; }
+.dots { display:flex; gap:16px; margin:6px 0 2px; }
+.dot { width:clamp(18px,3vw,26px); height:clamp(18px,3vw,26px); border-radius:50%; border:3px solid var(--sub); }
+.dot.on { background:var(--brand); border-color:var(--brand); }
+.hint { color:var(--sub); font-size:clamp(14px,2.2vw,18px); min-height:1.4em; text-align:center; }
+.pad { display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(10px,1.8vw,16px); width:min(420px,90vw); }
+.k { aspect-ratio:1.35; border:none; border-radius:18px; background:var(--key); color:var(--txt); font-size:clamp(28px,6vw,44px); font-weight:700; font-family:inherit; cursor:pointer; }
+.k:active { background:var(--keyh); transform:scale(.97); }
+.k.fn { font-size:clamp(16px,3vw,22px); background:#1e293b; color:var(--sub); }
+.result { position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; text-align:center; padding:24px; }
+.result.show { display:flex; }
+.result.in { background:var(--in); } .result.out { background:var(--out); } .result.warn { background:var(--warn); color:#111; } .result.err { background:var(--err); }
+.result .big { font-size:clamp(40px,9vw,80px); font-weight:900; line-height:1.15; }
+.result .mid { font-size:clamp(20px,4vw,34px); font-weight:700; }
+.result .small { font-size:clamp(14px,2.4vw,18px); opacity:.85; }
+.choose { position:fixed; inset:0; background:rgba(15,23,42,.96); display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; padding:24px; }
+.choose.show { display:flex; }
+.choose .q { font-size:clamp(22px,4vw,32px); font-weight:800; margin-bottom:6px; }
+.choose button { min-width:min(420px,86vw); padding:18px; border:none; border-radius:14px; background:var(--key); color:var(--txt); font-size:clamp(20px,4vw,28px); font-weight:700; font-family:inherit; }
+.choose button small { display:block; font-size:.55em; color:var(--sub); font-weight:400; margin-top:2px; }
+.choose .cancel { background:transparent; color:var(--sub); font-size:18px; }
+.busy { opacity:.5; pointer-events:none; }
+.status { position:fixed; bottom:8px; right:12px; font-size:11px; color:#475569; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="head">
+    <div class="acad">CHAEUM ENGLISH</div>
+    <div class="ttl">출석 체크</div>
+    <div class="clock" id="clock"></div>
+  </div>
+  <div class="dots" id="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  <div class="hint" id="hint">출석번호 4자리를 눌러주세요</div>
+  <div class="pad" id="pad"></div>
+</div>
+<div class="result" id="result"></div>
+<div class="choose" id="choose"></div>
+<div class="status" id="status"></div>
+
+<script>
+let pin = '';
+let busy = false;
+let resultTimer = null;
+
+// 키패드
+const pad = document.getElementById('pad');
+['1','2','3','4','5','6','7','8','9','지우기','0','← 한 칸'].forEach(k => {
+  const b = document.createElement('button');
+  b.className = 'k' + (k.length > 1 ? ' fn' : '');
+  b.textContent = k;
+  b.onclick = () => press(k);
+  pad.appendChild(b);
+});
+document.addEventListener('keydown', e => {
+  if (/^\d$/.test(e.key)) press(e.key);
+  else if (e.key === 'Backspace') press('← 한 칸');
+  else if (e.key === 'Escape') press('지우기');
+});
+
+function press(k) {
+  if (busy) return;
+  if (document.getElementById('result').classList.contains('show')) hideResult();
+  if (k === '지우기') pin = '';
+  else if (k === '← 한 칸') pin = pin.slice(0, -1);
+  else if (pin.length < 4) pin += k;
+  drawDots();
+  if (pin.length === 4) submit();
+}
+function drawDots() {
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i < pin.length));
+}
+
+async function submit(pick) {
+  busy = true;
+  document.getElementById('wrap').classList.add('busy');
+  document.getElementById('hint').textContent = '확인 중...';
+  try {
+    const r = await fetch('/api/checkin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'checkin', pin, pick })
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || '오류가 났어요');
+    if (d.choose) { showChoose(d.choose); return; }
+    showResult(d);
+  } catch (e) {
+    showResult({ kind: 'err', message: e.message });
+  } finally {
+    busy = false;
+    document.getElementById('wrap').classList.remove('busy');
+    document.getElementById('hint').textContent = '출석번호 4자리를 눌러주세요';
+  }
+}
+
+function showChoose(list) {
+  const box = document.getElementById('choose');
+  box.innerHTML = '<div class="q">누구인가요?</div>';
+  list.forEach(s => {
+    const b = document.createElement('button');
+    b.innerHTML = `${esc(s.name)}<small>${esc(s.type)} ${esc(s.grade)}</small>`;
+    b.onclick = () => { box.classList.remove('show'); submit(s.name); };
+    box.appendChild(b);
+  });
+  const c = document.createElement('button');
+  c.className = 'cancel'; c.textContent = '취소';
+  c.onclick = () => { box.classList.remove('show'); pin = ''; drawDots(); };
+  box.appendChild(c);
+  box.classList.add('show');
+}
+
+function showResult(d) {
+  const el = document.getElementById('result');
+  const cls = { in: 'in', out: 'out', dup: 'warn', done: 'warn', err: 'err' }[d.kind] || 'warn';
+  const short = (d.name || '').replace(/\s*\(.*?\)\s*/g, '');
+  let html;
+  if (d.kind === 'in') {
+    html = `<div class="mid">어서 와요! 👋</div><div class="big">${esc(short)}</div><div class="mid">등원 ${esc(d.time)}</div>`;
+    speak(`${short} 등원`);
+  } else if (d.kind === 'out') {
+    html = `<div class="mid">수고했어요! 🙌</div><div class="big">${esc(short)}</div><div class="mid">하원 ${esc(d.time)}</div>`;
+    speak(`${short} 하원`);
+  } else {
+    html = `<div class="mid">${d.kind === 'err' ? '⚠️' : 'ℹ️'}</div><div class="mid">${esc(d.message || '')}</div>`;
+  }
+  if (d.alim && d.alim.error) html += `<div class="small">학부모 알림을 못 보냈어요 (${esc(d.alim.error)})</div>`;
+  el.className = 'result show ' + cls;
+  el.innerHTML = html;
+  el.onclick = hideResult;
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(hideResult, d.kind === 'err' ? 3500 : 2500);
+}
+function hideResult() {
+  document.getElementById('result').classList.remove('show');
+  pin = ''; drawDots();
+}
+function speak(t) {
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = 'ko-KR'; u.rate = 1.05;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function esc(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+// 시계
+function tick() {
+  const n = new Date();
+  const days = '일월화수목금토';
+  document.getElementById('clock').textContent =
+    `${n.getMonth() + 1}월 ${n.getDate()}일 (${days[n.getDay()]}) ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+tick(); setInterval(tick, 10000);
+
+// 알림톡 연결 상태 (오른쪽 아래 작게)
+fetch('/api/checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status' }) })
+  .then(r => r.json()).then(d => {
+    document.getElementById('status').textContent = d.alimtalk ? '● 학부모 알림톡 켜짐' : '○ 알림톡 꺼짐 (기록만)';
+  }).catch(() => {});
+
+// 화면 꺼짐 방지 (지원하는 기기만)
+async function keepAwake() { try { await navigator.wakeLock?.request('screen'); } catch (e) {} }
+keepAwake(); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+</script>
+</body>
+</html>
