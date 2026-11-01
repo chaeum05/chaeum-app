@@ -133,10 +133,10 @@ function showResult(d) {
   let html;
   if (d.kind === 'in') {
     html = `<div class="mid">어서 와요! 👋</div><div class="big">${esc(short)}</div><div class="mid">등원 ${esc(d.time)}</div>`;
-    speak(`${short} 등원`);
+    speak(`${short} 학생이 등원하였습니다`);
   } else if (d.kind === 'out') {
     html = `<div class="mid">수고했어요! 🙌</div><div class="big">${esc(short)}</div><div class="mid">하원 ${esc(d.time)}</div>`;
-    speak(`${short} 하원`);
+    speak(`${short} 학생이 하원하였습니다`);
   } else {
     html = `<div class="mid">${d.kind === 'err' ? '⚠️' : 'ℹ️'}</div><div class="mid">${esc(d.message || '')}</div>`;
   }
