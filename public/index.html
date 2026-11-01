@@ -90,6 +90,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-auto b { color: #5b21b6; }
 .sm-auto button { margin-top: 6px; padding: 7px 14px; border: none; border-radius: 8px; background: #b91c1c; color: #fff; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
 .sm-auto ul { margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; }
+@media (pointer: coarse) { .pc-only { display: none !important; } }
+.kf-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 9px 6px; border-bottom: 1px solid #f1f5f9; font-size: 13px; align-items: start; }
+.kf-row .kf-name { font-weight: 800; color: #1e293b; }
+.kf-row .kf-name small { display: block; font-weight: 600; color: #94a3b8; font-size: 11px; }
+.kf-cands { display: flex; flex-direction: column; gap: 4px; }
+.kf-cands label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500; color: #334155; }
+.kf-cands label input[type=radio] { margin: 0; }
+.kf-cands .kf-wait { color: #94a3b8; }
+.kf-cands input[type=text] { padding: 4px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-family: 'Pretendard', sans-serif; width: 220px; }
+.kf-done { color: #15803d; font-weight: 700; }
 .sm-tabs { display: flex; gap: 6px; padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
 .sm-tab { flex: 1 0 auto; padding: 8px 10px; border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; font-family: 'Pretendard', sans-serif; white-space: nowrap; }
 .sm-tab small { display: block; font-size: 10.5px; font-weight: 600; color: #94a3b8; margin-top: 1px; }
@@ -2170,6 +2180,7 @@ function copyReportText() {
 }
 
 let allStudentsCache = [];
+let slVisible = [];   // 학생 목록에서 지금 필터로 보이는 학생
 const isSession = s => s && s.lessonType === '회차';   // 🎫 회차 수업 학생
 
 async function loadStudents() {
@@ -2193,6 +2204,7 @@ async function loadStudents() {
         <select onchange="slLesson=this.value;renderStudentList()"><option value="">수업 전체</option><option value="정규"${slLesson==='정규'?' selected':''}>정규만</option><option value="회차"${slLesson==='회차'?' selected':''}>🏫 특목고(회차)만</option></select>
         <select onchange="slDay=this.value;renderStudentList()"><option value="">요일 전체</option>${['월','화','수','목','금'].map(d => `<option value="${d}"${slDay===d?' selected':''}>${d}요일 수업</option>`).join('')}</select>
         <span id="sl-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
+        <button class="pc-only" onclick="kfOpen()" style="margin-left:auto;padding:7px 12px;border:1.5px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🔍 카톡방 자동 찾기</button>
       </div>
       <div id="sl-table"></div>`;
     renderStudentList();
@@ -2228,6 +2240,7 @@ function renderStudentList() {
     (!q || [s.name, s.school, s.parentKakao].some(v => String(v || '').toLowerCase().includes(q))));
   const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
   list.sort((a, b) => (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3) || (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0) || a.name.localeCompare(b.name, 'ko'));
+  slVisible = list;
   document.getElementById('sl-count').textContent = `총 ${allStudentsCache.length}명${list.length !== allStudentsCache.length ? ` · 보이는 ${list.length}명` : ''}`;
   if (!list.length) { el.innerHTML = '<div class="empty" style="padding:20px;">해당 학생이 없습니다</div>'; return; }
   const groups = {};
@@ -5541,6 +5554,172 @@ function escapeHtmlSafe(t) {
   return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// ── 🔍 학부모 카톡방 자동 찾기 (PC 도우미의 /find 사용) ──
+let kfRows = [];      // { s, base, cands: [], pick: '', done }
+let kfRunning = false, kfStopFlag = false;
+
+const kfBase = n => String(n).replace(/\s*\(.*?\)\s*/g, '').trim();
+const kfTag  = n => (String(n).match(/\((.*?)\)/) || [])[1] || '';
+const KF_PARENT = /학부모|어머|엄마|아버|아빠|맘|부모|보호자/;
+
+// 후보 중 학부모방으로 보이는 걸 하나 골라두기
+function kfGuess(r) {
+  const withName = r.cands.filter(t => t.includes(r.base));
+  let par = withName.filter(t => KF_PARENT.test(t));
+  const tag = kfTag(r.s.name);
+  if (tag && par.length > 1) { const t2 = par.filter(t => t.includes(tag)); if (t2.length) par = t2; }
+  return par.length === 1 ? par[0] : '';
+}
+
+async function kfOpen() {
+  const p = await smAutoPing();
+  if (!p) { alert('내 PC의 카톡 자동발송 도우미(run.bat)가 꺼져 있어요.\nrun.bat을 실행한 뒤 다시 눌러주세요.'); return; }
+  if (!p.version || p.version < 2) { alert('카톡 도우미(kakao_sender.py)가 옛날 버전이에요.\n새 파일로 바꾸고 run.bat을 다시 켜주세요.'); return; }
+  if (!p.kakao) { alert('PC 카카오톡을 못 찾았어요. 카카오톡에 로그인해 주세요.'); return; }
+  const targets = (slVisible.length ? slVisible : allStudentsCache).filter(s => !String(s.parentKakao || '').trim());
+  kfRows = targets.map(s => ({ s, base: kfBase(s.name), cands: null, pick: '', done: false }));
+  document.getElementById('kakao-find').classList.add('open');
+  document.getElementById('kf-msg').innerHTML = kfRows.length
+    ? `지금 목록에서 <b>학부모 카톡 이름이 비어 있는 ${kfRows.length}명</b>을 찾아요. (학생 목록 필터로 대상을 줄일 수 있어요)`
+    : '지금 목록의 학생은 모두 학부모 카톡 이름이 들어 있어요 🎉';
+  document.getElementById('kf-start').style.display = kfRows.length ? '' : 'none';
+  document.getElementById('kf-start').disabled = false;
+  document.getElementById('kf-save').style.display = 'none';
+  document.getElementById('kf-prog').textContent = '';
+  kfRender();
+}
+function kfClose() {
+  if (kfRunning) { kfStopFlag = true; }
+  document.getElementById('kakao-find').classList.remove('open');
+}
+function kfStop() { kfStopFlag = true; document.getElementById('kf-stop').textContent = '멈추는 중…'; }
+
+function kfRender() {
+  const box = document.getElementById('kf-list');
+  box.innerHTML = '';
+  kfRows.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'kf-row';
+    const nm = document.createElement('div');
+    nm.className = 'kf-name';
+    nm.innerHTML = `${escapeHtmlSafe(r.s.name)}<small>${escapeHtmlSafe(r.s.type)} ${escapeHtmlSafe(r.s.grade || '')}${r.s.school ? ' · ' + escapeHtmlSafe(r.s.school) : ''}</small>`;
+    const c = document.createElement('div');
+    c.className = 'kf-cands';
+    if (r.done) {
+      c.innerHTML = `<span class="kf-done">✅ 저장됨: ${escapeHtmlSafe(r.pick)}</span>`;
+    } else if (r.cands === null) {
+      c.innerHTML = '<span class="kf-wait">대기 중</span>';
+    } else if (r.cands === 'loading') {
+      c.innerHTML = '<span class="kf-wait">⏳ 카톡 검색 중...</span>';
+    } else {
+      const name = 'kf-' + i;
+      const opts = r.cands.map(t => ({ v: t, label: t }));
+      opts.push({ v: '', label: '건너뛰기 (저장 안 함)' });
+      opts.forEach(o => {
+        const lb = document.createElement('label');
+        const ra = document.createElement('input');
+        ra.type = 'radio'; ra.name = name; ra.checked = r.pick === o.v && !r.custom;
+        ra.onchange = () => { r.pick = o.v; r.custom = false; };
+        const sp = document.createElement('span');
+        sp.textContent = o.label;
+        if (!o.v) sp.style.color = '#94a3b8';
+        else if (KF_PARENT.test(o.v) && o.v.includes(r.base)) sp.style.fontWeight = '700';
+        lb.append(ra, sp);
+        c.appendChild(lb);
+      });
+      // 직접 입력
+      const lb = document.createElement('label');
+      const ra = document.createElement('input');
+      ra.type = 'radio'; ra.name = name; ra.checked = !!r.custom;
+      const tx = document.createElement('input');
+      tx.type = 'text'; tx.placeholder = '직접 입력 (채팅방 이름 그대로)'; tx.value = r.custom ? r.pick : '';
+      const useTx = () => { ra.checked = true; r.custom = true; r.pick = tx.value.trim(); };
+      ra.onchange = useTx; tx.oninput = useTx; tx.onfocus = useTx;
+      lb.append(ra, tx);
+      c.appendChild(lb);
+      if (!r.cands.length) {
+        const n = document.createElement('div');
+        n.className = 'kf-wait'; n.textContent = `'${r.base}'(으)로 검색되는 방이 없어요`;
+        c.prepend(n);
+      }
+    }
+    row.append(nm, c);
+    box.appendChild(row);
+  });
+}
+
+async function kfStart() {
+  if (kfRunning) return;
+  if (!confirm(`${kfRows.filter(r => !r.done).length}명의 카톡방을 찾을게요.\n\n· 검색 결과 방을 잠깐씩 열었다 닫아서, 안 읽은 메시지는 읽음 처리돼요.\n· 찾는 동안 마우스·키보드를 건드리지 마세요.`)) return;
+  kfRunning = true; kfStopFlag = false;
+  const startBtn = document.getElementById('kf-start'), stopBtn = document.getElementById('kf-stop');
+  startBtn.disabled = true; stopBtn.style.display = ''; stopBtn.textContent = '⏸ 멈추기';
+  const cache = {};   // 같은 이름(형제 X, 동명이인)은 검색 한 번만
+  const todo = kfRows.filter(r => !r.done && r.cands === null);
+  for (let i = 0; i < todo.length; i++) {
+    if (kfStopFlag) break;
+    const r = todo[i];
+    document.getElementById('kf-prog').textContent = `${i + 1}/${todo.length}`;
+    r.cands = 'loading'; kfRender();
+    try {
+      if (!cache[r.base]) {
+        const res = await fetch(SM_AUTO_URL + '/find', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: r.base }) });
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.error || '찾기 실패');
+        cache[r.base] = d.titles || [];
+      }
+      r.cands = cache[r.base];
+      r.pick = kfGuess(r);
+    } catch(e) {
+      r.cands = [];
+      toast('카톡 찾기 오류: ' + e.message);
+      if (/Failed to fetch|NetworkError/i.test(e.message)) { kfStopFlag = true; }
+    }
+    kfRender();
+  }
+  todo.forEach(r => { if (r.cands === 'loading' || r.cands === null) r.cands = null; });
+  kfRunning = false;
+  stopBtn.style.display = 'none';
+  startBtn.disabled = false;
+  startBtn.textContent = kfRows.some(r => r.cands === null && !r.done) ? '▶ 이어서 찾기' : '🔍 찾기 시작';
+  if (!kfRows.some(r => r.cands === null && !r.done)) startBtn.style.display = 'none';
+  document.getElementById('kf-save').style.display = '';
+  const auto = kfRows.filter(r => r.pick).length;
+  document.getElementById('kf-msg').innerHTML = `찾기 ${kfStopFlag ? '멈춤' : '끝'}! <b>${auto}명</b>은 학부모방으로 보이는 걸 골라 뒀어요. 확인하고 <b>💾 고른 것 저장</b>을 눌러주세요.<br><span style="font-size:12px;">굵은 글씨 = 학생 이름 + '학부모/어머님' 등이 들어간 방</span>`;
+  kfRender();
+}
+
+async function kfSave() {
+  const rows = kfRows.filter(r => !r.done && r.pick);
+  if (!rows.length) { toast('저장할 게 없어요.'); return; }
+  // 안전장치: 이름이 같은 학생(동명이인)에게 같은 방을 고르면 막기
+  const used = {};
+  for (const r of rows) {
+    const key = r.pick + '|' + r.base;
+    if (used[key] && used[key] !== r.s.name) {
+      alert(`${used[key]}와(과) ${r.s.name}에게 같은 방 '${r.pick}'을(를) 골랐어요.\n이름이 같은 학생은 서로 다른 카톡방이어야 해요. 하나를 고쳐 주세요.`);
+      return;
+    }
+    used[key] = r.s.name;
+  }
+  const btn = document.getElementById('kf-save');
+  btn.disabled = true;
+  let ok = 0, fail = 0;
+  for (const r of rows) {
+    btn.textContent = `⏳ 저장 중 ${ok + fail + 1}/${rows.length}`;
+    try {
+      await api('save-attendance', { action: 'set_parent_kakao', name: r.s.name, type: r.s.type, parentKakao: r.pick });
+      r.s.parentKakao = r.pick;
+      const st = findStudent(r.s.name, r.s.type); if (st) st.parentKakao = r.pick;
+      r.done = true; ok++;
+    } catch(e) { fail++; }
+  }
+  btn.disabled = false; btn.textContent = '💾 고른 것 저장';
+  kfRender();
+  toast(`학부모 카톡 이름 ${ok}명 저장${fail ? ` · ${fail}명 실패` : ''}`);
+  if (typeof renderStudentList === 'function') renderStudentList();
+}
+
 function smFileName(it) {
   return `${it.baseDate}_${it.name}_채움${it.type}리포트.png`;
 }
@@ -6471,6 +6650,26 @@ async function saveBookEditor(remove) {
         <button id="bg-start" class="bg-btn main" onclick="startBulkGen()">⚡ 시작</button>
       </div>
       <div class="bg-note">만든 보고서는 발송함에 담겨요. 보내기 전에 발송함에서 ✏️ 수정으로 고칠 수 있어요.</div>
+    </div>
+  </div>
+</div>
+<!-- 🔍 카톡방 자동 찾기 -->
+<div class="sm-overlay" id="kakao-find">
+  <div class="sm-box" style="width:min(620px,100%);">
+    <div class="sm-top">
+      <b style="font-size:15px;">🔍 학부모 카톡방 자동 찾기</b>
+      <span id="kf-prog" style="font-size:12px;color:#FEE500;font-weight:700;"></span>
+      <button class="sm-close" onclick="kfClose()">✕ 닫기</button>
+    </div>
+    <div id="kf-msg" style="padding:10px 16px 0;font-size:12.5px;color:#475569;line-height:1.6;"></div>
+    <div id="kf-list" class="bg-list" style="max-height:58vh;"></div>
+    <div class="bg-foot">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="kf-stop" class="bg-btn sub" style="display:none;" onclick="kfStop()">⏸ 멈추기</button>
+        <button id="kf-start" class="bg-btn main" onclick="kfStart()">🔍 찾기 시작</button>
+        <button id="kf-save" class="bg-btn kakao" style="display:none;" onclick="kfSave()">💾 고른 것 저장</button>
+      </div>
+      <div class="bg-note">학생 이름으로 카톡을 검색해서 나오는 방을 하나씩 열어 이름만 확인하고 닫아요. 연 방은 읽음 처리돼요. 찾는 동안 마우스·키보드를 건드리지 마세요.</div>
     </div>
   </div>
 </div>
