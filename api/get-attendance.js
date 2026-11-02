@@ -50,6 +50,8 @@ export default async function handler(req, res) {
         grade:  p.properties['학년']?.select?.name || '',
         inTime:  (p.properties['등원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
         outTime: (p.properties['하원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+        inAlim:  (p.properties['등원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+        outAlim: (p.properties['하원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
       })).filter(a => a.name);
       const seen = new Set();
       const students = [];
@@ -157,6 +159,8 @@ export default async function handler(req, res) {
       grade:  p.properties['학년']?.select?.name || '',
       inTime:  (p.properties['등원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
       outTime: (p.properties['하원시각']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+      inAlim:  (p.properties['등원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
+      outAlim: (p.properties['하원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
     }));
 
     // 오늘 출결 기록에 있는 학생 중 정규 목록에 없는 학생 추가 (보강 등)
