@@ -6,6 +6,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>채움영어 출석 체크</title>
+<link rel="manifest" href="/checkin.webmanifest">
+<meta name="theme-color" content="#7a1f2b">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="채움 출석">
+<link rel="apple-touch-icon" href="/icons/checkin-180.png">
+<link rel="icon" href="/icons/checkin-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <style>
@@ -87,6 +93,8 @@ html,body { margin:0; height:100%; background:var(--cream); color:var(--ink); fo
 .choose .cancel { background:transparent; color:#fff; box-shadow:none; font-size:18px; opacity:.85; }
 
 .status { position:fixed; bottom:10px; right:14px; font-size:11px; color:#b3a796; z-index:5; }
+.fsbtn { position:fixed; top:16px; left:18px; padding:9px 14px; border:1px solid rgba(232,207,143,.5); background:rgba(0,0,0,.15); color:#e8cf8f; border-radius:12px; font-size:13px; font-family:var(--sans); cursor:pointer; z-index:5; }
+.is-fs .fsbtn { display:none; }
 .hbtn { position:fixed; top:16px; right:18px; padding:9px 14px; border:1px solid var(--line); background:rgba(255,255,255,.7); color:var(--sub); border-radius:12px; font-size:13px; font-family:var(--sans); cursor:pointer; z-index:5; }
 
 /* ── 출결 이력 (선생님용) ── */
@@ -137,6 +145,7 @@ html,body { margin:0; height:100%; background:var(--cream); color:var(--ink); fo
     <div class="pad" id="pad"></div>
   </main>
 </div>
+<button class="fsbtn" id="fsbtn" onclick="goFullscreen()">⛶ 전체화면</button>
 <div class="result" id="result"></div>
 <div class="choose" id="choose"></div>
 <div class="status" id="status"></div>
@@ -422,6 +431,25 @@ fetch('/api/checkin', { method: 'POST', headers: { 'Content-Type': 'application/
       ? '● 학부모 알림톡 켜짐' + ((d.missing || []).includes('SOLAPI_TEMPLATE_OUT') ? ' (하원 템플릿 없음)' : '')
       : '○ 알림톡 꺼짐 — 빠진 설정: ' + ((d.missing || []).filter(k => k !== 'SOLAPI_TEST_PHONE').join(', ') || '?');
   }).catch(() => {});
+
+
+// ── 전체화면 (진짜 앱처럼) ──
+// 홈 화면 아이콘으로 열면 처음부터 전체화면. 브라우저로 열었으면 첫 터치 때 전체화면으로 바꿈
+const isStandalone = () => matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement) || isStandalone();
+function goFullscreen() {
+  if (isFs()) return;
+  const el = document.documentElement;
+  try { (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (e) {}
+  try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch (e) {}
+}
+function syncFs() { document.body.classList.toggle('is-fs', isFs()); }
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, syncFs));
+document.addEventListener('pointerdown', () => { if (!isFs()) goFullscreen(); }, true);   // 아무 데나 누르면 다시 전체화면
+syncFs();
+// 실수로 뒤로 가기 해도 출석 화면에 머물기
+history.pushState(null, '', location.href);
+addEventListener('popstate', () => history.pushState(null, '', location.href));
 
 // 화면 꺼짐 방지 (지원하는 기기만)
 async function keepAwake() { try { await navigator.wakeLock?.request('screen'); } catch (e) {} }
