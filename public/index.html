@@ -369,6 +369,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-row.s-보강 { background:#fffdf0; }
 .att-row-name { font-size:13px; font-weight:600; min-width:68px; white-space:nowrap; }
 .att-row-meta { font-size:10px; color:var(--text3); min-width:38px; white-space:nowrap; }
+.amini.ntf { background:#eef2ff; color:#3730a3; padding:3px 6px; }
+.amini.ntf:disabled { opacity:.5; cursor:default; }
+.att-alim { font-size:10px; font-weight:700; color:#4338ca; background:#e0e7ff; border-radius:5px; padding:2px 5px; white-space:nowrap; }
 .att-time { font-size:10.5px; font-weight:700; color:#0f766e; background:#ccfbf1; border-radius:5px; padding:1px 6px; white-space:nowrap; flex-shrink:0; }
 .att-row-memo { width:200px; flex:0 0 200px; font-size:11px; color:var(--text2); background:var(--surface2); border:1px solid var(--border); outline:none; font-family:'Pretendard',sans-serif; padding:2px 6px; cursor:text; border-radius:4px; }
 .att-row-memo::placeholder { color:#ccc; }
@@ -3022,6 +3025,7 @@ let absentTarget = null;
 let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayName } }
 
 function initAttendance() {
+  if (!allStudentsCache.length) ensureStudentsCache().then(() => { if (attStudents.length) renderAttGrid(); });
   // localDateStr 대신 안전한 날짜 계산 (timezone 안전)
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -3176,6 +3180,90 @@ function getTimeChip(name, type, grade) {
   const t = [r.inTime ? `등원 ${r.inTime}` : '', r.outTime ? `하원 ${r.outTime}${dur}` : ''].filter(Boolean).join(' · ');
   return `<span class="att-time" title="출석 체크 화면 기록">${t}</span>`;
 }
+// 📲 선생님이 직접 보내는 등원·하원 알림 (학부모 연락처 있는 학생만, 이미 보냈으면 ✓ 표시만)
+function getNotifyBtns(name, type, grade) {
+  const st = findStudent(name, type);
+  if (!st || !String(st.parentPhone || '').trim()) return '';
+  const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade) || {};
+  const a = `'${String(name).replace(/'/g, "\\'")}','${type}','${grade}'`;
+  const one = (kind, label, sent) => sent
+    ? `<span class="att-alim" title="알림톡 보낸 시각">✓${label} ${sent}</span>`
+    : `<button class="amini ntf" onclick="attNotify(${a},'${kind}',this)" title="지금 시각으로 기록하고 학부모님께 ${label} 알림톡 보내기">📲${label}</button>`;
+  return one('in', '등원', r.inAlim) + one('out', '하원', r.outAlim);
+}
+async function attNotify(name, type, grade, kind, btn) {
+  const label = kind === 'in' ? '등원' : '하원';
+  if (!confirm(`${name} 학부모님께 ${label} 알림톡을 보낼까요?\n(지금 시각으로 ${label}도 기록돼요. 이미 보낸 알림이면 다시 안 나가요)`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const d = await api('checkin', { action: 'notify', name, type, grade, kind });
+    let r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
+    if (!r) { r = { name, type, grade, status: d.status || '출석', memo: '' }; attRecords.push(r); }
+    if (d.status) r.status = d.status;
+    if (kind === 'in') { r.inTime = r.inTime || d.time; if (d.alim?.at || d.alim?.already) r.inAlim = d.alim.at || r.inAlim || d.time; }
+    else { r.outTime = r.outTime || d.time; if (d.alim?.at || d.alim?.already) r.outAlim = d.alim.at || r.outAlim || d.time; }
+    const date = document.getElementById('att-date').value;
+    if (attCache[date]) attCache[date].attendance = [...attRecords];
+    renderAttGrid();
+    toast(d.alim?.already ? `이미 ${d.alim.at}에 보낸 ${label} 알림이라 다시 안 보냈어요` : d.alim?.sent ? `📲 ${name} ${label} 알림톡 보냄` : `${name} ${label} 기록됨 (알림: ${d.alim?.reason || '안 보냄'})`);
+  } catch(e) {
+    toast(`${label} 알림 실패: ${e.message}`);
+    if (btn) { btn.disabled = false; btn.textContent = '📲' + label; }
+  }
+}
+
+// 🔄 출결 화면 자동 새로고침 (30초마다, 출결 탭을 보고 있을 때만) + 새로 찍힌 등·하원 알려주기
+let attPollBusy = false;
+const attSig = r => [r.status, r.inTime, r.outTime, r.inAlim, r.outAlim, r.memo].join('|');
+async function attPoll() {
+  if (attPollBusy || document.visibilityState !== 'visible') return;
+  if (!document.getElementById('panel-attendance')?.classList.contains('active')) return;
+  if (document.querySelector('.modal-overlay.open, .sm-overlay.open')) return;
+  const date = document.getElementById('att-date')?.value;
+  if (!date) return;
+  attPollBusy = true;
+  try {
+    const d = await api('get-attendance', { date });
+    if (document.getElementById('att-date').value !== date) return;
+    const key = r => `${r.name}_${r.type}_${r.grade}`;
+    const before = new Map(attRecords.map(r => [key(r), r]));
+    const changed = (d.attendance || []).length !== attRecords.length
+      || (d.students || []).length !== attStudents.length
+      || (d.attendance || []).some(r => !before.has(key(r)) || attSig(before.get(key(r))) !== attSig(r));
+    if (!changed) return;
+    // 새로 찍힌 등·하원
+    const news = [];
+    (d.attendance || []).forEach(r => {
+      const b = before.get(key(r)) || {};
+      if (r.outTime && !b.outTime) news.push(`🏠 ${r.name} 하원 ${r.outTime}`);
+      else if (r.inTime && !b.inTime) news.push(`🚪 ${r.name} 등원 ${r.inTime}`);
+    });
+    // 쓰는 중인 메모·포커스·스크롤 지키기
+    const typed = {};
+    document.querySelectorAll('#att-grid .att-row-memo').forEach(inp => {
+      const parts = decodeURIComponent(inp.id.replace('memo-', '')).split('_');
+      if (parts.length >= 3 && inp.value !== getMemo(parts[0], parts[1], parts[2])) typed[inp.id] = inp.value;
+    });
+    const focusedId = document.activeElement?.id;
+    const y = window.scrollY;
+    attCache[date] = d;
+    attRecords  = d.attendance || [];
+    attMakeup   = d.makeupList || [];
+    attStudents = d.students  || [];
+    attSession  = d.sessionStudents || [];
+    renderAttGrid();
+    renderMakeupList();
+    Object.entries(typed).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.value = v; });
+    if (focusedId) document.getElementById(focusedId)?.focus();
+    window.scrollTo(0, y);
+    markRefreshed('att-refresh-time');
+    if (news.length) toast(news.length > 2 ? `${news.slice(0, 2).join(' · ')} 외 ${news.length - 2}명` : news.join(' · '));
+  } catch(e) { /* 조용히 다음 번에 */ }
+  finally { attPollBusy = false; }
+}
+setInterval(attPoll, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') attPoll(); });
+
 function getMemo(name, type, grade) {
   const r = attRecords.find(r => r.name===name && r.type===type && r.grade===grade);
   return r ? (r.memo||'') : '';
@@ -3338,6 +3426,7 @@ function renderAttGrid() {
                 📚 ${isOn?'보강출석':'보강왔어요'}
               </button>
               <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+              ${getNotifyBtns(s.name, s.type, s.grade)}
             </div>
             <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
               onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
@@ -3367,6 +3456,7 @@ function renderAttGrid() {
               <button class="amini p ${isPresent?'on':''}" onclick="${attendAction}">✅ ${isMakeup?'보강완료':'출석'}</button>
               <button class="amini a ${st==='결석'?'on':''}" onclick="openAbsentModal('${s.name}','${s.type}','${s.grade}')">❌ 결석</button>
               <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+              ${getNotifyBtns(s.name, s.type, s.grade)}
               ${delBtn}
             </div>
             <input class="att-row-memo" type="text" placeholder="메모" value="${memo.replace(/"/g,'&quot;')}" id="memo-${enc}"
@@ -3421,6 +3511,7 @@ function renderAttGrid() {
         <div class="att-row-btns">
           <button class="amini p ${st === '출석' ? 'on' : ''}" onclick="doAttend('${s.name}','${s.type}','${s.grade}','출석')">✅ ${st === '출석' ? '출석' : '왔어요'}</button>
           <button class="amini r" onclick="goRecord('${s.name}','${s.type}','${s.grade}')">📝 기록</button>
+          ${getNotifyBtns(s.name, s.type, s.grade)}
         </div>
         <input class="att-row-memo" type="text" placeholder="메모 (예: 3회차)" value="${memo.replace(/"/g, '&quot;')}" id="memo-${enc}"
           onblur="saveMemo('${s.name}','${s.type}','${s.grade}',this.value)">
