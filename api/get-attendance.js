@@ -104,6 +104,7 @@ export default async function handler(req, res) {
     const activeNames = new Set();
     const sessionStudents = [];   // 🎫 회차 수업 학생 (그날 수업 요일인 학생만 따로 보여줌)
     const allSessionNames = new Set();   // 회차 학생 전체 (보강 대기·보강 줄에서 빼는 용도)
+    const sessionAll = {};               // 회차 학생 정보 (수업 요일이 아닌 날 와도 보여주려고)
     let cursor;
     do {
       const q = { page_size: 100 };
@@ -118,7 +119,11 @@ export default async function handler(req, res) {
         if (n) activeNames.add(n);
         const sd = p.properties['등록일']?.date?.start?.slice(0, 10) || '';
         // 회차 학생: 수업 요일(예: 금)이 정해져 있으면 그날만, 요일이 없으면 매일 보여줌
-        if (n && p.properties['수업형태']?.select?.name === '회차') allSessionNames.add(n);
+        if (n && p.properties['수업형태']?.select?.name === '회차') {
+          allSessionNames.add(n);
+          sessionAll[n] = { id: p.id, name: n, type: p.properties['구분']?.select?.name || '', grade: p.properties['학년']?.select?.name || '',
+            school: p.properties['학교']?.rich_text?.[0]?.text?.content?.trim() || '', teacher: p.properties['담임']?.select?.name || '', lessonType: '회차', isMakeup: false };
+        }
         const anyDay = ['월','화','수','목','금'].some(k => p.properties[k]?.checkbox);
         const onToday = !anyDay || !!p.properties[dayName]?.checkbox;
         if (n && p.properties['수업형태']?.select?.name === '회차' && onToday && (!sd || sd <= today)) sessionStudents.push({
@@ -162,6 +167,12 @@ export default async function handler(req, res) {
       inAlim:  (p.properties['등원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
       outAlim: (p.properties['하원알림']?.rich_text || []).map(t => t.plain_text || '').join('').trim(),
     }));
+
+    // 회차 학생: 수업 요일이 아니어도 오늘 기록이 있으면(출석 체크 등) 회차 줄에 보여줌
+    const sessKeys = new Set(sessionStudents.map(x => x.name));
+    attendance.forEach(a => {
+      if (a.name && sessionAll[a.name] && !sessKeys.has(a.name)) { sessionStudents.push(sessionAll[a.name]); sessKeys.add(a.name); }
+    });
 
     // 오늘 출결 기록에 있는 학생 중 정규 목록에 없는 학생 추가 (보강 등)
     const studentKeys = new Set(students.map(s => `${s.name}_${s.type}_${s.grade}`));
