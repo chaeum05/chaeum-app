@@ -68,6 +68,9 @@ html,body { margin:0; height:100%; background:var(--cream); color:var(--ink); fo
 .result { position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; text-align:center; padding:24px; color:#fff; z-index:20; }
 .result.show { display:flex; animation:fadein .18s ease; }
 @keyframes fadein { from{opacity:0} to{opacity:1} }
+.result.wait { background:radial-gradient(120% 100% at 50% 0%, #8f2a37, var(--wine2)); }
+.spin { width:clamp(70px,9vw,104px); height:clamp(70px,9vw,104px); border-radius:50%; border:7px solid rgba(255,255,255,.18); border-top-color:var(--gold2); animation:spin .8s linear infinite; margin-bottom:10px; }
+@keyframes spin { to { transform:rotate(360deg); } }
 .result.in   { background:radial-gradient(120% 100% at 50% 0%, var(--in2), var(--in1)); }
 .result.out  { background:radial-gradient(120% 100% at 50% 0%, var(--out2), var(--out1)); }
 .result.warn { background:radial-gradient(120% 100% at 50% 0%, var(--warn2), var(--warn1)); }
@@ -206,7 +209,32 @@ function drawDots() {
   document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i < pin.length));
 }
 
+// ⚡ 번호 4자리를 누르는 순간 바로 '확인 중' 화면 (아는 번호면 이름까지)
+let roster = {};   // 출석번호 → [이름]
+async function loadRoster() {
+  try {
+    const r = await fetch('/api/get-students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const d = await r.json();
+    const m = {};
+    (d.students || []).forEach(st => String(st.pin || '').split(/[,\s]+/).filter(Boolean).forEach(p => (m[p] = m[p] || []).push(st.name)));
+    roster = m;
+  } catch (e) {}
+}
+loadRoster(); setInterval(loadRoster, 10 * 60 * 1000);
+function showWaiting(p, pick) {
+  const names = pick ? [pick] : (roster[p] || []);
+  const nm = names.length === 1 ? names[0].replace(/\s*\(.*?\)\s*/g, '') : '';
+  const el = document.getElementById('result');
+  el.className = 'result show wait';
+  el.innerHTML = `<div class="spin"></div>${nm ? `<div class="big">${esc(nm)}</div>` : ''}<div class="mid">확인하고 있어요…</div>`;
+  el.onclick = null;
+  clearTimeout(resultTimer);
+}
+// 서버가 잠들지 않게 4분마다 살짝 깨워두기 (첫 번째 학생이 오래 기다리지 않도록)
+setInterval(() => { if (document.visibilityState === 'visible') fetch('/api/checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"action":"status"}' }).catch(() => {}); }, 4 * 60 * 1000);
+
 async function submit(pick, mode) {
+  showWaiting(pin, pick);
   busy = true;
   document.getElementById('wrap').classList.add('busy');
   document.getElementById('hint').textContent = '확인 중...';
@@ -217,8 +245,8 @@ async function submit(pick, mode) {
     });
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error || '오류가 났어요');
-    if (d.choose) { showChoose(d.choose); return; }
-    if (d.ask) { showAsk(d, pick); return; }
+    if (d.choose) { document.getElementById('result').classList.remove('show'); showChoose(d.choose); return; }
+    if (d.ask) { document.getElementById('result').classList.remove('show'); showAsk(d, pick); return; }
     if (d.test) testKind = d.kind === 'in' ? 'out' : 'in';   // 테스트 번호는 누를 때마다 등원↔하원
     showResult(d);
   } catch (e) {
