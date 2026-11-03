@@ -89,8 +89,10 @@ export default async function handler(req, res) {
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.errorMessage || d.message || `알림톡 발송 실패 (${r.status})`);
-    const failed = (d.failedMessageList || []).length;
-    return { sent: phones.length - failed, failed, detail: failed ? d.failedMessageList : undefined };
+    const failedList = d.failedMessageList || [];
+    const failed = failedList.length;
+    const why = failedList.map(f => f.statusMessage || f.reason || f.statusCode).filter(Boolean)[0];
+    return { sent: phones.length - failed, failed, ...(failed ? { error: `솔라피 거절: ${why || '사유 모름'}` } : {}) };
   };
 
   // ── 학생 ──
@@ -111,14 +113,20 @@ export default async function handler(req, res) {
   //  - 시험기간인 학교·학년 → 시험기간보강
   //  - 정규 요일이 아닌 날(주말 포함) 온 정규 학생 → 보강완료 (앱이 이번 달 결석과 자동으로 짝지어 줌)
   //  - 그 밖(정규 요일, 특목고 회차) → 출석
-  const newStatus = async s => {
+  // 오늘 시험기간인 시험 목록 (한 번만 불러와서 재사용, 미리 시작해 두면 기다리는 시간이 없음)
+  let examP = null;
+  const examToday = () => {
     const DB_EXAM = process.env.NOTION_DB_EXAM;
-    if (DB_EXAM && s.school) {
+    if (!examP) examP = DB_EXAM ? queryAll(DB_EXAM, { and: [
+      { property: '시험기간_시작', date: { on_or_before: today } },
+      { property: '시험기간_종료', date: { on_or_after: today } },
+    ]}).catch(() => []) : Promise.resolve([]);
+    return examP;
+  };
+  const newStatus = async s => {
+    if (s.school) {
       try {
-        const ex = await queryAll(DB_EXAM, { and: [
-          { property: '시험기간_시작', date: { on_or_before: today } },
-          { property: '시험기간_종료', date: { on_or_after: today } },
-        ]});
+        const ex = await examToday();
         const hit = ex.some(e => {
           const sc = (e.properties['학교명']?.title || []).map(t => t.plain_text || '').join('').trim();
           const gr = e.properties['학년']?.select?.name || '';
@@ -169,6 +177,27 @@ export default async function handler(req, res) {
     return to || st;
   };
 
+  // ⚡ 빠른 버전: 기록 저장과 알림톡 발송을 동시에 시작 → 둘 다 끝나면 '보낸 시각'만 남김 (중복 방지 규칙은 같음)
+  const alimStart = (s, recProps, kind) => {
+    const field = kind === 'in' ? '등원알림' : '하원알림';
+    const at = txt(recProps?.[field]);
+    if (at) return { field, done: Promise.resolve({ already: true, at }) };
+    if (!alimOn) return { field, done: Promise.resolve({ skipped: true, reason: '알림톡 설정 전' }) };
+    const phones = phonesOf(s.phones);
+    if (!phones.length) return { field, done: Promise.resolve({ skipped: true, reason: '학부모 연락처 없음' }) };
+    const tpl = kind === 'in' ? SOL.tplIn : SOL.tplOut;
+    if (!tpl) return { field, done: Promise.resolve({ skipped: true, reason: '하원 템플릿 설정 전' }) };
+    return { field, send: true, done: sendAlim(phones, tpl, { '#{학생명}': shortName(s.name), '#{시각}': hhmm }).catch(e => ({ error: e.message })) };
+  };
+  const alimFinish = async (a, recId) => {
+    const r = await a.done;
+    if (a.send && r.sent > 0) {
+      await nFetch(`https://api.notion.com/v1/pages/${recId}`, 'PATCH', { properties: { [a.field]: rt(hhmm) } }).catch(() => {});
+      return { ...r, at: hhmm };
+    }
+    return r;
+  };
+
   // ⭐ 알림톡은 반드시 이 함수로만: 이미 보낸 기록이 있으면 안 보냄, 보냈으면 시각을 남김
   const notifyOnce = async (s, recId, recProps, kind) => {
     const field = kind === 'in' ? '등원알림' : '하원알림';
@@ -196,7 +225,10 @@ export default async function handler(req, res) {
   try {
     // ── 상태 (알림톡 연결됐는지) ──
     if (action === 'status') {
-      return res.status(200).json({ ok: true, alimtalk: alimOn, today, now: hhmm });
+      // 어떤 설정이 빠졌는지 (값은 안 보여주고 있는지만)
+      const has = { SOLAPI_API_KEY: !!SOL.key, SOLAPI_API_SECRET: !!SOL.secret, SOLAPI_PFID: !!SOL.pfId,
+        SOLAPI_TEMPLATE_IN: !!SOL.tplIn, SOLAPI_TEMPLATE_OUT: !!SOL.tplOut, SOLAPI_TEST_PHONE: !!process.env.SOLAPI_TEST_PHONE };
+      return res.status(200).json({ ok: true, alimtalk: alimOn, missing: Object.keys(has).filter(k => !has[k]), today, now: hhmm });
     }
 
     // ── 알림톡 테스트: 원하는 번호로 등원 알림 한 통 ──
@@ -253,8 +285,15 @@ export default async function handler(req, res) {
           message: `테스트 ${kind === 'in' ? '등원' : '하원'} ${hhmm}`, alim });
       }
 
-      // 1. 번호로 학생 찾기
-      const rows = await queryAll(DB_SCHEDULE, { property: '출석번호', rich_text: { contains: pin } });
+      // 1. 번호로 학생 찾기 + 오늘 출결 기록 전체 + 시험기간 → 동시에 불러오기
+      examToday();
+      const [rows, todayAll] = await Promise.all([
+        queryAll(DB_SCHEDULE, { property: '출석번호', rich_text: { contains: pin } }),
+        queryAll(DB_ATTENDANCE, { and: [
+          { property: '날짜', date: { on_or_after: today } },
+          { property: '날짜', date: { on_or_before: today } },
+        ]}),
+      ]);
       let cands = rows.map(toStudent).filter(s => s.name && s.pins.includes(pin));
       if (!cands.length) return res.status(404).json({ error: '등록되지 않은 번호예요. 선생님께 말씀해 주세요.' });
       if (body.pick) cands = cands.filter(s => s.name === body.pick);
@@ -264,8 +303,8 @@ export default async function handler(req, res) {
       if (!cands.length) return res.status(404).json({ error: '학생을 찾지 못했어요.' });
       const s = cands[0];
 
-      // 2. 오늘 출결 기록
-      const rec = await todayRec(s);
+      // 2. 오늘 출결 기록 (이미 불러온 것에서 찾기)
+      const rec = todayAll.find(p => txt(p.properties['학생이름']) === s.name && (p.properties['구분']?.select?.name || '') === s.type) || null;
       const inT  = rec ? txt(rec.properties['등원시각']) : '';
       const outT = rec ? txt(rec.properties['하원시각']) : '';
       const mode = body.mode === 'in' || body.mode === 'out' ? body.mode : '';
@@ -281,16 +320,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, ask: true, name: s.name, time: hhmm, start });
       }
 
-      let kind, recId, recProps = {}, status;
+      let kind, extra;
       if (!inT && mode === 'out') {
         // 등원 체크 없이 하원: 하원 시각만 남기고 메모에 표시
-        const extra = { '하원시각': rt(hhmm), '메모': rt([rec ? txt(rec.properties['메모']) : '', '등원 체크 안 함'].filter(Boolean).join(' · ')) };
-        if (!rec) { const c = await createRec(s, extra); recId = c.page.id; status = c.status; }
-        else { recId = rec.id; recProps = rec.properties; status = await patchRec(s, rec, extra); }
+        extra = { '하원시각': rt(hhmm), '메모': rt([rec ? txt(rec.properties['메모']) : '', '등원 체크 안 함'].filter(Boolean).join(' · ')) };
         kind = 'out';
       } else if (!inT) {
-        if (!rec) { const c = await createRec(s, { '등원시각': rt(hhmm) }); recId = c.page.id; status = c.status; }
-        else { recId = rec.id; recProps = rec.properties; status = await patchRec(s, rec, { '등원시각': rt(hhmm) }); }
+        extra = { '등원시각': rt(hhmm) };
         kind = 'in';
       } else {
         const gap = toMin(hhmm) - toMin(inT);
@@ -298,13 +334,20 @@ export default async function handler(req, res) {
           return res.status(200).json({ ok: true, kind: 'dup', name: s.name, time: inT,
             message: `${s.name} 학생은 ${inT}에 이미 등원했어요. 하원할 때 다시 눌러주세요.` });
         }
-        await nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: { '하원시각': rt(hhmm) } });
-        recId = rec.id; recProps = rec.properties;
+        extra = { '하원시각': rt(hhmm) };
         kind = 'out';
       }
 
-      // 3. 알림톡 (중복 방지)
-      const alim = await notifyOnce(s, recId, recProps, kind);
+      // 3. 기록 저장과 알림톡을 동시에 (중복 방지: 이미 보낸 기록이 있으면 안 보냄)
+      const a = alimStart(s, rec?.properties, kind);
+      const writeP = !rec
+        ? createRec(s, extra).then(c => ({ id: c.page.id, status: c.status }))
+        : (kind === 'out' && inT
+            ? nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: extra }).then(() => ({ id: rec.id }))
+            : patchRec(s, rec, extra).then(st => ({ id: rec.id, status: st })));
+      const w = await writeP;
+      const status = w.status;
+      const alim = await alimFinish(a, w.id);
       const studyMin = kind === 'out' && inT ? toMin(hhmm) - toMin(inT) : null;
       return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status, inTime: inT || undefined, studyMin,
         noIn: kind === 'out' && !inT ? true : undefined,
