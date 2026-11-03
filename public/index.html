@@ -337,6 +337,20 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .pchip.p1 { border:1.5px solid #3b82f6; background:#eff6ff; color:#1d4ed8; }
 .pchip.p2 { border:1.5px solid #8b5cf6; background:#f5f3ff; color:#6d28d9; }
 .pchip:disabled { opacity:.5; }
+/* 🔎 출결 필터 한 줄 */
+.att-filters { display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; background:var(--surface,#fff); border:1px solid var(--border); border-radius:12px; padding:8px 12px; margin-bottom:14px; box-shadow:var(--shadow); }
+.af-group { display:flex; align-items:center; gap:6px; }
+.af-label { font-size:11px; font-weight:800; color:var(--text3); letter-spacing:.02em; white-space:nowrap; }
+.af-seg { display:flex; flex-wrap:wrap; gap:2px; background:var(--surface2); padding:3px; border-radius:9px; }
+.att-filters .att-lv, .att-filters .att-tt, .att-filters .att-st { padding:6px 9px; border:0; border-radius:7px; background:transparent; font-size:12.5px; font-weight:700; color:var(--text2); white-space:nowrap; line-height:1.3; box-shadow:none; }
+.att-filters .att-lv:hover, .att-filters .att-tt:hover, .att-filters .att-st:hover { background:rgba(0,0,0,.05); }
+.att-filters .att-lv.active { background:#7a1f2b; color:#fff; }
+.att-filters .att-tt.active { background:var(--burgundy); color:#fff; }
+.att-filters .att-st.active { background:#1e293b; color:#fff; }
+.att-filters .att-st .st-time { display:none; }
+.att-filters .att-st .st-cnt { display:inline-block; min-width:16px; margin-left:5px; padding:0 4px; border-radius:8px; background:rgba(0,0,0,.07); font-size:10.5px; opacity:1; text-align:center; }
+.att-filters .att-st.active .st-cnt { background:rgba(255,255,255,.2); }
+.att-filters .att-st.hide { display:none; }
 .att-action-btn:hover { border-color:var(--burgundy); color:var(--burgundy); }
 .att-action-btn.primary { background:var(--burgundy); color:white; border-color:var(--burgundy); }
 .att-action-btn.primary:hover { background:#8e1624; }
@@ -1164,30 +1178,33 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <button class="att-action-btn primary" onclick="openAddMakeupModal()">+ 보강 추가</button>
       </div>
 
-      <!-- 학교급 탭 (초·중등 / 고등) -->
-      <div id="att-level-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
-        <button class="att-lv" data-lv="" onclick="setAttLevel('')">전체</button>
-        <button class="att-lv" data-lv="mid" onclick="setAttLevel('mid')">초·중등</button>
-        <button class="att-lv" data-lv="high" onclick="setAttLevel('high')">고등</button>
-      </div>
-
-      <!-- 담임 탭 -->
-      <div id="att-teacher-tabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-        <button class="att-tt active" data-teacher="" onclick="setAttTeacher('')">전체</button>
-        <button class="att-tt" data-teacher="이유민" onclick="setAttTeacher('이유민')">이유민</button>
-        <button class="att-tt" data-teacher="성형주" onclick="setAttTeacher('성형주')">성형주</button>
-        <button class="att-tt" data-teacher="__none__" onclick="setAttTeacher('__none__')">미지정</button>
-      </div>
-
-      <!-- 수업 시간대 탭 -->
-      <div id="att-slot-tabs" style="display:flex;gap:6px;margin:-4px 0 12px;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:11px;font-weight:700;color:var(--text3);margin-right:2px;">시간대</span>
-        <button class="att-st active" data-slot="" onclick="setAttSlot('')">전체</button>
-        <button class="att-st" data-slot="M1" onclick="setAttSlot('M1')">중등 1부</button>
-        <button class="att-st" data-slot="M2" onclick="setAttSlot('M2')">중등 2부</button>
-        <button class="att-st" data-slot="H1" onclick="setAttSlot('H1')">고등 1부</button>
-        <button class="att-st" data-slot="H2" onclick="setAttSlot('H2')">고등 2부</button>
-        <button class="att-st" data-slot="none" onclick="setAttSlot('none')">미지정</button>
+      <!-- 🔎 필터 한 줄: 학교급 · 담임 · 시간대 -->
+      <div class="att-filters">
+        <div class="af-group"><span class="af-label">학교급</span>
+          <div class="af-seg" id="att-level-tabs">
+            <button class="att-lv" data-lv="" onclick="setAttLevel('')">전체</button>
+            <button class="att-lv" data-lv="mid" onclick="setAttLevel('mid')">초·중등</button>
+            <button class="att-lv" data-lv="high" onclick="setAttLevel('high')">고등</button>
+          </div>
+        </div>
+        <div class="af-group"><span class="af-label">담임</span>
+          <div class="af-seg" id="att-teacher-tabs">
+            <button class="att-tt active" data-teacher="" onclick="setAttTeacher('')">전체</button>
+            <button class="att-tt" data-teacher="이유민" onclick="setAttTeacher('이유민')">이유민</button>
+            <button class="att-tt" data-teacher="성형주" onclick="setAttTeacher('성형주')">성형주</button>
+            <button class="att-tt" data-teacher="__none__" onclick="setAttTeacher('__none__')">미지정</button>
+          </div>
+        </div>
+        <div class="af-group"><span class="af-label">시간대</span>
+          <div class="af-seg" id="att-slot-tabs">
+            <button class="att-st active" data-slot="" onclick="setAttSlot('')">전체</button>
+            <button class="att-st" data-slot="M1" onclick="setAttSlot('M1')">중등 1부</button>
+            <button class="att-st" data-slot="M2" onclick="setAttSlot('M2')">중등 2부</button>
+            <button class="att-st" data-slot="H1" onclick="setAttSlot('H1')">고등 1부</button>
+            <button class="att-st" data-slot="H2" onclick="setAttSlot('H2')">고등 2부</button>
+            <button class="att-st" data-slot="none" onclick="setAttSlot('none')">미지정</button>
+          </div>
+        </div>
       </div>
 
       <!-- 2단 레이아웃 -->
@@ -3376,7 +3393,9 @@ function updateSlotTabs(base) {
   document.querySelectorAll('#att-slot-tabs .att-st').forEach(b => {
     const k = b.dataset.slot;
     b.classList.toggle('active', k === attSlotFilter);
-    const label = k ? (k === 'none' ? '❔ 미지정' : `${SLOT_INFO[k].label} <span class="st-time">${SLOT_INFO[k].time}</span>`) : '전체';
+    const lvv = (typeof attLevel !== 'undefined') ? attLevel : '';
+    b.classList.toggle('hide', (lvv === 'mid' && /^H/.test(k)) || (lvv === 'high' && /^M/.test(k)));
+    const label = k ? (k === 'none' ? '미지정' : `${SLOT_INFO[k].label} <span class="st-time">${SLOT_INFO[k].time}</span>`) : '전체';
     b.innerHTML = `${label}<span class="st-cnt">${cnt[k] || 0}</span>`;
   });
 }
@@ -3422,6 +3441,7 @@ function setAttLevel(v) {
   attLevel = v;
   try { localStorage.setItem('chaeum-att-level', v); } catch (e) {}
   document.querySelectorAll('.att-lv').forEach(b => b.classList.toggle('active', b.dataset.lv === v));
+  if ((v === 'mid' && /^H/.test(attSlotFilter)) || (v === 'high' && /^M/.test(attSlotFilter))) attSlotFilter = '';
   renderAttGrid();
 }
 const levelOk = s => !attLevel || (attLevel === 'high' ? s.type === '고등' : s.type !== '고등');
