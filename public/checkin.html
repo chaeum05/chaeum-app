@@ -318,7 +318,8 @@ function showResult(d) {
   if (d.kind === 'in') {
     const tag = d.status === '보강완료' ? '보강' : d.status === '시험기간보강' ? '시험기간 보강' : '';
     html = `<div class="icon"><svg viewBox="0 0 24 24" width="56%" height="56%" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="mid">어서 와요!</div><div class="big">${esc(short)}</div>
-      <div class="time">등원 ${esc(d.time)}</div>${tag ? `<div class="chip">${tag}</div>` : ''}`;
+      <div class="time">등원 ${esc(d.time)}</div>${tag ? `<div class="chip">${tag}</div>` : ''}` +
+      (d.session ? `<div class="chip">${d.session.nth ? `오늘 ${d.session.nth}회차 · ` : ''}${d.session.left > 0 ? `남은 회차 ${d.session.left}회` : '회차를 다 썼어요 · 선생님께 말씀해 주세요'}</div>` : '');
     speak(`${short} 학생이 등원하였습니다`);
   } else if (d.kind === 'out') {
     html = `<div class="icon">🙌</div><div class="mid">오늘도 수고했어요!</div><div class="big">${esc(short)}</div>
