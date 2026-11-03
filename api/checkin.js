@@ -107,7 +107,24 @@ export default async function handler(req, res) {
     school: txt(p.properties['학교']),
     regularToday: !!p.properties[dayName]?.checkbox,
     session: p.properties['수업형태']?.select?.name === '회차',
+    sessionBase: typeof p.properties['회차잔여']?.number === 'number' ? p.properties['회차잔여'].number : null,
+    sessionBaseDate: p.properties['회차기준일']?.date?.start?.slice(0, 10) || '',
   });
+  const SESSION_PACK = 8;   // 회차권 한 장 = 8회
+  // 🎫 회차 학생: 오늘을 포함해 지금 남은 회차 (기준일 다음 날부터 온 날 수를 뺌)
+  const sessionInfo = async s => {
+    if (s.sessionBase === null || !s.sessionBaseDate) return null;
+    const rows = await queryAll(DB_ATTENDANCE, { and: [
+      { property: '학생이름', rich_text: { equals: s.name } },
+      { property: '날짜', date: { after: s.sessionBaseDate } },
+      { or: ['출석', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+    ]}).catch(() => null);
+    if (!rows) return null;
+    const days = new Set(rows.map(p => p.properties['날짜']?.date?.start?.slice(0, 10)).filter(d => d && d !== today));
+    if (today > s.sessionBaseDate) days.add(today);   // 오늘 온 것도 1회
+    const left = s.sessionBase - days.size;
+    return { left, nth: left >= 0 && left < SESSION_PACK ? SESSION_PACK - left : null, pack: SESSION_PACK };
+  };
 
   // 오늘 처음 기록을 만들 때 출결상태 정하기
   //  - 시험기간인 학교·학년 → 시험기간보강
@@ -345,12 +362,13 @@ export default async function handler(req, res) {
         : (kind === 'out' && inT
             ? nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: extra }).then(() => ({ id: rec.id }))
             : patchRec(s, rec, extra).then(st => ({ id: rec.id, status: st })));
+      const sessP = kind === 'in' && s.session ? sessionInfo(s) : Promise.resolve(null);
       const w = await writeP;
       const status = w.status;
-      const alim = await alimFinish(a, w.id);
+      const [alim, session] = await Promise.all([alimFinish(a, w.id), sessP]);
       const studyMin = kind === 'out' && inT ? toMin(hhmm) - toMin(inT) : null;
       return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status, inTime: inT || undefined, studyMin,
-        noIn: kind === 'out' && !inT ? true : undefined,
+        noIn: kind === 'out' && !inT ? true : undefined, session: session || undefined,
         message: kind === 'in' ? `${s.name} 학생 등원 ${hhmm}` : `${s.name} 학생 하원 ${hhmm}`, alim });
     }
 
