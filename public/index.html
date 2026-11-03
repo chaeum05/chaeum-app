@@ -91,6 +91,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sm-auto button { margin-top: 6px; padding: 7px 14px; border: none; border-radius: 8px; background: #b91c1c; color: #fff; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; }
 .sm-auto ul { margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; }
 @media (pointer: coarse) { .pc-only { display: none !important; } }
+#sl-add input:not([type=checkbox]), #sl-add select { padding:6px 8px !important; font-size:13px !important; height:auto !important; }
+#sl-add #add-name{width:80px !important} #sl-add #add-name2{width:100px !important} #sl-add #add-school{width:120px !important} #sl-add #add-pin{width:80px !important} #sl-add #add-phone{width:130px !important} #sl-add select{width:auto !important}
+.sl-mini.sl-leave { color:#b91c1c; }
+.sl-mini.sl-leave:hover { background:#fdecea; border-color:#fca5a5; }
 .sl-pin { display:inline-block; padding:2px 8px; border-radius:6px; background:#ecfeff; color:#0e7490; font-weight:800; font-size:12px; cursor:pointer; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .sl-pin.phone { background:#f1f5f9; color:#334155; font-weight:600; }
 .sl-pin.empty { background:transparent; color:#cbd5e1; border:1px dashed #cbd5e1; font-weight:600; }
@@ -1068,36 +1072,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         <button class="rs-tab active" id="sv-cards" onclick="setStudentView('cards')">👤 학생 목록</button>
         <button class="rs-tab" id="sv-books" onclick="setStudentView('books')">📚 교재 관리</button>
       </div>
-      <div id="student-list-container"><div class="loading-spinner">불러오는 중...</div></div>
-      <div id="books-view" style="display:none;">
-        <div class="bm-tools">
-          <div style="display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;">
-            <button class="rs-tab bm-lv active" data-v="all" onclick="bmSetLevel('all')">전체</button>
-            <button class="rs-tab bm-lv" data-v="low" onclick="bmSetLevel('low')">초·중등</button>
-            <button class="rs-tab bm-lv" data-v="high" onclick="bmSetLevel('high')">고등</button>
-          </div>
-          <select onchange="bmTeacher=this.value;renderBooksView()" style="width:auto !important;">
-            <option value="">담임 전체</option><option value="이유민">이유민</option><option value="성형주">성형주</option><option value="__none__">담임 미지정</option>
-          </select>
-          <input type="text" placeholder="이름 검색" style="width:100px;" oninput="bmSearch=this.value.trim();renderBooksView()">
-          <button class="bm-btn primary" id="bm-booklist-btn" onclick="openBookList()" title="학원에서 쓰는 교재를 미리 등록해 두고 학생 교재를 고를 때 써요">📖 교재 목록</button>
-          <button class="bm-btn" onclick="findBookSuggestions()" title="Day·point·Unit·회 같은 단위가 있는 최근 기록에서 교재를 찾아 노란 칸으로 보여줘요">💡 지난 기록에서 교재 찾기</button>
-          <button class="bm-btn primary" id="bm-sugg-save" style="display:none;" onclick="saveAllSuggestions()">💾 제안 모두 저장</button>
-          <button class="bm-btn" onclick="openBooksView(true)">🔄 새로고침</button>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">칸을 눌러 교재·단위·전체 분량을 정하면, 진도 기록에서 지금 위치를 읽어 진행률을 보여줘요 · 왼쪽 ☐로 여러 명을 골라 한 번에 지정할 수 있어요 <span id="bm-checked-n" style="color:#3a5fd9;font-weight:700;margin-left:6px;"></span></div>
-        <div id="bm-alerts" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;"></div>
-        <div id="bm-table"></div>
-      </div>
-    </div>
-
-    <!-- 출결 관리 패널 -->
-    <div class="panel active" id="panel-attendance">
-      <div class="panel-title">출결 관리</div>
-
-      <!-- 학생 추가 폼 (맨 위, 버튼 바로 옆) -->
-      <div class="att-add-form" style="margin-bottom:14px;">
-        <div class="att-add-form-title">➕ 학생 추가 (오늘 + 등원 요일 등록)</div>
+      <!-- ➕ 학생 추가 (학생 목록에서) -->
+      <details class="att-add-form" id="sl-add" style="margin:0 0 14px;">
+        <summary class="att-add-form-title" style="cursor:pointer;margin:0;">➕ 새 학생 등록 <span style="font-weight:400;color:var(--text3);">— 눌러서 열기 · 등원 요일·출석번호·학부모 연락처까지 한 번에</span></summary>
+        <div style="height:10px;"></div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <input type="text" id="add-name" placeholder="이름" style="width:72px;">
           <input type="text" id="add-name2" placeholder="동명이인 구분" style="width:88px;" title="예: 형곡, 본교 등">
@@ -1138,10 +1116,36 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <label style="font-size:12px;display:flex;align-items:center;gap:2px;cursor:pointer;"><input type="checkbox" id="add-fri" style="accent-color:var(--burgundy)"> 금</label>
           <button class="att-action-btn primary" style="margin-left:6px;" onclick="addStudentManually()">추가 + 등록</button>
         </div>
+      </details>
+      <div id="student-list-container"><div class="loading-spinner">불러오는 중...</div></div>
+      <div id="books-view" style="display:none;">
+        <div class="bm-tools">
+          <div style="display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;">
+            <button class="rs-tab bm-lv active" data-v="all" onclick="bmSetLevel('all')">전체</button>
+            <button class="rs-tab bm-lv" data-v="low" onclick="bmSetLevel('low')">초·중등</button>
+            <button class="rs-tab bm-lv" data-v="high" onclick="bmSetLevel('high')">고등</button>
+          </div>
+          <select onchange="bmTeacher=this.value;renderBooksView()" style="width:auto !important;">
+            <option value="">담임 전체</option><option value="이유민">이유민</option><option value="성형주">성형주</option><option value="__none__">담임 미지정</option>
+          </select>
+          <input type="text" placeholder="이름 검색" style="width:100px;" oninput="bmSearch=this.value.trim();renderBooksView()">
+          <button class="bm-btn primary" id="bm-booklist-btn" onclick="openBookList()" title="학원에서 쓰는 교재를 미리 등록해 두고 학생 교재를 고를 때 써요">📖 교재 목록</button>
+          <button class="bm-btn" onclick="findBookSuggestions()" title="Day·point·Unit·회 같은 단위가 있는 최근 기록에서 교재를 찾아 노란 칸으로 보여줘요">💡 지난 기록에서 교재 찾기</button>
+          <button class="bm-btn primary" id="bm-sugg-save" style="display:none;" onclick="saveAllSuggestions()">💾 제안 모두 저장</button>
+          <button class="bm-btn" onclick="openBooksView(true)">🔄 새로고침</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">칸을 눌러 교재·단위·전체 분량을 정하면, 진도 기록에서 지금 위치를 읽어 진행률을 보여줘요 · 왼쪽 ☐로 여러 명을 골라 한 번에 지정할 수 있어요 <span id="bm-checked-n" style="color:#3a5fd9;font-weight:700;margin-left:6px;"></span></div>
+        <div id="bm-alerts" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;"></div>
+        <div id="bm-table"></div>
       </div>
+    </div>
+
+    <!-- 출결 관리 패널 -->
+    <div class="panel active" id="panel-attendance">
+      <div class="panel-title">출결 관리</div>
 
       <!-- 퇴원 처리 -->
-      <details class="att-add-form att-leave" id="att-leave" style="margin-bottom:14px;" ontoggle="if(this.open) loadLeaveList()">
+      <details class="att-add-form att-leave" id="att-leave" style="display:none;" ontoggle="if(this.open) loadLeaveList()">
         <summary class="att-add-form-title" style="cursor:pointer;margin:0;">👋 퇴원 처리 <span style="font-weight:400;color:var(--text3);">— 등원일정에서 빼기 (지난 기록·성적은 그대로 남아요)</span></summary>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px;">
           <input type="text" id="leave-search" placeholder="이름 검색" style="width:110px;" oninput="renderLeaveList()">
@@ -2310,7 +2314,7 @@ function renderStudentList() {
         <td style="font-size:12px;">${escH(s.parentKakao || '')}</td>
         <td><span class="sl-pin${s.pin ? '' : ' empty'}" onclick="slEditPin('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.pin ? escH(s.pin) : '+ 번호'}</span></td>
         <td><span class="sl-pin phone${s.parentPhone ? '' : ' empty'}" onclick="slEditPhone('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.parentPhone ? escH(s.parentPhone) : '+ 연락처'}</span></td>
-        <td style="text-align:right;"><button class="sl-mini" onclick="goRecord(${a})">📝 기록</button> <button class="sl-mini" onclick="slGoReport(${a})">📊 보고서</button></td>
+        <td style="text-align:right;white-space:nowrap;"><button class="sl-mini" onclick="goRecord(${a})">📝 기록</button> <button class="sl-mini" onclick="slGoReport(${a})">📊 보고서</button> <button class="sl-mini sl-leave" onclick="slLeave(${a.split(',').slice(0, 2).join(',')}, this)" title="퇴원 처리 (지난 기록은 남아요)">👋 퇴원</button></td>
       </tr>`;
     });
   });
@@ -3702,6 +3706,27 @@ function renderLeaveList() {
   if (q && list.length === 1) sel.selectedIndex = 1;
 }
 
+// 👋 학생 목록에서 퇴원 처리
+async function slLeave(name, type, btn) {
+  const s = findStudent(name, type); if (!s) return;
+  if (!confirm(`${s.name} (${s.type} ${s.grade}) 학생을 퇴원 처리할까요?\n\n· 출결·일괄입력·보고서현황·성적표 목록에서 빠져요\n· 지난 일일기록, 출결, 성적은 그대로 남아요\n· 실수했다면 노션 휴지통에서 30일 안에 되살릴 수 있어요`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const d = await api('save-attendance', { action: 'archive_student', name: s.name, type: s.type });
+    const same = x => x.name === s.name && x.type === s.type;
+    allStudentsCache = allStudentsCache.filter(x => !same(x));
+    if (typeof batchStudents !== 'undefined') batchStudents = batchStudents.filter(x => !same(x));
+    attStudents = attStudents.filter(x => !same(x));
+    if (typeof attCache !== 'undefined') Object.keys(attCache).forEach(k => delete attCache[k]);
+    renderStudentList();
+    if (typeof populateReportDropdown === 'function') populateReportDropdown(allStudentsCache);
+    toast(`👋 ${s.name} 퇴원 처리 완료${d.removedMakeups ? ` · 예정 보강 ${d.removedMakeups}건 정리` : ''}`);
+  } catch(e) {
+    toast('퇴원 처리 실패: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '👋 퇴원'; }
+  }
+}
+
 async function leaveStudent() {
   const sel = document.getElementById('leave-select');
   if (!sel.value) { toast('퇴원 처리할 학생을 고르세요.'); return; }
@@ -3756,8 +3781,8 @@ async function addStudentManually() {
 
   if (!baseName) { toast('이름을 입력해주세요.'); return; }
 
-  const exists = attStudents.find(s => s.name === name);
-  if (exists) { toast(`${name}은 이미 목록에 있어요.`); return; }
+  const exists = attStudents.find(s => s.name === name) || allStudentsCache.find(s => s.name === name && s.type === type);
+  if (exists) { toast(`${name}은 이미 학생 목록에 있어요. 동명이인이면 '동명이인 구분'을 적어주세요.`); return; }
 
   // 🚪 출석번호 중복 확인
   const pinIn   = (document.getElementById('add-pin')?.value || '').trim();
@@ -3799,6 +3824,8 @@ async function addStudentManually() {
     else allStudentsCache.push(entry);
     if (typeof batchStudents !== 'undefined' && batchStudents.length && !batchStudents.some(s => s.name === name && s.type === type)) batchStudents.push(entry);
     if (typeof populateReportDropdown === 'function') populateReportDropdown(allStudentsCache);
+    if (typeof attCache !== 'undefined') Object.keys(attCache).forEach(k => delete attCache[k]);
+    if (document.getElementById('sl-table')) renderStudentList();
     const hasDays = Object.values(days).some(Boolean);
     const tMsg = teacher ? ` · 담임 ${teacher}` : '';
     toast(hasDays ? `${name} 추가 + 등원 요일 등록 완료${tMsg}` : `${name} 등록 완료 (요일 미지정)${tMsg}`);
@@ -6456,6 +6483,7 @@ function setStudentView(v) {
   document.getElementById('sv-books').classList.toggle('active', v === 'books');
   document.getElementById('student-list-container').style.display = v === 'cards' ? '' : 'none';
   document.getElementById('books-view').style.display = v === 'books' ? '' : 'none';
+  const sa = document.getElementById('sl-add'); if (sa) sa.style.display = v === 'cards' ? '' : 'none';
   if (v === 'books') openBooksView();
 }
 
