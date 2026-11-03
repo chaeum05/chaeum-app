@@ -61,6 +61,8 @@ export default async function handler(req, res) {
         },
         startDate: p.properties['등록일']?.date?.start?.slice(0, 10) || '',
         lessonType: p.properties['수업형태']?.select?.name === '회차' ? '회차' : '',   // 🎫 회차 수업
+        sessionBase: typeof p.properties['회차잔여']?.number === 'number' ? p.properties['회차잔여'].number : null,  // 기준일의 남은 회차
+        sessionBaseDate: p.properties['회차기준일']?.date?.start?.slice(0, 10) || '',
         period: p.properties['수업부']?.select?.name || '',
         periods: {
           '월': p.properties['수업부_월']?.select?.name || '',
@@ -90,6 +92,41 @@ export default async function handler(req, res) {
         students.forEach(s => { if (!s.school && schoolMap[s.name]) s.school = schoolMap[s.name]; });
       } catch {}
     }
+
+    // 3. 🎫 회차 학생: 기준일 뒤로 온 날을 빼서 지금 남은 회차 계산
+    const DB_ATTENDANCE = process.env.NOTION_DB_ATTENDANCE;
+    const sess = students.filter(s => s.sessionBase !== null && s.sessionBaseDate);
+    if (DB_ATTENDANCE && sess.length) {
+      try {
+        const minDate = sess.map(s => s.sessionBaseDate).sort()[0];
+        let rows = [], cursor;
+        do {
+          const b = { page_size: 100, filter: { and: [
+            { property: '날짜', date: { after: minDate } },
+            { or: ['출석', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+          ]}};
+          if (cursor) b.start_cursor = cursor;
+          const r = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify(b) });
+          const d = await r.json();
+          if (d.object === 'error') throw new Error(d.message);
+          rows = rows.concat(d.results || []);
+          cursor = d.has_more ? d.next_cursor : undefined;
+        } while (cursor);
+        const days = {};   // 이름|구분 → Set(날짜)
+        rows.forEach(p => {
+          const n = (p.properties['학생이름']?.rich_text || []).map(t => t.plain_text || '').join('').trim();
+          const k = n + '|' + (p.properties['구분']?.select?.name || '');
+          const d = p.properties['날짜']?.date?.start?.slice(0, 10);
+          if (n && d) (days[k] = days[k] || new Set()).add(d);
+        });
+        sess.forEach(s => {
+          const used = [...(days[s.name + '|' + s.type] || [])].filter(d => d > s.sessionBaseDate).length;
+          s.sessionUsed = used;
+          s.sessionLeft = s.sessionBase - used;
+        });
+      } catch {}
+    }
+    sess.forEach(s => { if (s.sessionLeft === undefined) s.sessionLeft = s.sessionBase; });
 
     const typeOrder = { '초등': 0, '중등': 1, '고등': 2 };
     students.sort((a, b) => {
