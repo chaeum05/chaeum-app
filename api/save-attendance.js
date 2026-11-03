@@ -418,6 +418,25 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ── 🎫 회차 잔여 저장: 지금 남은 회차를 오늘 기준으로 적어둠 (새 회차권 충전 포함) ──
+    if (action === 'set_session') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const left = Number(body.left);
+      if (!Number.isFinite(left)) return res.status(400).json({ error: '남은 회차를 숫자로 적어주세요.' });
+      const base = String(body.baseDate || '').slice(0, 10) || new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const r0 = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, { method: 'POST', headers, body: JSON.stringify({ filter: { and: [
+        { property: '학생이름', title: { equals: name } }, { property: '구분', select: { equals: type } } ]}}) });
+      const d0 = await r0.json();
+      if (d0.object === 'error') throw new Error(d0.message);
+      if (!d0.results?.length) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      const r = await fetch(`https://api.notion.com/v1/pages/${d0.results[0].id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: {
+        '회차잔여': { number: left }, '회차기준일': { date: { start: base } },
+      }})});
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true, left, baseDate: base });
+    }
+
     // ── 출석번호·학부모연락처 저장 (출석번호는 다른 학생과 겹치면 막음) ──
     if (action === 'set_contact') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
