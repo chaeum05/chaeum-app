@@ -343,6 +343,35 @@ export default async function handler(req, res) {
     }
 
     // 👋 퇴원 처리: 등원일정 DB에서 휴지통으로 (노션 휴지통에서 30일간 복구 가능)
+    // 📅 한 학생의 출결 이력 (날짜 최신순) — 학생 목록의 '출결' 버튼
+    if (action === 'student_history') {
+      if (!name) return res.status(400).json({ error: '학생 이름이 필요해요.' });
+      const rt = p => (p?.rich_text || p?.title || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+      const and = [{ property: '학생이름', rich_text: { equals: name } }];
+      if (type) and.push({ property: '구분', select: { equals: type } });
+      if (body.from) and.push({ property: '날짜', date: { on_or_after: body.from } });
+      let all = [], cursor;
+      do {
+        const q = { page_size: 100, filter: { and }, sorts: [{ property: '날짜', direction: 'descending' }] };
+        if (cursor) q.start_cursor = cursor;
+        const r = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify(q) });
+        const d = await r.json();
+        if (d.object === 'error') throw new Error(d.message);
+        all = all.concat(d.results || []);
+        cursor = d.has_more ? d.next_cursor : undefined;
+      } while (cursor && all.length < 2000);
+      const records = all.map(p => ({
+        id: p.id,
+        date: p.properties['날짜']?.date?.start?.slice(0, 10) || '',
+        status: p.properties['출결상태']?.select?.name || '',
+        inTime: rt(p.properties['등원시각']),
+        outTime: rt(p.properties['하원시각']),
+        memo: rt(p.properties['메모']),
+        makeupOf: p.properties['원래날짜']?.date?.start?.slice(0, 10) || '',
+      })).filter(r => r.date);
+      return res.status(200).json({ ok: true, records });
+    }
+
     if (action === 'archive_student') {
       const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
       if (!name || !type) return res.status(400).json({ error: '학생 이름과 구분이 필요해요.' });
