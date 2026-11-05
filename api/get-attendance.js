@@ -207,9 +207,12 @@ export default async function handler(req, res) {
       method: 'POST', headers,
       body: JSON.stringify({
         filter: {
-          or: [
-            { property: '출결상태', select: { equals: '보강' } },
-            { property: '출결상태', select: { equals: '보강완료' } },
+          and: [
+            { or: [
+              { property: '출결상태', select: { equals: '보강' } },
+              { property: '출결상태', select: { equals: '보강완료' } },
+            ]},
+            { property: '날짜', date: { on_or_after: new Date(Date.now() - 31 * 24 * 3600 * 1000).toISOString().slice(0, 10) } },
           ]
         },
         page_size: 100
@@ -217,25 +220,12 @@ export default async function handler(req, res) {
     });
     const scheduledData = await scheduledRes.json();
 
-    // ── 30일 지난 보강 기록 자동 삭제 (보강/보강완료 모두) ──
-    const now = new Date();
-    const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30일 전
-    const toArchive = (scheduledData.results || []).filter(p => {
+    // 30일 지난 보강 기록은 화면 계산에서만 빼요 (예전엔 노션에서 지웠는데, 출결 이력이 사라져서 이제 지우지 않음)
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const archivedIds = new Set((scheduledData.results || []).filter(p => {
       const md = p.properties['날짜']?.date?.start || '';
-      if (!md) return false;
-      return new Date(md) < cutoff;
-    });
-    // 백그라운드 삭제 (응답 지연 방지를 위해 최대 25건씩)
-    if (toArchive.length) {
-      await Promise.all(toArchive.slice(0, 25).map(p =>
-        fetch(`https://api.notion.com/v1/pages/${p.id}`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({ archived: true })
-        }).catch(() => {})
-      ));
-    }
-    // 삭제된 건 이후 로직에서 제외
-    const archivedIds = new Set(toArchive.map(p => p.id));
+      return md && new Date(md) < cutoff;
+    }).map(p => p.id));
 
     // 보강 기록 인덱싱
     const scheduledByName = {};
