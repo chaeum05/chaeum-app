@@ -4246,6 +4246,7 @@ async function confirmAddMakeup() {
   const memo       = document.getElementById('modal-makeup-memo').value;
   if (!name)       { toast('이름을 입력해주세요.'); return; }
   if (!makeupDate) { toast('보강 날짜를 선택해주세요.'); return; }
+  if (!makeupDayOk(name, type, makeupDate)) return;
   const reasonLabel = {'사전보강':'사전 보강','결석후보강':'결석 후 보강','추가수업':'추가 수업','기타':'기타'};
   const memoText = [reasonLabel[reason], memo].filter(Boolean).join(' · ');
   try {
@@ -4255,6 +4256,15 @@ async function confirmAddMakeup() {
     await loadMakeupOnly();
     if (makeupDate===document.getElementById('att-date').value) loadAttendance();
   } catch(e) { toast('오류: '+e.message); }
+}
+
+// ⚠️ 정규 수업 요일에 보강을 잡으려고 하면 한 번 더 물어보기
+function makeupDayOk(name, type, date) {
+  const st = findStudent(name, type);
+  const W = ['일','월','화','수','목','금','토'];
+  const dow = W[new Date(date + 'T00:00:00').getDay()];
+  if (!st || !(st.days || []).includes(dow)) return true;
+  return confirm(`${name} 학생은 ${dow}요일이 원래 수업하는 날이에요.\n${date.slice(5).replace('-', '/')}(${dow})에 보강을 잡을까요?\n\n· 다른 날로 바꾸려면 [취소]를 누르고 날짜를 다시 고르세요`);
 }
 
 // 보강 날짜 등록
@@ -4273,6 +4283,7 @@ async function confirmScheduleMakeup() {
   const { name, type, grade, absentDate } = scheduleMakeupTarget;
   const makeupDate = document.getElementById('modal-schedule-date').value;
   if (!makeupDate) { toast('날짜를 선택해주세요.'); return; }
+  if (!makeupDayOk(name, type, makeupDate)) return;
   try {
     await api('save-attendance', { action:'upsert', name, type, grade, date:makeupDate, status:'보강', memo:'결석 후 보강', absentDate });
     closeModal('modal-schedule-makeup');
