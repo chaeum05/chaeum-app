@@ -1355,6 +1355,17 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
     </div>
 
+    <!-- 👋 퇴원생 되돌리기 -->
+    <div id="modal-left" class="modal-overlay" onclick="if(event.target===this) closeModal('modal-left')">
+      <div class="modal-box sh-box" style="max-width:520px;">
+        <div class="sh-head">
+          <div><div class="modal-title" style="margin:0;">👋 퇴원생</div><div class="sh-sub">되돌리면 학생 목록·출결·출석번호가 퇴원 전 그대로 돌아와요 (퇴원 후 30일 안)</div></div>
+          <button class="sh-x" onclick="closeModal('modal-left')">✕</button>
+        </div>
+        <div class="sh-list" id="left-list"></div>
+      </div>
+    </div>
+
     <!-- 📅 학생 출결 이력 -->
     <div id="modal-hist" class="modal-overlay" onclick="if(event.target===this) closeModal('modal-hist')">
       <div class="modal-box sh-box">
@@ -2314,6 +2325,7 @@ async function loadStudents() {
         <select onchange="slDay=this.value;renderStudentList()"><option value="">요일 전체</option>${['월','화','수','목','금'].map(d => `<option value="${d}"${slDay===d?' selected':''}>${d}요일 수업</option>`).join('')}</select>
         <span id="sl-count" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
         <button onclick="slAutoPins()" style="margin-left:auto;padding:7px 12px;border:1.5px solid #a5f3fc;background:#ecfeff;color:#0e7490;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🎲 출석번호 자동 배정</button>
+        <button onclick="openLeftList()" style="padding:7px 12px;border:1.5px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">👋 퇴원생 · 되돌리기</button>
         <button class="pc-only" onclick="kfOpen()" style="padding:7px 12px;border:1.5px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;">🔍 카톡방 자동 찾기</button>
       </div>
       <div id="sl-table"></div>`;
@@ -3390,6 +3402,19 @@ async function attPoll() {
     Object.entries(typed).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.value = v; });
     if (focusedId) document.getElementById(focusedId)?.focus();
     window.scrollTo(0, y);
+    // 🎫 회차 학생이 새로 등원했으면 남은 회차를 다시 계산해서 보여주기
+    const sessNew = (d.attendance || []).some(r => {
+      const b = before.get(key(r)) || {};
+      const st = findStudent(r.name, r.type);
+      return r.inTime && !b.inTime && st && st.sessionLeft !== undefined && st.sessionLeft !== null;
+    });
+    if (sessNew) {
+      api('get-students', {}).then(st => {
+        if (!st?.students) return;
+        allStudentsCache = st.students;
+        if (document.getElementById('att-date')?.value === date) renderAttGrid();
+      }).catch(() => {});
+    }
     markRefreshed('att-refresh-time');
     if (news.length) toast(news.length > 2 ? `${news.slice(0, 2).join(' · ')} 외 ${news.length - 2}명` : news.join(' · '));
   } catch(e) { /* 조용히 다음 번에 */ }
@@ -3775,6 +3800,45 @@ function renderLeaveList() {
 }
 
 
+
+// ── 👋 퇴원생 되돌리기 ──
+async function openLeftList() {
+  document.getElementById('modal-left').classList.add('open');
+  const box = document.getElementById('left-list');
+  box.innerHTML = '<div class="sh-empty">⏳ 불러오는 중...</div>';
+  try {
+    const d = await api('save-attendance', { action: 'list_left' });
+    const list = d.left || [];
+    if (!list.length) { box.innerHTML = '<div class="sh-empty">퇴원 처리한 학생이 없어요.</div>'; return; }
+    const today = new Date(localDateStr(new Date()) + 'T00:00:00');
+    box.innerHTML = list.map(x => {
+      const days = x.date ? Math.round((today - new Date(x.date + 'T00:00:00')) / 86400000) : 0;
+      const left = 30 - days;
+      return `<div class="sh-row" style="grid-template-columns:1fr auto;border-left-color:#fca5a5;">
+        <span><b style="font-size:13.5px;">${escH(x.name)}</b> <span style="color:var(--text3);font-size:12px;">${escH([x.type, x.grade].filter(Boolean).join(' '))} · ${x.date ? x.date.slice(5).replace('-', '/') + ' 퇴원' : ''}${left > 0 ? ` · ${left}일 안에 되돌릴 수 있어요` : ' · 기간 지남'}</span></span>
+        <button class="sl-mini" style="color:#15803d;font-weight:800;" onclick="restoreStudent('${x.id}', this)">↩️ 되돌리기</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = `<div class="sh-empty">불러오지 못했어요: ${escH(e.message)}</div>`;
+  }
+}
+async function restoreStudent(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    await api('save-attendance', { action: 'restore_student', id });
+    if (btn) btn.closest('.sh-row').remove();
+    toast('↩️ 되돌렸어요 · 학생 목록을 새로 불러와요');
+    if (typeof attCache !== 'undefined') Object.keys(attCache).forEach(k => delete attCache[k]);
+    try { await loadStudents(); } catch (e) {}
+    if (typeof populateReportDropdown === 'function') populateReportDropdown(allStudentsCache);
+    if (!document.querySelector('#left-list .sh-row')) document.getElementById('left-list').innerHTML = '<div class="sh-empty">퇴원 처리한 학생이 없어요.</div>';
+  } catch (e) {
+    toast('되돌리기 실패: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '↩️ 되돌리기'; }
+  }
+}
+
 // ── 📅 학생 출결 이력 ──
 let shCur = null, shRange = 3, shData = [];
 function openStudentHist(name, type) {
@@ -3867,10 +3931,10 @@ function shRender() {
 // 👋 학생 목록에서 퇴원 처리
 async function slLeave(name, type, btn) {
   const s = findStudent(name, type); if (!s) return;
-  if (!confirm(`${s.name} (${s.type} ${s.grade}) 학생을 퇴원 처리할까요?\n\n· 출결·일괄입력·보고서현황·성적표 목록에서 빠져요\n· 지난 일일기록, 출결, 성적은 그대로 남아요\n· 실수했다면 노션 휴지통에서 30일 안에 되살릴 수 있어요`)) return;
+  if (!confirm(`${s.name} (${s.type} ${s.grade}) 학생을 퇴원 처리할까요?\n\n· 출결·일괄입력·보고서현황·성적표 목록에서 빠져요\n· 지난 일일기록, 출결, 성적은 그대로 남아요\n· 실수했다면 학생 목록의 '👋 퇴원생 · 되돌리기'에서 30일 안에 되돌릴 수 있어요`)) return;
   if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
   try {
-    const d = await api('save-attendance', { action: 'archive_student', name: s.name, type: s.type });
+    const d = await api('save-attendance', { action: 'archive_student', name: s.name, type: s.type, grade: s.grade });
     const same = x => x.name === s.name && x.type === s.type;
     allStudentsCache = allStudentsCache.filter(x => !same(x));
     if (typeof batchStudents !== 'undefined') batchStudents = batchStudents.filter(x => !same(x));
