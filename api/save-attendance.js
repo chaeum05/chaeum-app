@@ -7,6 +7,7 @@ export default async function handler(req, res) {
 
   const NOTION_TOKEN  = process.env.NOTION_TOKEN;
   const DB_ATTENDANCE = process.env.NOTION_DB_ATTENDANCE;
+  const DB_LEAVE = process.env.NOTION_DB_LEAVE || '20cf5772351041ccac1ef8cb811efd83'; // 👋 퇴원 기록
 
   if (!NOTION_TOKEN || !DB_ATTENDANCE) {
     return res.status(500).json({ error: '환경변수가 설정되지 않았습니다.' });
@@ -417,7 +418,96 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
+      // 퇴원 기록 남기기 (되돌리기용) — 실패해도 퇴원 자체는 완료
+      try {
+        const p0 = pages[0];
+        await fetch('https://api.notion.com/v1/pages', { method: 'POST', headers, body: JSON.stringify({
+          parent: { database_id: DB_LEAVE },
+          properties: {
+            '학생이름': { title: [{ text: { content: name } }] },
+            '구분': { select: { name: type } },
+            '학년': { rich_text: [{ text: { content: body.grade || p0.properties['학년']?.select?.name || '' } }] },
+            '퇴원일': { date: { start: todayKST } },
+            '상태': { select: { name: '퇴원' } },
+            '일정페이지': { rich_text: [{ text: { content: pages.map(p => p.id).join(',') } }] },
+          }
+        })});
+      } catch (e) {}
+
       return res.status(200).json({ ok: true, count: pages.length, removedMakeups });
+    }
+
+    // 📆 요일·수업부·담임 바꾸기 (학생 목록) — 다른 정보는 건드리지 않음
+    if (action === 'set_days') {
+      const DB_SCHEDULE = process.env.NOTION_DB_SCHEDULE;
+      const plan = body.plan || {};   // { 월: { on, period, teacher }, ... }
+      if (!name || !type) return res.status(400).json({ error: '학생 이름과 구분이 필요해요.' });
+      const q = await fetch(`https://api.notion.com/v1/databases/${DB_SCHEDULE}/query`, { method: 'POST', headers, body: JSON.stringify({
+        filter: { and: [{ property: '학생이름', title: { equals: name } }, { property: '구분', select: { equals: type } }] }
+      })});
+      const qd = await q.json();
+      if (qd.object === 'error') throw new Error(qd.message);
+      const page = qd.results?.[0];
+      if (!page) return res.status(404).json({ error: '등원일정에서 학생을 찾지 못했어요.' });
+      const W = ['월', '화', '수', '목', '금'];
+      const T = ['이유민', '성형주'];
+      const props = {};
+      let firstP = '', firstT = '';
+      W.forEach(d => {
+        const x = plan[d] || {};
+        const on = !!x.on;
+        props[d] = { checkbox: on };
+        const per = on && (x.period === '1부' || x.period === '2부') ? x.period : '';
+        const tch = on && T.includes(x.teacher) ? x.teacher : '';
+        props[`수업부_${d}`] = per ? { select: { name: per } } : { select: null };
+        props[`담임_${d}`] = tch ? { select: { name: tch } } : { select: null };
+        if (per && !firstP) firstP = per;
+        if (tch && !firstT) firstT = tch;
+      });
+      if (firstP) props['수업부'] = { select: { name: firstP } };
+      if (firstT) props['담임'] = { select: { name: firstT } };
+      const r = await fetch(`https://api.notion.com/v1/pages/${page.id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: props }) });
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true });
+    }
+
+    // 👋 퇴원생 목록 (되돌리기용)
+    if (action === 'list_left') {
+      const r = await fetch(`https://api.notion.com/v1/databases/${DB_LEAVE}/query`, { method: 'POST', headers, body: JSON.stringify({
+        filter: { property: '상태', select: { equals: '퇴원' } },
+        sorts: [{ property: '퇴원일', direction: 'descending' }], page_size: 100,
+      })});
+      const d = await r.json();
+      if (d.object === 'error') throw new Error(d.message);
+      const rt = p => (p?.rich_text || p?.title || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+      return res.status(200).json({ ok: true, left: (d.results || []).map(p => ({
+        id: p.id,
+        name: rt(p.properties['학생이름']),
+        type: p.properties['구분']?.select?.name || '',
+        grade: rt(p.properties['학년']),
+        date: p.properties['퇴원일']?.date?.start || '',
+      }))});
+    }
+
+    // ↩️ 퇴원 되돌리기: 휴지통에 있는 등원일정을 다시 꺼냄 (노션 휴지통 보관 기간 안에서만 가능)
+    if (action === 'restore_student') {
+      if (!body.id) return res.status(400).json({ error: '퇴원 기록이 필요해요.' });
+      const lr = await fetch(`https://api.notion.com/v1/pages/${body.id}`, { headers });
+      const log = await lr.json();
+      if (log.object === 'error') throw new Error(log.message);
+      const ids = (log.properties['일정페이지']?.rich_text || []).map(t => t.plain_text || '').join('').split(',').map(x => x.trim()).filter(Boolean);
+      if (!ids.length) return res.status(400).json({ error: '되돌릴 학생 정보가 없어요.' });
+      for (const id of ids) {
+        const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ archived: false }) });
+        const d = await r.json();
+        if (d.object === 'error') return res.status(410).json({ error: '노션 휴지통에서 이미 완전히 지워져서 되돌릴 수 없어요. 학생 추가로 다시 등록해 주세요.' });
+      }
+      const todayKST2 = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      await fetch(`https://api.notion.com/v1/pages/${body.id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: {
+        '상태': { select: { name: '복귀' } }, '되돌린날': { date: { start: todayKST2 } },
+      }})});
+      return res.status(200).json({ ok: true, restored: ids.length });
     }
 
     // 학부모 카톡 이름 저장 (등원일정 DB)
