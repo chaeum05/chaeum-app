@@ -337,6 +337,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .pchip.p1 { border:1.5px solid #3b82f6; background:#eff6ff; color:#1d4ed8; }
 .pchip.p2 { border:1.5px solid #8b5cf6; background:#f5f3ff; color:#6d28d9; }
 .pchip:disabled { opacity:.5; }
+/* 📆 요일 바꾸기 */
+.sl-days-edit { cursor:pointer; display:inline-flex; gap:2px; padding:2px; border-radius:6px; border:1px dashed transparent; }
+.sl-days-edit:hover { border-color:#cbd5e1; background:#f8fafc; }
+.dy-row { display:grid; grid-template-columns:70px 1fr 1fr; gap:8px; align-items:center; padding:8px 4px; border-bottom:1px solid #f1f5f9; }
+.dy-row:last-child { border-bottom:0; }
+.dy-day { display:flex; align-items:center; justify-content:center; height:34px; border-radius:8px; border:1.5px solid var(--border); background:#fff; font-weight:800; font-size:14px; cursor:pointer; color:#94a3b8; font-family:inherit; }
+.dy-day.on { background:var(--burgundy); border-color:var(--burgundy); color:#fff; }
+.dy-row select { height:34px; padding:0 8px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:#fff; }
+.dy-row select:disabled { opacity:.35; }
 /* 📅 학생 출결 이력 */
 .modal-box.sh-box { width:min(760px, calc(100vw - 32px)); max-height:86vh; display:flex; flex-direction:column; padding:22px 24px; }
 .sh-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
@@ -1352,6 +1361,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <button class="modal-btn" onclick="confirmAbsent(false)">결석만 처리</button>
         </div>
         <button class="modal-cancel" onclick="closeModal('modal-absent')">취소</button>
+      </div>
+    </div>
+
+    <!-- 📆 요일 바꾸기 -->
+    <div id="modal-days" class="modal-overlay" onclick="if(event.target===this) closeModal('modal-days')">
+      <div class="modal-box sh-box" style="max-width:440px;">
+        <div class="sh-head">
+          <div><div class="modal-title" style="margin:0;" id="dy-title">요일 바꾸기</div><div class="sh-sub">오는 요일을 켜고, 요일마다 수업부·담임을 골라요</div></div>
+          <button class="sh-x" onclick="closeModal('modal-days')">✕</button>
+        </div>
+        <div id="dy-rows"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="sl-mini" style="padding:8px 14px;" onclick="closeModal('modal-days')">취소</button>
+          <button class="sl-mini" id="dy-save" style="padding:8px 16px;background:var(--burgundy);color:#fff;border-color:var(--burgundy);font-weight:800;" onclick="saveDaysEdit()">저장</button>
+        </div>
       </div>
     </div>
 
@@ -2384,7 +2408,7 @@ function renderStudentList() {
         <td style="color:#64748b;">${s.type === '초등' ? s.grade : s.grade}</td>
         <td>${escH(s.school || '')}</td>
         <td>${escH(teachers.join(', ') || s.teacher || '')}${!teachers.length && !s.teacher ? '<span style="color:#cbd5e1;">미지정</span>' : ''}</td>
-        <td>${dayHtml}</td>
+        <td><span class="sl-days-edit" onclick="openDaysEdit('${escH(s.name)}','${s.type}')" title="눌러서 요일·수업부·담임 바꾸기">${dayHtml}</span></td>
         <td><select class="sl-lesson" onchange="setLessonType(${a.split(',').slice(0, 2).join(',')},this.value)" style="padding:3px 6px;border:1px solid ${isSession(s) ? '#c4b5fd' : 'var(--border)'};border-radius:6px;font-size:11px;font-family:inherit;background:${isSession(s) ? '#f5f3ff' : '#fff'};color:${isSession(s) ? '#6d28d9' : 'inherit'};font-weight:${isSession(s) ? 700 : 400};">
           <option value="정규"${isSession(s) ? '' : ' selected'}>정규</option><option value="회차"${isSession(s) ? ' selected' : ''}>🏫 특목고</option></select>${isSession(s) ? ' ' + sessionChip(s.name, s.type) : ''}</td>
         <td style="color:#64748b;font-size:12px;">${s.startDate ? s.startDate.slice(2).replace(/-/g, '.') : ''}</td>
@@ -3800,6 +3824,58 @@ function renderLeaveList() {
 }
 
 
+
+
+// ── 📆 학생 목록에서 요일·수업부·담임 바꾸기 ──
+let dyCur = null;
+function openDaysEdit(name, type) {
+  const s = findStudent(name, type); if (!s) return;
+  dyCur = s;
+  document.getElementById('dy-title').textContent = `📆 ${s.name} 요일 바꾸기`;
+  const W = ['월', '화', '수', '목', '금'];
+  document.getElementById('dy-rows').innerHTML = W.map(d => {
+    const on = (s.days || []).includes(d);
+    const per = s.periods?.[d] || s.period || '1부';
+    const tch = s.teachers?.[d] || s.teacher || '';
+    return `<div class="dy-row" data-d="${d}">
+      <button type="button" class="dy-day${on ? ' on' : ''}" onclick="dyToggle(this)">${d}</button>
+      <select class="dy-per"${on ? '' : ' disabled'}><option${per === '1부' ? ' selected' : ''}>1부</option><option${per === '2부' ? ' selected' : ''}>2부</option></select>
+      <select class="dy-tch"${on ? '' : ' disabled'}><option value="">담임 미지정</option>${['이유민', '성형주'].map(t => `<option${t === tch ? ' selected' : ''}>${t}</option>`).join('')}</select>
+    </div>`;
+  }).join('');
+  document.getElementById('modal-days').classList.add('open');
+}
+function dyToggle(btn) {
+  btn.classList.toggle('on');
+  const row = btn.closest('.dy-row');
+  row.querySelectorAll('select').forEach(x => x.disabled = !btn.classList.contains('on'));
+}
+async function saveDaysEdit() {
+  const s = dyCur; if (!s) return;
+  const plan = {};
+  document.querySelectorAll('#dy-rows .dy-row').forEach(r => {
+    plan[r.dataset.d] = { on: r.querySelector('.dy-day').classList.contains('on'), period: r.querySelector('.dy-per').value, teacher: r.querySelector('.dy-tch').value };
+  });
+  const btn = document.getElementById('dy-save');
+  btn.disabled = true; btn.textContent = '⏳ 저장 중';
+  try {
+    await api('save-attendance', { action: 'set_days', name: s.name, type: s.type, plan });
+    const W = ['월', '화', '수', '목', '금'];
+    s.days = W.filter(d => plan[d].on);
+    s.periods = {}; s.teachers = {};
+    W.forEach(d => { s.periods[d] = plan[d].on ? plan[d].period : ''; s.teachers[d] = plan[d].on ? plan[d].teacher : ''; });
+    const f = W.find(d => plan[d].on);
+    if (f) { s.period = plan[f].period; if (plan[f].teacher) s.teacher = plan[f].teacher; }
+    if (typeof attCache !== 'undefined') Object.keys(attCache).forEach(k => delete attCache[k]);
+    closeModal('modal-days');
+    renderStudentList();
+    toast(`📆 ${s.name} 요일 저장 · ${s.days.join('·') || '요일 없음'}`);
+  } catch (e) {
+    toast('저장 실패: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '저장';
+  }
+}
 
 // ── 👋 퇴원생 되돌리기 ──
 async function openLeftList() {
