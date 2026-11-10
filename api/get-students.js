@@ -103,7 +103,7 @@ export default async function handler(req, res) {
         do {
           const b = { page_size: 100, filter: { and: [
             { property: '날짜', date: { after: minDate } },
-            { or: ['출석', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+            { or: ['출석', '보강완료', '시험기간보강', '추가수업'].map(v => ({ property: '출결상태', select: { equals: v } })) },
           ]}};
           if (cursor) b.start_cursor = cursor;
           const r = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify(b) });
