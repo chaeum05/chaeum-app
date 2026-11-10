@@ -173,18 +173,21 @@ export default async function handler(req, res) {
       { property: '날짜', date: { before: today } },
     ]});
     const W = ['일','월','화','수','목','금','토'];
-    const abs = [], mk = [];
+    const abs = [], mk = [], missed = {};
     rows.forEach(p => {
       const d = (p.properties['날짜']?.date?.start || '').slice(0, 10);
       const st = p.properties['출결상태']?.select?.name || '';
       const od = (p.properties['원래날짜']?.date?.start || '').slice(0, 10);
       if (!d) return;
+      if (st === '결석' && od && od !== d) { missed[d] = od; return; }   // 잡아둔 보강을 빠진 날 → 원래 결석으로 이어짐
       if (st === '결석') { if (d >= monthStart) abs.push(d); return; }
       if (st === '보강' || st === '보강완료') { mk.push({ d, od, used: false }); return; }
       if (st === '시험기간보강' || st === '출석') {
         if (od || !(s.days || []).includes(W[new Date(d + 'T00:00:00').getDay()])) mk.push({ d, od, used: false });
       }
     });
+    const root = d => { let x = d, k = 0; while (missed[x] && k++ < 10) x = missed[x]; return x; };
+    mk.forEach(x => { if (x.od) x.od = root(x.od); });
     abs.sort();
     const covered = new Set();
     abs.forEach(a => { const r = mk.find(x => !x.used && x.od === a); if (r) { r.used = true; covered.add(a); } });
