@@ -186,8 +186,9 @@ export default async function handler(req, res) {
       }
     });
 
-    // 3. 결석 조회 — 보강 대기는 매달 리셋 (선택한 날짜가 속한 달 1일부터만)
-    const limitDate = today.slice(0, 7) + '-01';
+    // 3. 결석 조회 — 보강 대기는 이번 달 1일부터 (매달 새로 시작)
+    const MAKEUP_WINDOW_DAYS = 42;
+    const limitDate = today.slice(0, 7) + '-01';   // 보강 대기는 매달 1일부터 (지난달 결석은 보강 의무 없음)
 
     const makeupRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
       method: 'POST', headers,
@@ -203,6 +204,20 @@ export default async function handler(req, res) {
       })
     });
     const makeupData = await makeupRes.json();
+    // 결석이 100개 넘으면 나머지도 불러오기
+    let mkCursor = makeupData.has_more ? makeupData.next_cursor : undefined;
+    while (mkCursor) {
+      const rr = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify({
+        filter: { and: [
+          { property: '출결상태', select: { equals: '결석' } },
+          { property: '날짜', date: { on_or_after: limitDate } },
+        ]}, sorts: [{ property: '날짜', direction: 'ascending' }], page_size: 100, start_cursor: mkCursor,
+      })});
+      const dd = await rr.json();
+      if (dd.object === 'error') break;
+      makeupData.results = (makeupData.results || []).concat(dd.results || []);
+      mkCursor = dd.has_more ? dd.next_cursor : undefined;
+    }
 
     // 4. 보강/보강완료 기록 전체 조회
     const scheduledRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
@@ -287,7 +302,7 @@ export default async function handler(req, res) {
         const at = new Date(d + 'T00:00:00').getTime();
         const cand = recs.filter(x => !x.used && !x.absentDate && x.makeupDate !== d)
           .map(x => ({ x, diff: (new Date(x.makeupDate + 'T00:00:00').getTime() - at) / 86400000 }))
-          .filter(o => o.diff >= -7 && o.diff <= 30)
+          .filter(o => o.diff >= -7 && o.diff <= MAKEUP_WINDOW_DAYS)
           .sort((p1, p2) => (p1.diff < 0) - (p2.diff < 0) || Math.abs(p1.diff) - Math.abs(p2.diff));
         if (cand.length) { cand[0].x.used = true; covered.add(n + '|' + d); }
       });
