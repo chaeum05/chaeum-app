@@ -106,6 +106,7 @@ export default async function handler(req, res) {
     slot: p.properties[`수업부_${dayName}`]?.select?.name || p.properties['수업부']?.select?.name || '',
     school: txt(p.properties['학교']),
     regularToday: !!p.properties[dayName]?.checkbox,
+    days: ['월','화','수','목','금'].filter(k => p.properties[k]?.checkbox),
     session: p.properties['수업형태']?.select?.name === '회차',
     sessionBase: typeof p.properties['회차잔여']?.number === 'number' ? p.properties['회차잔여'].number : null,
     sessionBaseDate: p.properties['회차기준일']?.date?.start?.slice(0, 10) || '',
@@ -117,7 +118,7 @@ export default async function handler(req, res) {
     const rows = await queryAll(DB_ATTENDANCE, { and: [
       { property: '학생이름', rich_text: { equals: s.name } },
       { property: '날짜', date: { after: s.sessionBaseDate } },
-      { or: ['출석', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+      { or: ['출석', '보강완료', '시험기간보강', '추가수업'].map(v => ({ property: '출결상태', select: { equals: v } })) },
     ]}).catch(() => null);
     if (!rows) return null;
     const days = new Set(rows.map(p => p.properties['날짜']?.date?.start?.slice(0, 10)).filter(d => d && d !== today));
@@ -152,8 +153,51 @@ export default async function handler(req, res) {
         if (hit) return '시험기간보강';
       } catch (e) { /* 시험정보를 못 읽으면 아래 규칙으로 */ }
     }
-    if (!s.session && !s.regularToday) return '보강완료';
+    if (!s.session && !s.regularToday) {
+      // 보강 안 된 결석이 있으면 → 보강완료 (가장 오래된 결석과 짝), 없으면 → 추가수업
+      const ab = await pendingAbsence(s).catch(() => '');
+      if (ab) { s._absentDate = ab; return '보강완료'; }
+      return '추가수업';
+    }
     return '출석';
+  };
+
+  // 이번 달 결석 중 아직 보강이 안 된 가장 오래된 날 (출결 화면의 '보강 대기'와 같은 규칙)
+  const pendingAbsence = async s => {
+    const MAKEUP_WINDOW_DAYS = 42;   // 보강은 결석 후 최대 6주 안
+    const monthStart = today.slice(0, 7) + '-01';   // 보강 대기는 매달 1일부터 (지난달 결석은 보강 의무 없음)
+    const from = new Date(new Date(monthStart).getTime() - 8 * 86400000).toISOString().slice(0, 10);
+    const rows = await queryAll(DB_ATTENDANCE, { and: [
+      { property: '학생이름', rich_text: { equals: s.name } },
+      { property: '날짜', date: { on_or_after: from } },
+      { property: '날짜', date: { before: today } },
+    ]});
+    const W = ['일','월','화','수','목','금','토'];
+    const abs = [], mk = [];
+    rows.forEach(p => {
+      const d = (p.properties['날짜']?.date?.start || '').slice(0, 10);
+      const st = p.properties['출결상태']?.select?.name || '';
+      const od = (p.properties['원래날짜']?.date?.start || '').slice(0, 10);
+      if (!d) return;
+      if (st === '결석') { if (d >= monthStart) abs.push(d); return; }
+      if (st === '보강' || st === '보강완료') { mk.push({ d, od, used: false }); return; }
+      if (st === '시험기간보강' || st === '출석') {
+        if (od || !(s.days || []).includes(W[new Date(d + 'T00:00:00').getDay()])) mk.push({ d, od, used: false });
+      }
+    });
+    abs.sort();
+    const covered = new Set();
+    abs.forEach(a => { const r = mk.find(x => !x.used && x.od === a); if (r) { r.used = true; covered.add(a); } });
+    abs.forEach(a => {
+      if (covered.has(a)) return;
+      const at = new Date(a + 'T00:00:00').getTime();
+      const c = mk.filter(x => !x.used && !x.od && x.d !== a)
+        .map(x => ({ x, diff: (new Date(x.d + 'T00:00:00').getTime() - at) / 86400000 }))
+        .filter(o => o.diff >= -7 && o.diff <= MAKEUP_WINDOW_DAYS)
+        .sort((p1, p2) => (p1.diff < 0) - (p2.diff < 0) || Math.abs(p1.diff) - Math.abs(p2.diff));
+      if (c.length) { c[0].x.used = true; covered.add(a); }
+    });
+    return abs.find(a => !covered.has(a)) || '';
   };
 
   const todayRec = async s => {
@@ -178,6 +222,8 @@ export default async function handler(req, res) {
         '구분':     { select: { name: s.type } },
         ...(s.grade ? { '학년': { select: { name: s.grade } } } : {}),
         '출결상태': { select: { name: st } },
+        ...(st === '보강완료' && s._absentDate ? { '원래날짜': { date: { start: s._absentDate } }, '메모': rt('결석 후 보강 (자동)') } : {}),
+        ...(st === '추가수업' ? { '메모': rt('추가 수업 (자동)') } : {}),
         ...extra,
       }
     });
