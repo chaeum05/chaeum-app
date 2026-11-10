@@ -119,7 +119,7 @@ html,body { margin:0; height:100%; background:var(--cream); color:var(--ink); fo
 .hist-tbl td.t { font-weight:700; font-variant-numeric:tabular-nums; }
 .hist-tbl .muted { color:#d6ccbe; font-weight:400; }
 .tag { display:inline-block; padding:3px 9px; border-radius:7px; font-size:12px; font-weight:700; }
-.tag.출석 { background:#dff3e6; color:#0f5132; } .tag.결석 { background:#f9dede; color:#7f1d1d; } .tag.보강, .tag.보강완료, .tag.시험기간보강 { background:#fbefd6; color:#8a5a00; } .tag.none { background:#f3ece1; color:#a89c8d; }
+.tag.출석 { background:#dff3e6; color:#0f5132; } .tag.결석 { background:#f9dede; color:#7f1d1d; } .tag.보강, .tag.보강완료, .tag.시험기간보강 { background:#fbefd6; color:#8a5a00; } .tag.추가수업 { background:#ede9fe; color:#5b21b6; } .tag.none { background:#f3ece1; color:#a89c8d; }
 .pinbox { position:fixed; inset:0; background:rgba(34,28,23,.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; color:#fff; z-index:25; }
 .pinbox.show { display:flex; }
 .pinbox input { font-size:32px; width:220px; text-align:center; letter-spacing:.4em; padding:12px; border-radius:14px; border:none; font-family:var(--sans); }
@@ -166,6 +166,10 @@ html,body { margin:0; height:100%; background:var(--cream); color:var(--ink); fo
     <input type="date" id="hist-date" onchange="histLoad()">
     <button onclick="histMove(1)">다음날 ▶</button>
     <button onclick="histToday()">오늘</button>
+    <span style="display:inline-flex;gap:4px;margin-left:6px;" id="hist-lv">
+      <button data-lv="" onclick="histSetLevel('')">전체</button><button data-lv="mid" onclick="histSetLevel('mid')">초·중등</button><button data-lv="high" onclick="histSetLevel('high')">고등</button>
+    </span>
+    <button id="voice-btn" onclick="toggleVoice()"></button>
     <button onclick="histLoad()">🔄</button>
     <button class="close" onclick="histClose()">✕ 출석 화면으로</button>
   </div>
@@ -316,7 +320,7 @@ function showResult(d) {
   const short = (d.name || '').replace(/\s*\(.*?\)\s*/g, '');
   let html;
   if (d.kind === 'in') {
-    const tag = d.status === '보강완료' ? '보강' : d.status === '시험기간보강' ? '시험기간 보강' : '';
+    const tag = d.status === '보강완료' ? '보강' : d.status === '시험기간보강' ? '시험기간 보강' : d.status === '추가수업' ? '추가 수업' : '';
     html = `<div class="icon"><svg viewBox="0 0 24 24" width="56%" height="56%" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="mid">어서 와요!</div><div class="big">${esc(short)}</div>
       <div class="time">등원 ${esc(d.time)}</div>${tag ? `<div class="chip">${tag}</div>` : ''}` +
       (d.session ? `<div class="chip">${d.session.nth ? `오늘 ${d.session.nth}회차 · ` : ''}${d.session.left > 0 ? `남은 회차 ${d.session.left}회` : '회차를 다 썼어요 · 선생님께 말씀해 주세요'}</div>` : '');
@@ -336,6 +340,7 @@ function showResult(d) {
   else if (d.alim && d.alim.sent) html += `<div class="small">📲 학부모님께 알림이 갔어요</div>`;
   const dur = d.kind === 'err' ? 3500 : 2500;
   html += `<div class="bar" style="--dur:${dur}ms"></div>`;
+  chime(d.kind === 'in' ? 'in' : d.kind === 'out' ? 'out' : 'err');
   if (d.kind === 'err') { const dots = document.getElementById('dots'); dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); }
   el.className = 'result show ' + cls;
   el.innerHTML = html;
@@ -348,11 +353,40 @@ function hideResult() {
   document.getElementById('result').classList.remove('show');
   pin = ''; drawDots();
 }
+// 🔔 소리: 띵동 효과음(기기 안에서 만들어서 무료) + 음성 안내(태블릿 기본 음성, 무료)
+//    음성 끄기/켜기는 📋 출결 이력 화면에서 (이 태블릿에 기억)
+let voiceOn = (() => { try { return localStorage.getItem('chaeum-voice') !== 'off'; } catch (e) { return true; } })();
+let actx = null;
+function chime(kind) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = kind === 'out' ? [784, 587] : kind === 'err' ? [330, 262] : [659, 988];   // 등원 띵↗동, 하원 띵↘동
+    notes.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * 0.18;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+      o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + 0.75);
+    });
+  } catch (e) {}
+}
+// 태블릿에 깔린 한국어 음성 중 가장 자연스러운 것 고르기 (구글·삼성 고음질 음성 우선)
+let bestVoice = null;
+function pickVoice() {
+  try {
+    const vs = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+    const score = v => (/google/i.test(v.name) ? 3 : 0) + (/neural|natural|premium|enhanced|고음질/i.test(v.name) ? 4 : 0) + (/samsung/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+    bestVoice = vs.sort((a, b) => score(b) - score(a))[0] || null;
+  } catch (e) {}
+}
+try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
 function speak(t) {
+  if (!voiceOn) return;
   try {
     const u = new SpeechSynthesisUtterance(t);
-    u.lang = 'ko-KR'; u.rate = 1.05;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    u.lang = 'ko-KR'; u.rate = 0.95; u.pitch = 1.08;
+    if (bestVoice) u.voice = bestVoice;
+    speechSynthesis.cancel();
+    setTimeout(() => speechSynthesis.speak(u), 380);   // 띵동 다음에 말하기
   } catch (e) {}
 }
 // 학습 시간: "18:02","20:15" → "2시간 13분"
@@ -394,6 +428,21 @@ function histClose() {
   try { sessionStorage.removeItem('chaeum-hist-ok'); } catch (e) {}
   clearTimeout(histTimer);
 }
+let histLevel = '';
+function histSetLevel(v, noLoad) {
+  histLevel = v;
+  document.querySelectorAll('#hist-lv button').forEach(b => { b.style.background = b.dataset.lv === v ? '#e8cf8f' : ''; b.style.color = b.dataset.lv === v ? '#221c17' : ''; });
+  if (!noLoad) histLoad();
+}
+function drawVoiceBtn() { const b = document.getElementById('voice-btn'); if (b) b.textContent = voiceOn ? '🔊 음성 켜짐' : '🔇 음성 꺼짐'; }
+function toggleVoice() {
+  voiceOn = !voiceOn;
+  try { localStorage.setItem('chaeum-voice', voiceOn ? 'on' : 'off'); } catch (e) {}
+  drawVoiceBtn();
+  if (voiceOn) { chime('in'); speak('채움영어 학생이 등원하였습니다'); }
+}
+drawVoiceBtn();
+setTimeout(() => histSetLevel('', true), 0);
 // 2분 동안 아무것도 안 하면 출석 화면으로 돌아가기 (학생들이 보지 않게)
 function histIdle() { clearTimeout(histTimer); histTimer = setTimeout(histClose, 120000); }
 ['click', 'touchstart', 'keydown'].forEach(ev => document.getElementById('hist').addEventListener(ev, histIdle));
@@ -418,8 +467,9 @@ async function histLoad() {
     const people = new Map();
     [...(d.students || []), ...(d.sessionStudents || [])].forEach(s => people.set(key(s), { name: s.name, type: s.type, grade: s.grade, session: (d.sessionStudents || []).includes(s) }));
     (d.attendance || []).forEach(a => { if (!people.has(key(a))) people.set(key(a), { name: a.name, type: a.type, grade: a.grade }); });
-    const rows = [...people.values()].map(p => ({ ...p, rec: recs[key(p)] }));
-    const came = rows.filter(r => r.rec && (r.rec.inTime || ['출석', '보강완료', '시험기간보강'].includes(r.rec.status)))
+    const rows = [...people.values()].map(p => ({ ...p, rec: recs[key(p)] }))
+      .filter(r => !histLevel || (histLevel === 'high' ? r.type === '고등' : r.type !== '고등'));
+    const came = rows.filter(r => r.rec && (r.rec.inTime || ['출석', '보강완료', '시험기간보강', '추가수업'].includes(r.rec.status)))
       .sort((a, b) => (a.rec.inTime || '99').localeCompare(b.rec.inTime || '99') || a.name.localeCompare(b.name, 'ko'));
     const absent = rows.filter(r => r.rec && r.rec.status === '결석' && !r.rec.inTime);
     const notYet = rows.filter(r => !came.includes(r) && !absent.includes(r) && !r.session)
