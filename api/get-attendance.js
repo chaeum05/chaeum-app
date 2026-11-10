@@ -277,15 +277,26 @@ export default async function handler(req, res) {
         const dow = W[new Date(md + 'T00:00:00').getDay()];
         if ((regDays[n] || []).includes(dow) && !ad) return;   // 정규일 수업은 보강 아님
       }
-      (scheduledByName[n] = scheduledByName[n] || []).push({ absentDate: ad ? ad.slice(0, 10) : '', makeupDate: md, status, used: false });
+      (scheduledByName[n] = scheduledByName[n] || []).push({ name: n, absentDate: ad ? ad.slice(0, 10) : '', makeupDate: md, status, used: false });
     });
 
     // 결석 한 번에 보강 한 번씩 짝짓기 (원래날짜가 적힌 것 먼저, 나머지는 결석 순서대로)
+    // 잡아둔 보강을 빠진 경우(결석인데 원래날짜가 적힘): 새 결석이 아니라 원래 결석이 아직 안 채워진 것
+    //  → 그 날짜로 잡은 다음 보강은 원래 결석을 채운 걸로 봄 (6일 결석 → 10일 보강 빠짐 → 12일 보강 = 6일분)
+    const missedOf = {};   // "이름|빠진 보강일" → 원래 결석일
+    (makeupData.results || []).forEach(p => {
+      const n = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+      const d = (p.properties['날짜']?.date?.start || '').slice(0, 10);
+      const od = (p.properties['원래날짜']?.date?.start || '').slice(0, 10);
+      if (n && d && od && od !== d) missedOf[n + '|' + d] = od;
+    });
+    const rootAbs = (n, d) => { let x = d, k = 0; while (missedOf[n + '|' + x] && k++ < 10) x = missedOf[n + '|' + x]; return x; };
+    Object.values(scheduledByName).forEach(list => list.forEach(r => { if (r.absentDate) r.absentDate = rootAbs(r.name, r.absentDate); }));
     const absByName = {};
     (makeupData.results || []).forEach(p => {
       const n = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
       const d = (p.properties['날짜']?.date?.start || '').slice(0, 10);
-      if (n && d) (absByName[n] = absByName[n] || []).push(d);
+      if (n && d && !missedOf[n + '|' + d]) (absByName[n] = absByName[n] || []).push(d);
     });
     const covered = new Set();   // "이름|결석일"
     Object.entries(absByName).forEach(([n, dates]) => {
@@ -319,6 +330,7 @@ export default async function handler(req, res) {
         absentDate: p.properties['날짜']?.date?.start || '',
         memo:       p.properties['메모']?.rich_text?.[0]?.text?.content || '',
       }))
+      .filter(m => !missedOf[m.name + '|' + String(m.absentDate).slice(0, 10)])   // 빠진 보강은 원래 결석 하나로만 셈
       .filter(m => m.name && isActive(m.name) && !sessionNames.has(m.name) && !hasMakeup(m.name, m.absentDate)) // 퇴원생·회차 학생 제외
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
