@@ -3162,6 +3162,11 @@ let attCache = {}; // { 'YYYY-MM-DD': { students, attendance, makeupList, dayNam
 function initAttendance() {
   document.querySelectorAll('.att-lv').forEach(b => b.classList.toggle('active', b.dataset.lv === attLevel));
   if (!allStudentsCache.length) ensureStudentsCache().then(() => { if (attStudents.length) renderAttGrid(); });
+  // 📝 시험 일정도 미리 불러오기 (시험기간 학생을 따로 묶어 보여주려면 필요 — 예전엔 시험 관리 화면을 열어야만 불러왔음)
+  if (!examsCache.length) api('exam', { action: 'get_exams' }).then(d => {
+    if (!examsCache.length) examsCache = d.exams || [];
+    if (attStudents.length) renderAttGrid();
+  }).catch(() => {});
   // localDateStr 대신 안전한 날짜 계산 (timezone 안전)
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -3636,7 +3641,7 @@ function renderAttGrid() {
           ? `doAttend('${s.name}','${s.type}','${s.grade}','보강완료')`
           : `doAttend('${s.name}','${s.type}','${s.grade}','출석')`;
         // 보강 줄: 출석 체크 화면에서 '출석'으로 찍힌 경우도 온 것으로 표시
-        const isPresent = isMakeup ? ['보강완료', '출석', '시험기간보강'].includes(st) : (st==='출석');
+        const isPresent = isMakeup ? ['보강완료', '출석', '시험기간보강'].includes(st) : ['출석', '시험기간보강'].includes(st);
         const pchip = isMakeup ? `<span class="att-row-meta">보강</span>` :
           `<select class="pchip ${s.period==='1부'?'p1':s.period==='2부'?'p2':''}" title="수업 시간 고르기 (이 요일)"
             onchange="setStudentPeriod('${s.name}','${s.type}','${s.grade}',this.value)">
@@ -3673,7 +3678,7 @@ function renderAttGrid() {
       const inSlot = regular.filter(s => slotOf(s) === slot);
       if (!inSlot.length) return;
       const info = SLOT_INFO[slot];
-      const present = inSlot.filter(s => getStatus(s.name, s.type, s.grade) === '출석').length;
+      const present = inSlot.filter(s => ['출석','시험기간보강'].includes(getStatus(s.name, s.type, s.grade))).length;
       html += `<div class="att-slot-header ${info.cls}">
         <span class="sl-time">${info.emoji} ${info.label}</span><span class="sl-sub">${slot === 'none' ? info.sub : info.time + '~'}</span>
         <span class="sl-cnt">${slot === 'none' ? inSlot.length + '명' : `출석 ${present} / ${inSlot.length}명`}</span>
