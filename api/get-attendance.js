@@ -102,6 +102,7 @@ export default async function handler(req, res) {
 
     // 1-1. 재원생 명단 (등원일정 전체) — 퇴원 처리된 학생은 여기 없음
     const activeNames = new Set();
+    const regDays = {};                  // 이름 → 정규 수업 요일
     const sessionStudents = [];   // 🎫 회차 수업 학생 (그날 수업 요일인 학생만 따로 보여줌)
     const allSessionNames = new Set();   // 회차 학생 전체 (보강 대기·보강 줄에서 빼는 용도)
     const sessionAll = {};               // 회차 학생 정보 (수업 요일이 아닌 날 와도 보여주려고)
@@ -117,6 +118,7 @@ export default async function handler(req, res) {
       (d.results || []).forEach(p => {
         const n = p.properties['학생이름']?.title?.[0]?.text?.content?.trim();
         if (n) activeNames.add(n);
+        if (n) regDays[n] = ['월','화','수','목','금'].filter(k => p.properties[k]?.checkbox);
         const sd = p.properties['등록일']?.date?.start?.slice(0, 10) || '';
         // 회차 학생: 수업 요일(예: 금)이 정해져 있으면 그날만, 요일이 없으면 매일 보여줌
         if (n && p.properties['수업형태']?.select?.name === '회차') {
@@ -208,56 +210,89 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         filter: {
           and: [
-            { or: [
-              { property: '출결상태', select: { equals: '보강' } },
-              { property: '출결상태', select: { equals: '보강완료' } },
-            ]},
-            { property: '날짜', date: { on_or_after: new Date(Date.now() - 31 * 24 * 3600 * 1000).toISOString().slice(0, 10) } },
+            { or: ['보강', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+            { property: '날짜', date: { on_or_after: new Date(new Date(limitDate).getTime() - 8 * 24 * 3600 * 1000).toISOString().slice(0, 10) } },
           ]
         },
         page_size: 100
       })
     });
     const scheduledData = await scheduledRes.json();
+    // 기록이 100개 넘으면 나머지도 불러오기
+    let schCursor = scheduledData.has_more ? scheduledData.next_cursor : undefined;
+    while (schCursor) {
+      const body0 = JSON.parse(JSON.stringify({ filter: { and: [
+        { or: ['보강', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+        { property: '날짜', date: { on_or_after: new Date(new Date(limitDate).getTime() - 8 * 24 * 3600 * 1000).toISOString().slice(0, 10) } },
+      ]}, page_size: 100, start_cursor: schCursor }));
+      const rr = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify(body0) });
+      const dd = await rr.json();
+      if (dd.object === 'error') break;
+      scheduledData.results = (scheduledData.results || []).concat(dd.results || []);
+      schCursor = dd.has_more ? dd.next_cursor : undefined;
+    }
 
-    // 30일 지난 보강 기록은 화면 계산에서만 빼요 (예전엔 노션에서 지웠는데, 출결 이력이 사라져서 이제 지우지 않음)
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const archivedIds = new Set((scheduledData.results || []).filter(p => {
-      const md = p.properties['날짜']?.date?.start || '';
-      return md && new Date(md) < cutoff;
-    }).map(p => p.id));
+    // 결석한 학생이 정규 요일이 아닌 날 '출석'으로 찍힌 것도 보강으로 셈 (선생님이 출석으로 눌렀을 때)
+    const absNames = [...new Set((makeupData.results || []).map(p => p.properties['학생이름']?.rich_text?.[0]?.text?.content || '').filter(Boolean))];
+    for (let i = 0; i < absNames.length; i += 40) {
+      const chunk = absNames.slice(i, i + 40);
+      const rr = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify({
+        filter: { and: [
+          { property: '출결상태', select: { equals: '출석' } },
+          { property: '날짜', date: { on_or_after: limitDate } },
+          { or: chunk.map(n => ({ property: '학생이름', rich_text: { equals: n } })) },
+        ]}, page_size: 100,
+      })});
+      const dd = await rr.json();
+      if (dd.object !== 'error') scheduledData.results = (scheduledData.results || []).concat(dd.results || []);
+    }
 
     // 보강 기록 인덱싱
+    //  - 보강·보강완료: 그대로 보강으로 봄
+    //  - 시험기간보강·출석: 정규 수업 요일이 아닌 날 온 것만 보강으로 봄 (정규일에 온 건 원래 수업)
+    const W = ['일','월','화','수','목','금','토'];
     const scheduledByName = {};
     (scheduledData.results || []).forEach(p => {
-      if (archivedIds.has(p.id)) return; // 삭제 대상 제외
       const n      = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
       const ad     = p.properties['원래날짜']?.date?.start || '';
-      const md     = p.properties['날짜']?.date?.start || '';
+      const md     = (p.properties['날짜']?.date?.start || '').slice(0, 10);
       const status = p.properties['출결상태']?.select?.name || '';
-      if (!n) return;
-      if (!scheduledByName[n]) scheduledByName[n] = [];
-      scheduledByName[n].push({ absentDate: ad, makeupDate: md, status });
+      if (!n || !md) return;
+      if (status === '시험기간보강' || status === '출석') {
+        const dow = W[new Date(md + 'T00:00:00').getDay()];
+        if ((regDays[n] || []).includes(dow) && !ad) return;   // 정규일 수업은 보강 아님
+      }
+      (scheduledByName[n] = scheduledByName[n] || []).push({ absentDate: ad ? ad.slice(0, 10) : '', makeupDate: md, status, used: false });
     });
 
-    // 결석 건에 보강이 잡혔거나 완료됐는지 확인
-    const hasMakeup = (name, absentDate) => {
-      const records = scheduledByName[name];
-      if (!records || records.length === 0) return false;
-      return records.some(r => {
-        // 1순위: 원래날짜가 정확히 일치
-        if (r.absentDate && r.absentDate === absentDate) return true;
-
-        // 2순위: 원래날짜 없는 보강 → 결석일 이후 30일 이내 보강/보강완료
-        if (!r.absentDate && r.makeupDate) {
-          const makeupTime = new Date(r.makeupDate).getTime();
-          const absentTime = new Date(absentDate).getTime();
-          const diffDays   = (makeupTime - absentTime) / (1000 * 60 * 60 * 24);
-          return diffDays >= -7 && diffDays <= 30; // 사전보강(-7일)~이후 30일
-        }
-        return false;
+    // 결석 한 번에 보강 한 번씩 짝짓기 (원래날짜가 적힌 것 먼저, 나머지는 결석 순서대로)
+    const absByName = {};
+    (makeupData.results || []).forEach(p => {
+      const n = p.properties['학생이름']?.rich_text?.[0]?.text?.content || '';
+      const d = (p.properties['날짜']?.date?.start || '').slice(0, 10);
+      if (n && d) (absByName[n] = absByName[n] || []).push(d);
+    });
+    const covered = new Set();   // "이름|결석일"
+    Object.entries(absByName).forEach(([n, dates]) => {
+      const recs = scheduledByName[n] || [];
+      dates.sort();
+      // 1순위: 원래날짜가 정확히 일치
+      dates.forEach(d => {
+        const r = recs.find(x => !x.used && x.absentDate === d);
+        if (r) { r.used = true; covered.add(n + '|' + d); }
       });
-    };
+      // 2순위: 원래날짜 없는 보강·비정규일 등원 → 결석일 7일 전 ~ 30일 뒤 안에서 가까운 것부터
+      dates.forEach(d => {
+        if (covered.has(n + '|' + d)) return;
+        const at = new Date(d + 'T00:00:00').getTime();
+        const cand = recs.filter(x => !x.used && !x.absentDate && x.makeupDate !== d)
+          .map(x => ({ x, diff: (new Date(x.makeupDate + 'T00:00:00').getTime() - at) / 86400000 }))
+          .filter(o => o.diff >= -7 && o.diff <= 30)
+          .sort((p1, p2) => (p1.diff < 0) - (p2.diff < 0) || Math.abs(p1.diff) - Math.abs(p2.diff));
+        if (cand.length) { cand[0].x.used = true; covered.add(n + '|' + d); }
+      });
+    });
+    const hasMakeup = (name, absentDate) => covered.has(name + '|' + String(absentDate).slice(0, 10));
 
     // 보강이 안 잡힌 결석만 보강 대기로
     const makeupList = (makeupData.results || [])
