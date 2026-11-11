@@ -313,7 +313,7 @@ export default async function handler(req, res) {
         const at = new Date(d + 'T00:00:00').getTime();
         const cand = recs.filter(x => !x.used && !x.absentDate && x.makeupDate !== d)
           .map(x => ({ x, diff: (new Date(x.makeupDate + 'T00:00:00').getTime() - at) / 86400000 }))
-          .filter(o => o.diff >= -7 && o.diff <= MAKEUP_WINDOW_DAYS)
+          .filter(o => o.diff >= (o.x.status === '보강' || o.x.status === '보강완료' ? -7 : 1) && o.diff <= MAKEUP_WINDOW_DAYS)   // 미리 하는 보강은 '보강'으로 잡은 것만 인정, 그냥 다른 날 온 건 결석 뒤에 온 것만
           .sort((p1, p2) => (p1.diff < 0) - (p2.diff < 0) || Math.abs(p1.diff) - Math.abs(p2.diff));
         if (cand.length) { cand[0].x.used = true; covered.add(n + '|' + d); }
       });
