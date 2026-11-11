@@ -181,7 +181,7 @@ export default async function handler(req, res) {
       if (!d) return;
       if (st === '결석' && od && od !== d) { missed[d] = od; return; }   // 잡아둔 보강을 빠진 날 → 원래 결석으로 이어짐
       if (st === '결석') { if (d >= monthStart) abs.push(d); return; }
-      if (st === '보강' || st === '보강완료') { mk.push({ d, od, used: false }); return; }
+      if (st === '보강' || st === '보강완료') { mk.push({ d, od, pre: true, used: false }); return; }
       if (st === '시험기간보강' || st === '출석') {
         if (od || !(s.days || []).includes(W[new Date(d + 'T00:00:00').getDay()])) mk.push({ d, od, used: false });
       }
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
       const at = new Date(a + 'T00:00:00').getTime();
       const c = mk.filter(x => !x.used && !x.od && x.d !== a)
         .map(x => ({ x, diff: (new Date(x.d + 'T00:00:00').getTime() - at) / 86400000 }))
-        .filter(o => o.diff >= -7 && o.diff <= MAKEUP_WINDOW_DAYS)
+        .filter(o => o.diff >= (o.x.pre ? -7 : 1) && o.diff <= MAKEUP_WINDOW_DAYS)
         .sort((p1, p2) => (p1.diff < 0) - (p2.diff < 0) || Math.abs(p1.diff) - Math.abs(p2.diff));
       if (c.length) { c[0].x.used = true; covered.add(a); }
     });
