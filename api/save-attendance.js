@@ -23,6 +23,46 @@ export default async function handler(req, res) {
   const { action, name, type, grade, date, status, memo, recordId, absentDate } = body;
 
   try {
+    // 🕘 등원·하원 시각 직접 고치기 (하원 안 찍고 간 아이 등) — 알림톡은 안 보냄
+    if (action === 'set_time') {
+      const field = body.field === 'out' ? '하원시각' : '등원시각';
+      const t = String(body.time || '').trim();
+      if (t && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(t)) return res.status(400).json({ error: '시각은 18:30처럼 적어주세요.' });
+      const hhmm = t ? t.padStart(5, '0') : '';
+      const q = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, { method: 'POST', headers, body: JSON.stringify({
+        filter: { and: [
+          { property: '학생이름', rich_text: { equals: name } },
+          { property: '날짜', date: { on_or_after: date } },
+          { property: '날짜', date: { on_or_before: date } },
+          { property: '구분', select: { equals: type } },
+        ]}
+      })});
+      const qd = await q.json();
+      if (qd.object === 'error') throw new Error(qd.message);
+      const val = { rich_text: hhmm ? [{ text: { content: hhmm } }] : [] };
+      if (qd.results?.length) {
+        const r = await fetch(`https://api.notion.com/v1/pages/${qd.results[0].id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: { [field]: val } }) });
+        const d = await r.json(); if (d.object === 'error') throw new Error(d.message);
+        return res.status(200).json({ ok: true, time: hhmm, status: qd.results[0].properties['출결상태']?.select?.name || '' });
+      }
+      if (!hhmm) return res.status(200).json({ ok: true, time: '' });
+      const st = status || '출석';
+      const r = await fetch('https://api.notion.com/v1/pages', { method: 'POST', headers, body: JSON.stringify({
+        parent: { database_id: DB_ATTENDANCE },
+        properties: {
+          '기록제목': { title: [{ text: { content: `${name} — ${st} (${date})` } }] },
+          '날짜': { date: { start: date } },
+          '학생이름': { rich_text: [{ text: { content: name } }] },
+          '구분': { select: { name: type } },
+          ...(grade ? { '학년': { select: { name: grade } } } : {}),
+          '출결상태': { select: { name: st } },
+          [field]: val,
+        }
+      })});
+      const d = await r.json(); if (d.object === 'error') throw new Error(d.message);
+      return res.status(200).json({ ok: true, time: hhmm, status: st, created: true });
+    }
+
     if (action === 'upsert') {
       // 날짜 equals 대신 on_or_after + on_or_before 사용 (timezone 이슈 방지)
       const searchRes = await fetch(`https://api.notion.com/v1/databases/${DB_ATTENDANCE}/query`, {
