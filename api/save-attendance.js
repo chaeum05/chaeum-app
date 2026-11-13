@@ -52,7 +52,7 @@ export default async function handler(req, res) {
               '출결상태': { select: { name: status } },
               '메모':     { rich_text: [{ text: { content: memo || '' } }] },
               ...(absentDate ? { '원래날짜': { date: { start: absentDate } } } : {}),
-              ...(status === '추가수업' ? { '원래날짜': { date: null } } : {})   // 추가수업은 결석과 짝 안 지음
+              ...((status === '추가수업' || status === '출석') && !absentDate ? { '원래날짜': { date: null } } : {})   // 정규 출석·추가수업은 결석과 짝 안 지음
             }
           })
         });
