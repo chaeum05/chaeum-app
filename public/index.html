@@ -97,6 +97,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sl-mini.sl-leave:hover { background:#fdecea; border-color:#fca5a5; }
 .sl-pin { display:inline-block; padding:2px 8px; border-radius:6px; background:#ecfeff; color:#0e7490; font-weight:800; font-size:12px; cursor:pointer; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .sl-pin.phone { background:#f1f5f9; color:#334155; font-weight:600; }
+.sl-pin.kakao { background:#fef9c3; color:#3b2f00; font-weight:600; font-family:inherit; letter-spacing:0; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
 .sl-pin.empty { background:transparent; color:#cbd5e1; border:1px dashed #cbd5e1; font-weight:600; }
 .kf-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 9px 6px; border-bottom: 1px solid #f1f5f9; font-size: 13px; align-items: start; }
 .kf-row .kf-name { font-weight: 800; color: #1e293b; }
@@ -2415,7 +2416,7 @@ function renderStudentList() {
         <td><select class="sl-lesson" onchange="setLessonType(${a.split(',').slice(0, 2).join(',')},this.value)" style="padding:3px 6px;border:1px solid ${isSession(s) ? '#c4b5fd' : 'var(--border)'};border-radius:6px;font-size:11px;font-family:inherit;background:${isSession(s) ? '#f5f3ff' : '#fff'};color:${isSession(s) ? '#6d28d9' : 'inherit'};font-weight:${isSession(s) ? 700 : 400};">
           <option value="정규"${isSession(s) ? '' : ' selected'}>정규</option><option value="회차"${isSession(s) ? ' selected' : ''}>🏫 특목고</option></select>${isSession(s) ? ' ' + sessionChip(s.name, s.type) : ''}</td>
         <td style="color:#64748b;font-size:12px;">${s.startDate ? s.startDate.slice(2).replace(/-/g, '.') : ''}</td>
-        <td style="font-size:12px;">${escH(s.parentKakao || '')}</td>
+        <td><span class="sl-pin kakao${s.parentKakao ? '' : ' empty'}" onclick="slEditKakao('${escH(s.name)}','${s.type}')" title="눌러서 고치기 (카톡방 이름과 똑같이)">${s.parentKakao ? escH(s.parentKakao) : '+ 카톡명'}</span></td>
         <td><span class="sl-pin${s.pin ? '' : ' empty'}" onclick="slEditPin('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.pin ? escH(s.pin) : '+ 번호'}</span></td>
         <td><span class="sl-pin phone${s.parentPhone ? '' : ' empty'}" onclick="slEditPhone('${escH(s.name)}','${s.type}')" title="눌러서 고치기">${s.parentPhone ? escH(s.parentPhone) : '+ 연락처'}</span></td>
         <td style="text-align:right;white-space:nowrap;"><button class="sl-mini" onclick="goRecord(${a})">📝 기록</button> <button class="sl-mini" onclick="slGoReport(${a})">📊 보고서</button> <button class="sl-mini" onclick="openStudentHist(${a.split(',').slice(0, 2).join(',')})" title="이 학생의 지난 출결 기록">📅 출결</button> <button class="sl-mini sl-leave" onclick="slLeave(${a.split(',').slice(0, 2).join(',')}, this)" title="퇴원 처리 (지난 기록은 남아요)">👋 퇴원</button></td>
@@ -6156,6 +6157,16 @@ async function slEditPhone(name, type) {
   try {
     await api('save-attendance', { action: 'set_contact', name, type, parentPhone: v.trim() });
     s.parentPhone = v.trim(); renderStudentList(); toast(`${name} 연락처 저장`);
+  } catch(e) { toast('저장 실패: ' + e.message); }
+}
+// 💬 학부모 카톡방 이름 직접 고치기
+async function slEditKakao(name, type) {
+  const s = findStudent(name, type); if (!s) return;
+  const v = prompt(`${name} 학부모 카톡방 이름\n(PC 카톡에 보이는 이름과 똑같이 · 예: ㄱ${name.replace(/\(.*\)/, '')} 학부모님)\n비우고 확인하면 지워져요`, s.parentKakao || '');
+  if (v === null) return;
+  try {
+    await api('save-attendance', { action: 'set_parent_kakao', name, type, parentKakao: v.trim() });
+    s.parentKakao = v.trim(); renderStudentList(); toast(`${name} 학부모 카톡명 저장`);
   } catch(e) { toast('저장 실패: ' + e.message); }
 }
 // 출석번호 없는 학생에게 한 번에 배정
