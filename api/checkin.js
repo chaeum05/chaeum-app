@@ -5,6 +5,10 @@
 //  - 선생님용 'notify': 관리 화면의 📲 버튼 → 지금 시각으로 기록 + 알림톡 (이미 보냈으면 안 보냄)
 import crypto from 'crypto';
 
+// ⚡ 학생 명단(등원일정)을 서버 메모리에 잠깐 기억 → 번호 누를 때마다 노션에서 찾지 않아도 됨
+//    (태블릿이 4분마다 보내는 'status' 신호 때 새로 고침. 명단에 없는 번호면 그때만 노션에서 직접 찾음)
+const ROSTER = { at: 0, pages: null, p: null };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -111,6 +115,11 @@ export default async function handler(req, res) {
     sessionBase: typeof p.properties['회차잔여']?.number === 'number' ? p.properties['회차잔여'].number : null,
     sessionBaseDate: p.properties['회차기준일']?.date?.start?.slice(0, 10) || '',
   });
+  const refreshRoster = () => {
+    if (!ROSTER.p) ROSTER.p = queryAll(DB_SCHEDULE).then(pages => { ROSTER.pages = pages; ROSTER.at = Date.now(); return pages; })
+      .catch(() => ROSTER.pages).finally(() => { ROSTER.p = null; });
+    return ROSTER.p;
+  };
   const SESSION_PACK = 8;   // 회차권 한 장 = 8회
   // 🎫 회차 학생: 오늘을 포함해 지금 남은 회차 (기준일 다음 날부터 온 날 수를 뺌)
   const sessionInfo = async s => {
@@ -155,7 +164,7 @@ export default async function handler(req, res) {
     }
     if (!s.session && !s.regularToday) {
       // 보강 안 된 결석이 있으면 → 보강완료 (가장 오래된 결석과 짝), 없으면 → 추가수업
-      const ab = await pendingAbsence(s).catch(() => '');
+      const ab = await (s._pendP || pendingAbsence(s)).catch(() => '');
       if (ab) { s._absentDate = ab; return '보강완료'; }
       return '추가수업';
     }
@@ -291,6 +300,7 @@ export default async function handler(req, res) {
   try {
     // ── 상태 (알림톡 연결됐는지) ──
     if (action === 'status') {
+      if (!ROSTER.pages || Date.now() - ROSTER.at > 60 * 1000) await refreshRoster();
       // 어떤 설정이 빠졌는지 (값은 안 보여주고 있는지만)
       const has = { SOLAPI_API_KEY: !!SOL.key, SOLAPI_API_SECRET: !!SOL.secret, SOLAPI_PFID: !!SOL.pfId,
         SOLAPI_TEMPLATE_IN: !!SOL.tplIn, SOLAPI_TEMPLATE_OUT: !!SOL.tplOut, SOLAPI_TEST_PHONE: !!process.env.SOLAPI_TEST_PHONE };
@@ -351,16 +361,13 @@ export default async function handler(req, res) {
           message: `테스트 ${kind === 'in' ? '등원' : '하원'} ${hhmm}`, alim });
       }
 
-      // 1. 번호로 학생 찾기 + 오늘 출결 기록 전체 + 시험기간 → 동시에 불러오기
+      // 1. 번호로 학생 찾기 — 기억해 둔 명단에서 먼저 (없으면 노션에서 직접)
       examToday();
-      const [rows, todayAll] = await Promise.all([
-        queryAll(DB_SCHEDULE, { property: '출석번호', rich_text: { contains: pin } }),
-        queryAll(DB_ATTENDANCE, { and: [
-          { property: '날짜', date: { on_or_after: today } },
-          { property: '날짜', date: { on_or_before: today } },
-        ]}),
-      ]);
-      let cands = rows.map(toStudent).filter(s => s.name && s.pins.includes(pin));
+      const fresh = ROSTER.pages && Date.now() - ROSTER.at < 15 * 60 * 1000;
+      if (!fresh || Date.now() - ROSTER.at > 3 * 60 * 1000) refreshRoster();   // 뒤에서 새로 고침
+      const pick = pages => (pages || []).map(toStudent).filter(s => s.name && s.pins.includes(pin));
+      let cands = fresh ? pick(ROSTER.pages) : [];
+      if (!cands.length) cands = pick(await queryAll(DB_SCHEDULE, { property: '출석번호', rich_text: { contains: pin } }));
       if (!cands.length) return res.status(404).json({ error: '등록되지 않은 번호예요. 선생님께 말씀해 주세요.' });
       if (body.pick) cands = cands.filter(s => s.name === body.pick);
       if (cands.length > 1) {
@@ -369,8 +376,15 @@ export default async function handler(req, res) {
       if (!cands.length) return res.status(404).json({ error: '학생을 찾지 못했어요.' });
       const s = cands[0];
 
-      // 2. 오늘 출결 기록 (이미 불러온 것에서 찾기)
-      const rec = todayAll.find(p => txt(p.properties['학생이름']) === s.name && (p.properties['구분']?.select?.name || '') === s.type) || null;
+      // 2. 이 학생의 오늘 기록 + (필요하면) 보강 판단·회차 계산을 동시에
+      if (!s.session && !s.regularToday) s._pendP = pendingAbsence(s);
+      const sessEarly = s.session ? sessionInfo(s) : null;
+      const todayRecs = await queryAll(DB_ATTENDANCE, { and: [
+        { property: '학생이름', rich_text: { equals: s.name } },
+        { property: '날짜', date: { on_or_after: today } },
+        { property: '날짜', date: { on_or_before: today } },
+      ]});
+      const rec = todayRecs.find(p => (p.properties['구분']?.select?.name || '') === s.type) || null;
       const inT  = rec ? txt(rec.properties['등원시각']) : '';
       const outT = rec ? txt(rec.properties['하원시각']) : '';
       const mode = body.mode === 'in' || body.mode === 'out' ? body.mode : '';
@@ -405,16 +419,22 @@ export default async function handler(req, res) {
       }
 
       // 3. 기록 저장과 알림톡을 동시에 (중복 방지: 이미 보낸 기록이 있으면 안 보냄)
+      //    알림톡 '보낸 시각'도 기록과 한 번에 써 둠 → 혹시 발송이 실패하면 그때만 지움 (중복 방지 규칙은 그대로)
       const a = alimStart(s, rec?.properties, kind);
+      const ex2 = a.send ? { ...extra, [a.field]: rt(hhmm) } : extra;
       const writeP = !rec
-        ? createRec(s, extra).then(c => ({ id: c.page.id, status: c.status }))
+        ? createRec(s, ex2).then(c => ({ id: c.page.id, status: c.status }))
         : (kind === 'out' && inT
-            ? nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: extra }).then(() => ({ id: rec.id }))
-            : patchRec(s, rec, extra).then(st => ({ id: rec.id, status: st })));
-      const sessP = kind === 'in' && s.session ? sessionInfo(s) : Promise.resolve(null);
-      const w = await writeP;
+            ? nFetch(`https://api.notion.com/v1/pages/${rec.id}`, 'PATCH', { properties: ex2 }).then(() => ({ id: rec.id }))
+            : patchRec(s, rec, ex2).then(st => ({ id: rec.id, status: st })));
+      const sessP = kind === 'in' && sessEarly ? sessEarly : Promise.resolve(null);
+      const [w, alimRaw, session] = await Promise.all([writeP, a.done, sessP]);
       const status = w.status;
-      const [alim, session] = await Promise.all([alimFinish(a, w.id), sessP]);
+      let alim = alimRaw;
+      if (a.send) {
+        if (alimRaw?.sent > 0) alim = { ...alimRaw, at: hhmm };
+        else await nFetch(`https://api.notion.com/v1/pages/${w.id}`, 'PATCH', { properties: { [a.field]: rt('') } }).catch(() => {});
+      }
       const studyMin = kind === 'out' && inT ? toMin(hhmm) - toMin(inT) : null;
       return res.status(200).json({ ok: true, kind, name: s.name, time: hhmm, status, inTime: inT || undefined, studyMin,
         noIn: kind === 'out' && !inT ? true : undefined, session: session || undefined,
