@@ -581,40 +581,44 @@ export default async function handler(req, res) {
         ? '모든 문항 정답'
         : incorrectList.map(i => `${i.num}번(${i.area}/${i.type}${i.partial ? `, 부분점수 ${i.earned}/${i.score}점` : ''})`).join(', ');
 
+      const RULES = `[작성 규칙]
+- 학부모님께 전달하는 따뜻하고 전문적인 존댓말
+- 전체 4~5문장, 공백 포함 350자 이내 (넘치면 덜 중요한 설명부터 줄이기)
+- 순서: ① 점수와 전반적인 평가 1문장 → ② 틀린 문항의 영역·유형과 원인 1~2문장 (문항 번호는 묶어서 간단히) → ③ 앞으로의 학습 방향 1~2문장 (학원에서 무엇을 어떻게 보완할지 구체적으로)
+- 문법 개념 설명을 길게 늘어놓지 말 것
+- 마크다운 기호·제목·목록 없이 한 문단 본문만`;
       const prompt = hasTeacherMemo
-        ? `채움영어학원 선생님이 작성한 피드백을 아래 학생 성적 데이터를 반영하여 더 구체적이고 자연스럽게 다듬어 주세요. 기존 피드백의 핵심 내용과 톤을 유지하면서 오답 분석 내용을 자연스럽게 녹여주세요.
+        ? `채움영어학원 선생님이 쓴 피드백을 아래 성적 데이터에 맞춰 간결하게 다듬어 주세요. 선생님 피드백의 핵심 내용과 말투는 살리되, 길면 줄이고, 앞으로의 학습 방향이 없으면 꼭 넣어 주세요.
 
 학생: ${studentName}
 시험명: ${examId}
 점수: ${totalScore}점 / 100점
 오답 문항: ${incorrectSummary}
-기존 선생님 피드백: ${teacherMemo}
+선생님 피드백: ${teacherMemo}
 
-[작성 규칙]
-- 학부모에게 전달하는 따뜻하고 전문적인 어투
-- 기존 피드백 내용을 바탕으로 오답 영역/유형을 자연스럽게 포함
-- 마크다운 기호 없이 본문만`
-        : `채움영어학원 선생님입니다. 아래 학생의 시험 결과를 바탕으로 학부모 전달용 피드백을 3~4문장으로 작성해 주세요.
+${RULES}`
+        : `채움영어학원 선생님입니다. 아래 학생의 시험 결과로 학부모님께 보낼 피드백을 써 주세요.
 
 학생: ${studentName}
 시험명: ${examId}
 점수: ${totalScore}점 / 100점
 오답 문항: ${incorrectSummary}
 
-[작성 규칙]
-- 학부모에게 전달하는 따뜻하고 전문적인 어투
-- 오답 문항의 영역/유형을 구체적으로 언급
-- 잘한 점과 보완점 균형있게 서술
-- 마크다운 기호 없이 본문만`;
+${RULES}`;
 
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'x-api-key':CLAUDE_KEY, 'anthropic-version':'2023-06-01' },
-        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:500, messages:[{role:'user',content:prompt}] })
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, messages:[{role:'user',content:prompt}] })
       });
       const claudeData = await claudeRes.json();
-      const feedback = claudeData.content?.[0]?.text?.trim();
+      let feedback = claudeData.content?.[0]?.text?.trim();
       if (!feedback) throw new Error('Claude 응답 오류');
+      // 혹시 길이 제한에 걸려 끊겼으면 마지막 완성된 문장까지만 남기기
+      if (claudeData.stop_reason === 'max_tokens') {
+        const end = Math.max(feedback.lastIndexOf('다.'), feedback.lastIndexOf('요.'));
+        if (end > 0) feedback = feedback.slice(0, end + 2);
+      }
       return res.status(200).json({ ok: true, feedback });
     }
 
