@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>채움영어 성적 분석 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -242,6 +243,75 @@ textarea.fi{resize:vertical;min-height:72px;}
   .sm-top{border-radius:0;}
   .sm-preview-wrap{margin:8px 10px;padding:6px;}
 }
+
+/* ════ 성적 리포트 디자인 (2026-11 · 테두리 + 제목 띠 + 한눈에 요약 · 나눔고딕) ════ */
+#capture-area{--n:#1b2a4a;--g:#b8923f;--gt:#9a7426;--l:#e3e6ec;--t:#1f2937;--s:#6b7280;--bgl:#f5f6f9;--red:#b0272f;--redbg:#fbf0f0;--org:#b8923f;
+  font-family:'Nanum Gothic','Noto Sans KR',sans-serif;color:var(--t);padding:14px;}
+#capture-area .rp-frame{border:0;padding:0;}
+#capture-area .rp-inner{border:1.5px solid var(--g);padding:0 32px 22px;}
+#capture-area .rp-head{text-align:center;color:var(--n);background:#f3efe4;margin:0 -32px;padding:24px 24px 20px;border-bottom:1px solid #e3d6b4;}
+#capture-area .rp-acad{font-size:11px;font-weight:700;letter-spacing:.32em;color:var(--gt);}
+#capture-area .rp-title{font-size:25px;font-weight:800;letter-spacing:-.03em;margin-top:8px;line-height:1.4;color:var(--n);}
+#capture-area .rp-title em{font-style:normal;color:var(--gt);}
+#capture-area .rp-who{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap;}
+#capture-area .rp-who>span{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #e3d6b4;border-radius:22px;padding:6px 16px;}
+#capture-area .rp-who small{font-size:11.5px;font-weight:700;color:var(--gt);}
+#capture-area .rp-who b{font-size:15px;font-weight:800;color:var(--n);}
+#capture-area .rp-note{font-size:11px;color:var(--s);text-align:center;margin:12px 0 18px;}
+#capture-area .rp-sum{display:grid;grid-template-columns:1.25fr 1fr 1fr 1.15fr 1.3fr;border:1px solid var(--l);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+#capture-area .rp-score{padding:8px 16px;border-right:1px solid var(--l);background:var(--redbg);display:flex;flex-direction:column;justify-content:center;}
+#capture-area .rp-lab{font-size:11.5px;font-weight:700;color:var(--s);}
+#capture-area .rp-sc{display:flex;align-items:baseline;gap:4px;margin-top:1px;}
+#capture-area .rp-sc b{font-size:34px;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--red);}
+#capture-area .rp-sc>span{font-size:12.5px;color:var(--s);font-weight:700;}
+#capture-area .rp-bar{height:4px;border-radius:2px;background:#efd3d4;margin-top:6px;overflow:hidden;}
+#capture-area .rp-bar i{display:block;height:100%;width:0;background:var(--red);border-radius:2px;}
+#capture-area .rp-kpis{display:contents;}
+#capture-area .rp-k{padding:10px 14px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--l);}
+#capture-area .rp-k:last-child{border-right:0;}
+#capture-area .rp-k>span{font-size:11.5px;color:var(--s);font-weight:700;}
+#capture-area .rp-k b{font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--n);margin-top:3px;white-space:nowrap;}
+#capture-area .rp-k b small{font-size:11.5px;color:var(--s);font-weight:700;margin-left:3px;}
+#capture-area .rp-k b.ok{color:var(--n);} #capture-area .rp-k b.bad{color:var(--red);}
+#capture-area .rp-sec{margin-bottom:22px;}
+#capture-area .rp-st{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--n);margin-bottom:12px;}
+#capture-area .rp-st .no{width:22px;height:22px;border-radius:50%;background:var(--n);color:#fff;font-size:11.5px;display:grid;place-items:center;flex:none;}
+#capture-area .rp-st small{margin-left:auto;font-size:11.5px;color:var(--s);font-weight:700;}
+#capture-area .rp-two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+#capture-area .rp-box{background:var(--bgl);border-radius:10px;padding:14px 16px;}
+#capture-area .rp-bh{font-size:12.5px;font-weight:800;color:var(--n);margin-bottom:10px;}
+#capture-area .esb-list{gap:8px;}
+#capture-area .esb-row{grid-template-columns:76px 1fr 74px;font-size:12.5px;}
+#capture-area .esb-label{color:var(--s);}
+#capture-area .esb-row.top .esb-label{color:var(--t);font-weight:800;}
+#capture-area .esb-track{height:8px;border-radius:4px;background:#fff;}
+#capture-area .esb-bar{border-radius:4px;}
+#capture-area .esb-blue{--esb-strong:#1b2a4a;--esb-soft:#9aa7c2;}
+#capture-area .esb-gold{--esb-strong:#b8923f;--esb-soft:#dcc58e;}
+#capture-area .esb-cnt{font-size:12px;}
+#capture-area .rp-weak{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+#capture-area .rp-weak:empty{display:none;}
+#capture-area .rp-w{border:1px solid var(--l);border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:10px;}
+#capture-area .rp-w .cnt{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;align-content:center;font-size:15px;font-weight:800;color:#fff;flex:none;line-height:1.05;text-align:center;}
+#capture-area .rp-w .cnt small{display:block;font-size:8.5px;font-weight:700;opacity:.9;}
+#capture-area .rp-w.w1 .cnt{background:var(--red);} #capture-area .rp-w.w2 .cnt{background:var(--g);} #capture-area .rp-w.w3 .cnt{background:#9aa7c2;}
+#capture-area .rp-w b{font-size:13px;color:var(--n);font-weight:800;}
+#capture-area .rp-w p{font-size:11.5px;color:var(--s);margin-top:1px;}
+#capture-area .err-table{font-size:13px;margin-bottom:0;}
+#capture-area .err-table th{background:none;border-top:1.5px solid var(--n);border-bottom:1px solid var(--l);color:var(--s);font-size:11.5px;font-weight:700;padding:8px 10px;}
+#capture-area .err-table td{padding:9px 10px;border-bottom:1px solid var(--l);}
+#capture-area .q-no{display:inline-block;min-width:28px;padding:2px 7px;border-radius:6px;background:var(--redbg);color:var(--red);font-weight:800;}
+#capture-area .q-no.p{background:#f6eedb;color:var(--gt);}
+#capture-area .tag-partial{background:#f6eedb;color:var(--gt);}
+#capture-area .memo-box{background:var(--bgl);border:0;border-radius:10px;padding:14px 18px;font-size:13.5px;line-height:1.75;margin-bottom:10px;}
+#capture-area .memo-box strong{display:block;font-size:12.5px;font-weight:800;color:var(--n);margin-bottom:4px;}
+#capture-area .box-gold{background:#f8f4ea;border:1.5px solid var(--g);border-left:6px solid var(--g);padding:16px 20px 18px;font-size:14.5px;line-height:1.85;color:#1f2937;box-shadow:0 2px 8px rgba(184,146,63,.12);}
+#capture-area .box-gold strong{display:inline-block;background:var(--n);color:#fff;font-size:12.5px;padding:4px 12px;border-radius:14px;margin-bottom:8px;letter-spacing:.02em;}
+#capture-area .box-ai{background:#f5f3ff;}
+#capture-area .memo-wrap{margin:0;}
+#capture-area .rpt-footer{display:flex;justify-content:space-between;align-items:center;text-align:left;border-top:1px solid var(--l);padding-top:14px;margin-top:14px;font-size:12px;color:var(--s);}
+#capture-area .rpt-footer b{color:var(--n);font-size:14px;font-weight:800;}
+#capture-area .rpt-footer span{color:var(--gt);font-family:inherit;font-weight:800;font-size:14px;margin:0;}
 </style>
 </head>
 <body>
@@ -447,67 +517,62 @@ textarea.fi{resize:vertical;min-height:72px;}
 
 <!-- 리포트 전체화면 -->
 <div id="report-page" style="display:none;">
-  <div id="capture-area">
-    <header class="rpt-header">
-      <div>
-        <div class="rpt-title">[ 채움영어 성적 분석 리포트 ]</div>
-        <div class="rpt-notice">※ 본 리포트는 가채점 및 추가 점수를 바탕으로 분석되었습니다.</div>
-        <div class="rpt-info">
-          <div>시험명: <b id="r-exam"></b></div>
-          <div>이름: <b id="r-student"></b></div>
-        </div>
-      </div>
-      <div>
-        <div class="score-row">
-          <span class="score-val" id="r-score">0</span>
-          <span class="score-max">/ <span id="r-max">100</span>점</span>
-        </div>
-      </div>
+  <div id="capture-area"><div class="rp-frame"><div class="rp-inner">
+    <!-- 제목 띠 -->
+    <header class="rp-head">
+      <div class="rp-acad">PREMIUM CHAEUM ENGLISH</div>
+      <div class="rp-title"><span id="r-title-exam"></span> <em>성적 분석 리포트</em></div>
+      <div class="rp-who"><span class="rp-name"><small>학생</small><b id="r-title-name"></b></span><span class="rp-school" id="r-school"></span></div>
+      <span id="r-exam" hidden></span><span id="r-student" hidden></span>
     </header>
+    <div class="rp-note">※ 가채점 및 추가 점수를 바탕으로 분석했으며, 학교 공식 성적과 다를 수 있습니다.</div>
 
-    <!-- 시험 구성 분석 요약 -->
-    <div id="r-exam-summary" style="margin-bottom:20px;">
-      <div class="sec-title">시험 구성 분석</div>
-      <div class="exam-summary-grid">
-        <div class="exam-summary-box">
-          <div class="esb-title"><span>📚 출제 단원별 분포</span><span class="esb-total" id="r-unit-total"></span></div>
-          <div id="r-unit-summary"></div>
-        </div>
-        <div class="exam-summary-box">
-          <div class="esb-title"><span>📝 출제 영역별 분포</span><span class="esb-total" id="r-area-total"></span></div>
-          <div id="r-area-summary"></div>
-        </div>
-        <div class="exam-summary-box" style="grid-column:1/-1;">
-          <div class="esb-title">❌ 취약 영역 분석</div>
-          <div id="r-wrong-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:6px;"></div>
-        </div>
+    <!-- 한눈에 보기 -->
+    <div class="rp-sum">
+      <div class="rp-score">
+        <div class="rp-lab">이번 시험 점수</div>
+        <div class="rp-sc"><b id="r-score">0</b><span>/ <span id="r-max">100</span>점</span></div>
+        <div class="rp-bar"><i id="r-score-bar"></i></div>
       </div>
-      <!-- 총평 -->
-      <div class="memo-box box-blue" style="margin-top:0;">
-        <strong>📌 시험 총평</strong>
-        <div id="r-common" contenteditable="true" style="margin-top:5px;white-space:pre-line;"></div>
+      <div class="rp-kpis">
+        <div class="rp-k"><span>전체 문항</span><b id="r-k-total">-</b></div>
+        <div class="rp-k"><span>맞힌 문항</span><b class="ok" id="r-k-right">-</b></div>
+        <div class="rp-k"><span>틀린 문항</span><b class="bad" id="r-k-wrong">-</b></div>
+        <div class="rp-k"><span>집중 보완 영역</span><b id="r-k-weak">-</b></div>
       </div>
     </div>
 
-    <div class="sec-title"><span id="r-name2"></span> 학생 오답 상세 분석</div>
-    <table class="err-table">
-      <thead><tr><th style="width:18%">문항</th><th style="width:18%">단원</th><th style="width:26%">영역</th><th>문제 유형</th><th style="width:14%">배점</th></tr></thead>
-      <tbody id="r-errors"></tbody>
-    </table>
-
-    <div class="memo-wrap">
-      <div class="memo-box box-gold">
-        <strong>✍️ 선생님 피드백</strong>
-        <div id="r-teacher" contenteditable="true" style="margin-top:5px;"></div>
-      </div>
-      <div class="memo-box box-ai" id="r-ai-box" style="display:none;">
-        <strong>✨ AI 분석 피드백</strong>
-        <div id="r-ai" contenteditable="true" style="margin-top:5px;"></div>
+    <!-- 1 시험 구성 -->
+    <div class="rp-sec" id="r-exam-summary">
+      <div class="rp-st"><span class="no">1</span>시험 구성 분석<small id="r-unit-total"></small></div>
+      <div class="rp-two">
+        <div class="rp-box"><div class="rp-bh">출제 단원별 분포<small id="r-unit-total2" hidden></small></div><div id="r-unit-summary"></div></div>
+        <div class="rp-box"><div class="rp-bh">출제 영역별 분포<small id="r-area-total" hidden></small></div><div id="r-area-summary"></div></div>
       </div>
     </div>
 
-    <footer class="rpt-footer">프리미엄 채움영어학원<span>054.715.7773</span></footer>
-  </div>
+    <!-- 2 취약 영역 · 오답 -->
+    <div class="rp-sec">
+      <div class="rp-st"><span class="no">2</span><span><span id="r-name2"></span> 학생 취약 영역 · 오답 분석</span></div>
+      <div id="r-wrong-summary" class="rp-weak"></div>
+      <table class="err-table">
+        <thead><tr><th style="width:15%">문항</th><th style="width:14%">단원</th><th style="width:18%">영역</th><th style="text-align:left">문제 유형</th><th style="width:16%">배점</th></tr></thead>
+        <tbody id="r-errors"></tbody>
+      </table>
+    </div>
+
+    <!-- 3 총평 · 피드백 -->
+    <div class="rp-sec" style="margin-bottom:0">
+      <div class="rp-st"><span class="no">3</span>총평 · 선생님 피드백</div>
+      <div class="memo-box box-blue"><strong>시험 총평</strong><div id="r-common" contenteditable="true" style="white-space:pre-line;"></div></div>
+      <div class="memo-wrap">
+        <div class="memo-box box-gold"><strong>선생님 피드백</strong><div id="r-teacher" contenteditable="true"></div></div>
+        <div class="memo-box box-ai" id="r-ai-box" style="display:none;"><strong>AI 분석 피드백</strong><div id="r-ai" contenteditable="true"></div></div>
+      </div>
+    </div>
+
+    <footer class="rpt-footer"><b>프리미엄 채움영어학원</b><span>054.715.7773</span></footer>
+  </div></div></div>
 
   <div class="rpt-btns">
     <button class="rb rb-black" onclick="saveImg()">📸 카톡 이미지</button>
@@ -1470,6 +1535,23 @@ async function openReport(name) {
   } catch(e){toast('리포트 로드 실패: '+e.message);}
 }
 
+// ── 시험명 → 리포트 제목 ("2026 형곡고 2학년 미디어영어 2학기 기말고사" → "26년 2학기 기말고사", "형곡고 2학년 · 미디어영어") ──
+function parseExamTitle(name) {
+  const s = String(name || '').replace(/^manual_/, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  const y = (s.match(/(20\d{2})/) || [])[1];
+  const sem = (s.match(/([12])\s*학기/) || [])[1];
+  const kind = /중간/.test(s) ? '중간고사' : /기말|final/i.test(s) ? '기말고사' : '';
+  const school = (s.match(/([가-힣]+(?:고등학교|중학교|여고|여중|고|중))(?=\s|\d|$)/) || [])[1] || '';
+  const grade = (s.match(/(\d)\s*학년/) || (school ? s.match(new RegExp(school + '\\s*(\\d)')) : null) || [])[1] || '';
+  // 학년과 학기 사이 과목명 (예: 미디어영어)
+  const subj = (s.match(/학년\s+([가-힣A-Za-z]+)\s+[12]\s*학기/) || [])[1] || '';
+  if (!y || !sem || !kind) return { title: s, school: '' };
+  return {
+    title: `${y.slice(2)}년 ${sem}학기 ${kind}`,
+    school: [school && grade ? `${school} ${grade}학년` : school, subj].filter(Boolean).join(' · '),
+  };
+}
+
 // ── 출제 분포 막대 ──
 function renderDistribution(listId, totalId, labels, values, colorClass) {
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1499,6 +1581,26 @@ function renderReport(d) {
   document.getElementById('r-name2').textContent   = d.studentName;
   document.getElementById('r-score').textContent   = d.totalScore;
   document.getElementById('r-max').textContent     = d.maxScore;
+  // 제목: [이름]의 26년 2학기 기말고사 성적분석리포트 / 아래 줄: 학교 · 학년
+  const ex = parseExamTitle(d.examId);
+  document.getElementById('r-title-name').textContent = d.studentName;
+  document.getElementById('r-title-exam').textContent = ex.title;
+  document.getElementById('r-school').textContent = ex.school;
+  document.getElementById('r-school').style.display = ex.school ? '' : 'none';
+  if (ex.school) document.getElementById('r-school').innerHTML = '<small>학교</small><b></b>', document.querySelector('#r-school b').textContent = ex.school;
+  const pctScore = Math.max(0, Math.min(100, (Number(d.totalScore) || 0) / (Number(d.maxScore) || 100) * 100));
+  document.getElementById('r-score-bar').style.width = pctScore + '%';
+  // 한눈에 보기
+  const totalQ = (d.areaValues || []).reduce((a, b) => a + (Number(b) || 0), 0) || (d.unitValues || []).reduce((a, b) => a + (Number(b) || 0), 0);
+  const wrongs = d.incorrectList || [];
+  const partials = wrongs.filter(i => i.partial).length;
+  const kb = (id, html) => { document.getElementById(id).innerHTML = html; };
+  kb('r-k-total', totalQ ? `${totalQ}<small>문항</small>` : '-');
+  kb('r-k-right', totalQ ? `${Math.max(0, totalQ - wrongs.length)}<small>문항</small>` : '-');
+  kb('r-k-wrong', `${wrongs.length}<small>문항${partials ? ` · 부분 ${partials}` : ''}</small>`);
+  const areaCnt = {}; wrongs.forEach(i => { const a = i.area || '기타'; areaCnt[a] = (areaCnt[a] || 0) + 1; });
+  const weakTop = Object.entries(areaCnt).sort((a, b) => b[1] - a[1])[0];
+  kb('r-k-weak', weakTop ? `${weakTop[0].replace(/[<>&]/g, '')}<small>오답 ${weakTop[1]}문항</small>` : `없음<small>모두 정답</small>`);
   document.getElementById('r-teacher').textContent = d.teacherFeedback||'';
   document.getElementById('r-ai-box').style.display='none';
 
@@ -1522,11 +1624,11 @@ function renderReport(d) {
   // 오답 테이블
   const tbody = document.getElementById('r-errors');
   if(!(d.incorrectList||[]).length){
-    tbody.innerHTML='<tr><td colspan="5" style="color:var(--blue);font-weight:700;padding:16px;text-align:center;">🎉 Perfect! 모든 문항 정답!</td></tr>';
-    document.getElementById('r-wrong-summary').innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">오답 없음 🎉</div>';
+    tbody.innerHTML='<tr><td colspan="5" style="color:#1b2a4a;font-weight:800;padding:16px;text-align:center;">모든 문항 정답 · Perfect!</td></tr>';
+    document.getElementById('r-wrong-summary').innerHTML = '';
   } else {
     tbody.innerHTML = d.incorrectList.map(i=>
-      `<tr><td>${i.num}</td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td>${i.type||'-'}</td><td>${
+      `<tr><td><span class="q-no${i.partial ? ' p' : ''}">${i.num}</span></td><td>${i.unit||'-'}</td><td>${i.area||'-'}</td><td style="text-align:left">${i.type||'-'}</td><td style="font-weight:700">${
         i.partial ? `<b>${i.earned}</b> / ${i.score}점<span class="tag-partial">부분</span>` : `${i.score}점`
       }</td></tr>`
     ).join('');
@@ -1543,15 +1645,11 @@ function renderReport(d) {
 
     const sortedAreas = Object.entries(areaStat).sort((a,b)=>b[1].count-a[1].count);
 
-    document.getElementById('r-wrong-summary').innerHTML = sortedAreas.map(([area, stat], i) => {
-      const sevClass = i===0?'sev-1':i===1?'sev-2':i===2?'sev-3':'sev-default';
-      const topType = Object.entries(stat.types).sort((a,b)=>b[1]-a[1])[0];
-      return `<div class="weak-area-card ${sevClass}">
-        <div class="weak-area-top">
-          <span class="weak-area-name">${area}</span>
-          <span class="weak-area-count">오답 ${stat.count}문항</span>
-        </div>
-        <div class="weak-area-type">그 중 <b>${topType[0]}</b> 유형 ${topType[1]}문항으로 가장 많음</div>
+    document.getElementById('r-wrong-summary').innerHTML = sortedAreas.slice(0, 4).map(([area, stat], i) => {
+      const types = Object.entries(stat.types).sort((a,b)=>b[1]-a[1]).map(t => t[0]).slice(0, 2).join(' · ');
+      return `<div class="rp-w ${i === 0 ? 'w1' : i === 1 ? 'w2' : 'w3'}">
+        <div class="cnt">${stat.count}<small>문항</small></div>
+        <div><b>${area}</b><p>${types}</p></div>
       </div>`;
     }).join('');
   }
