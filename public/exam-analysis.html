@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>채움영어 성적 분석 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -246,7 +247,8 @@ textarea.fi{resize:vertical;min-height:72px;}
 
 /* ════ 성적 리포트 디자인 (2026-11 · 테두리 + 제목 띠 + 한눈에 요약 · 나눔고딕) ════ */
 #capture-area{--n:#1b2a4a;--g:#b8923f;--gt:#9a7426;--l:#e3e6ec;--t:#1f2937;--s:#6b7280;--bgl:#f5f6f9;--red:#b0272f;--redbg:#fbf0f0;--org:#b8923f;
-  font-family:'Nanum Gothic','Noto Sans KR',sans-serif;color:var(--t);padding:14px;}
+  font-family:'Pretendard','Noto Sans KR',sans-serif;color:#111827;padding:14px;}
+#capture-area .rp-acad,#capture-area .rp-title,#capture-area .rp-who b,#capture-area .rp-st,#capture-area .rp-bh,#capture-area .rp-w b,#capture-area .memo-box strong,#capture-area .rpt-footer b{font-family:'Nanum Gothic','Pretendard',sans-serif;}
 #capture-area .rp-frame{border:0;padding:0;}
 #capture-area .rp-inner{border:1.5px solid var(--g);padding:0 32px 22px;}
 #capture-area .rp-head{text-align:center;color:var(--n);background:#f3efe4;margin:0 -32px;padding:24px 24px 20px;border-bottom:1px solid #e3d6b4;}
@@ -282,28 +284,30 @@ textarea.fi{resize:vertical;min-height:72px;}
 #capture-area .rp-bh{font-size:12.5px;font-weight:800;color:var(--n);margin-bottom:10px;}
 #capture-area .esb-list{gap:8px;}
 #capture-area .esb-row{grid-template-columns:76px 1fr 74px;font-size:12.5px;}
-#capture-area .esb-label{color:var(--s);}
+#capture-area .esb-label{color:#4b5563;font-weight:500;}
 #capture-area .esb-row.top .esb-label{color:var(--t);font-weight:800;}
 #capture-area .esb-track{height:8px;border-radius:4px;background:#fff;}
 #capture-area .esb-bar{border-radius:4px;}
 #capture-area .esb-blue{--esb-strong:#1b2a4a;--esb-soft:#9aa7c2;}
 #capture-area .esb-gold{--esb-strong:#b8923f;--esb-soft:#dcc58e;}
 #capture-area .esb-cnt{font-size:12px;}
-#capture-area .rp-weak{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+#capture-area .rp-weak{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px;}
 #capture-area .rp-weak:empty{display:none;}
 #capture-area .rp-w{border:1px solid var(--l);border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:10px;}
 #capture-area .rp-w .cnt{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;align-content:center;font-size:15px;font-weight:800;color:#fff;flex:none;line-height:1.05;text-align:center;}
 #capture-area .rp-w .cnt small{display:block;font-size:8.5px;font-weight:700;opacity:.9;}
 #capture-area .rp-w.w1 .cnt{background:var(--red);} #capture-area .rp-w.w2 .cnt{background:var(--g);} #capture-area .rp-w.w3 .cnt{background:#9aa7c2;}
 #capture-area .rp-w b{font-size:13px;color:var(--n);font-weight:800;}
-#capture-area .rp-w p{font-size:11.5px;color:var(--s);margin-top:1px;}
-#capture-area .err-table{font-size:13px;margin-bottom:0;}
+#capture-area .rp-w p{font-size:12px;font-weight:500;color:#4b5563;margin-top:1px;}
+#capture-area .rp-w{min-width:0;} #capture-area .rp-w>div:last-child{min-width:0;}
+#capture-area .rp-w p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#capture-area .err-table{font-size:13.5px;margin-bottom:0;table-layout:fixed;}
 #capture-area .err-table th{background:none;border-top:1.5px solid var(--n);border-bottom:1px solid var(--l);color:var(--s);font-size:11.5px;font-weight:700;padding:8px 10px;}
-#capture-area .err-table td{padding:9px 10px;border-bottom:1px solid var(--l);}
+#capture-area .err-table td{padding:9px 10px;border-bottom:1px solid var(--l);font-weight:500;color:#111827;line-height:1.45;word-break:keep-all;}
 #capture-area .q-no{display:inline-block;min-width:28px;padding:2px 7px;border-radius:6px;background:var(--redbg);color:var(--red);font-weight:800;}
 #capture-area .q-no.p{background:#f6eedb;color:var(--gt);}
 #capture-area .tag-partial{background:#f6eedb;color:var(--gt);}
-#capture-area .memo-box{background:var(--bgl);border:0;border-radius:10px;padding:14px 18px;font-size:13.5px;line-height:1.75;margin-bottom:10px;}
+#capture-area .memo-box{background:var(--bgl);border:0;border-radius:10px;padding:14px 18px;font-size:14px;font-weight:500;line-height:1.75;margin-bottom:10px;color:#111827;}
 #capture-area .memo-box strong{display:block;font-size:12.5px;font-weight:800;color:var(--n);margin-bottom:4px;}
 #capture-area .box-gold{background:#f8f4ea;border:1.5px solid var(--g);border-left:6px solid var(--g);padding:16px 20px 18px;font-size:14.5px;line-height:1.85;color:#1f2937;box-shadow:0 2px 8px rgba(184,146,63,.12);}
 #capture-area .box-gold strong{display:inline-block;background:var(--n);color:#fff;font-size:12.5px;padding:4px 12px;border-radius:14px;margin-bottom:8px;letter-spacing:.02em;}
@@ -312,6 +316,16 @@ textarea.fi{resize:vertical;min-height:72px;}
 #capture-area .rpt-footer{display:flex;justify-content:space-between;align-items:center;text-align:left;border-top:1px solid var(--l);padding-top:14px;margin-top:14px;font-size:12px;color:var(--s);}
 #capture-area .rpt-footer b{color:var(--n);font-size:14px;font-weight:800;}
 #capture-area .rpt-footer span{color:var(--gt);font-family:inherit;font-weight:800;font-size:14px;margin:0;}
+
+/* ── 글자 크기 통일 (4단계: 제목 24 · 소제목 15 · 본문 13.5 · 작은 글씨 11.5) ── */
+#capture-area .rp-title{font-size:24px;}
+#capture-area .rp-st{font-size:15px;}
+#capture-area .rp-bh,#capture-area .memo-box strong,#capture-area .rp-w b{font-size:13.5px;}
+#capture-area .err-table td,#capture-area .esb-row,#capture-area .esb-cnt,#capture-area .memo-box,#capture-area .box-gold,#capture-area .rp-w p,#capture-area .rp-who b{font-size:13.5px;}
+#capture-area .rp-acad,#capture-area .rp-note,#capture-area .rp-lab,#capture-area .rp-k>span,#capture-area .rp-k b small,#capture-area .rp-sc>span,#capture-area .err-table th,#capture-area .esb-pct,#capture-area .rp-st small,#capture-area .rp-who small,#capture-area .rp-w .cnt small,#capture-area .tag-partial{font-size:11.5px;}
+#capture-area .rp-k b{font-size:20px;}
+#capture-area .box-gold strong{font-size:12.5px;}
+#capture-area .rpt-footer b,#capture-area .rpt-footer span{font-size:13.5px;}
 </style>
 </head>
 <body>
@@ -556,7 +570,7 @@ textarea.fi{resize:vertical;min-height:72px;}
       <div class="rp-st"><span class="no">2</span><span><span id="r-name2"></span> 학생 취약 영역 · 오답 분석</span></div>
       <div id="r-wrong-summary" class="rp-weak"></div>
       <table class="err-table">
-        <thead><tr><th style="width:15%">문항</th><th style="width:14%">단원</th><th style="width:18%">영역</th><th style="text-align:left">문제 유형</th><th style="width:16%">배점</th></tr></thead>
+        <thead><tr><th style="width:10%">문항</th><th style="width:15%">단원</th><th style="width:14%">영역</th><th style="text-align:left">문제 유형</th><th style="width:17%">배점</th></tr></thead>
         <tbody id="r-errors"></tbody>
       </table>
     </div>
