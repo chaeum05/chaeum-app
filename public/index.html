@@ -5833,7 +5833,7 @@ async function smSaveEdit() {
   }
 }
 
-// ── 📊 고등 월간보고서 + 성적 분석 리포트 한번에 보내기 ──
+// ── 📊 보고서 + 성적 분석 리포트 한번에 보내기 (초·중·고 모두, 주간·월간 모두) ──
 // 발송함에 따로 담지 않아도, 학생의 가장 최근 시험 리포트가 아직 안 보낸 상태면 자동으로 같이 붙여요.
 let smExamMap = {};               // 학생 이름 → { examId, sent, hasFeedback }
 const smExamOff = new Set();      // 이번에 빼기로 한 것 ("이름|시험명")
@@ -5844,7 +5844,7 @@ let smExamFrameP = null;
 let smExamChain = Promise.resolve();
 
 function smExamOf(it) {
-  if (!it || it.type !== '고등' || it.reportType !== '월간') return null;
+  if (!it) return null;
   const e = smExamMap[it.name];
   return e && !e.sent ? e : null;
 }
@@ -5854,7 +5854,7 @@ function smExamFileName(it, e) { return `채움영어_${e.examId}_${it.name}.png
 
 async function smLoadExamMap() {
   smExamMap = {};
-  const names = [...new Set(smQueue.filter(it => it.type === '고등' && it.reportType === '월간').map(it => it.name))];
+  const names = [...new Set(smQueue.map(it => it.name))];
   if (!names.length) return;
   try {
     const d = await api('exam-score', { action: 'get_latest_results', names });
@@ -5920,7 +5920,7 @@ function smRenderExamBox(it) {
   box.innerHTML = `<label><input type="checkbox" ${on ? 'checked' : ''}> 📊 성적 분석 리포트 같이 보내기</label>
     <div class="sm-exam-name"></div>
     ${e.hasFeedback ? '' : '<div class="sm-exam-warn">⚠️ 선생님 피드백이 아직 없어요 (체크하면 피드백 없이 나가요)</div>'}`;
-  box.querySelector('.sm-exam-name').textContent = e.examId + (on ? ' · 월간보고서와 함께 2장으로 보내요' : ' · 이번엔 빼고 보내요');
+  box.querySelector('.sm-exam-name').textContent = e.examId + (on ? ` · ${it.reportType || ''}보고서와 함께 2장으로 보내요` : ' · 이번엔 빼고 보내요');
   box.querySelector('input').onchange = ev => {
     const k = smExamKey(it, e);
     if (ev.target.checked) smExamOff.delete(k); else smExamOff.add(k);
@@ -5960,7 +5960,7 @@ async function smExamPrepare(it) {
     wrap.innerHTML = '';
     const m = document.createElement('div');
     m.className = 'sm-exam-load';
-    m.textContent = `성적 리포트를 못 그렸어요: ${err.message} — 체크를 끄면 월간보고서만 보낼 수 있어요.`;
+    m.textContent = `성적 리포트를 못 그렸어요: ${err.message} — 체크를 끄면 보고서만 보낼 수 있어요.`;
     wrap.appendChild(m);
   }
 }
