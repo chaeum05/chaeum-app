@@ -2092,7 +2092,7 @@ function smartRange(arr) {
   return unique.join(', ');
 }
 
-// 기간 안 기록이 하나뿐이면 직전 기록의 끝 번호를 시작점으로 ("Day 39" + 직전 "Day 25" → "Day 25 ~ 39")
+// 기간 안 기록이 하나뿐이면 직전 기록 다음 번호부터 ("Day 39" + 직전 "Day 25" → "Day 26 ~ 39")
 function rangeFromPrev(arr, prevVal) {
   const unique = [...new Set(arr || [])].filter(Boolean);
   if (unique.length !== 1 || !prevVal) return smartRange(unique);
@@ -2102,10 +2102,9 @@ function rangeFromPrev(arr, prevVal) {
   const norm = x => (x || '').replace(/\s+/g, '');
   const cb = norm(c[1]), pb = norm(p[1]);
   if (!cb || !(pb === cb || pb.endsWith(cb) || cb.endsWith(pb)) || (c[4] || '') !== (p[4] || '')) return unique[0];
-  const from = +(p[3] ?? p[2]);
+  const from = +(p[3] ?? p[2]) + 1;   // 직전 기록 번호는 이미 끝낸 것 → 다음 번호부터
   const lo = +c[2], to = +(c[3] ?? c[2]);
-  if (!(from < to)) return unique[0];
-  // 직전 끝 번호가 이번 시작보다 앞이면 직전 끝 번호부터 (같은 숫자면 그대로)
+  if (!(from < to)) return unique[0];   // 바로 다음 번호 하나뿐이면 그대로 ("8회")
   return `${c[1]}${Math.min(from, lo)} ~ ${to}${c[4] || ''}`;
 }
 
