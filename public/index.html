@@ -732,6 +732,18 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .m-menu-btn { color: #1d2b3f; display: none; align-items: center; justify-content: center; }
 .m-menu-btn .ti { font-size: 20px; }
 @media (max-width: 760px) { .m-menu-btn { display: flex !important; } }
+
+/* 리포트 종류 탭 */
+.rep-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.rep-mode button { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; font-family: 'Pretendard', sans-serif; transition: .15s; }
+.rep-mode button .ti { grid-row: span 2; font-size: 22px; color: #9aa3b2; }
+.rep-mode button b { font-size: 14px; color: var(--text); }
+.rep-mode button small { font-size: 11.5px; color: var(--text3); }
+.rep-mode button:hover { border-color: #c2a25c; }
+.rep-mode button.active { border-color: #24364f; background: #f4f6fa; box-shadow: inset 0 0 0 1px #24364f; }
+.rep-mode button.active .ti { color: #24364f; }
+#rm-newbie.active { border-color: #15803d; background: #f0fdf4; box-shadow: inset 0 0 0 1px #15803d; }
+#rm-newbie.active .ti, #rm-newbie.active b { color: #15803d; }
 </style>
 </head>
 <body>
@@ -880,12 +892,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="panel-title">리포트 만들기</div>
       <div class="panel-sub">노션 기록을 불러와 AI가 피드백을 자동으로 다듬습니다</div>
       <div class="report-controls">
-        <!-- 신규생 모드 토글 -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;">
-          <input type="checkbox" id="rep-newbie" onchange="toggleNewbieMode()" style="width:16px;height:16px;cursor:pointer;accent-color:#16a34a;">
-          <label for="rep-newbie" style="font-size:13px;font-weight:700;color:#15803d;cursor:pointer;margin:0;">🌱 신규생 첫 피드백 모드</label>
-          <span style="font-size:11px;color:#4ade80;margin-left:auto;">오늘 수업 태도·적응 중심</span>
+        <!-- 리포트 종류: 정기 / 신규생 첫 수업 -->
+        <div class="rep-mode">
+          <button type="button" id="rm-regular" class="active" onclick="setRepMode('regular')"><i class="ti ti-chart-bar"></i><b>정기 리포트</b><small>주간 · 월간 진도와 피드백</small></button>
+          <button type="button" id="rm-newbie" onclick="setRepMode('newbie')"><i class="ti ti-plant-2"></i><b>신규생 첫 수업</b><small>첫날 태도 · 적응 안내</small></button>
         </div>
+        <input type="checkbox" id="rep-newbie" onchange="toggleNewbieMode()" style="display:none;">
 
         <!-- 학생 빠른 선택 -->
         <div style="margin-bottom:14px;">
@@ -947,8 +959,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
           <div class="form-group"><label>종료일</label><input type="date" id="rep-end"></div>
         </div>
         <div class="btn-row">
-          <button class="btn-secondary" onclick="generateReport(false)">📊 보고서 생성</button>
-          <button class="btn-gold"      onclick="generateReport(true)">✨ AI 피드백 포함</button>
+          <button class="btn-secondary" id="rep-btn-plain" onclick="generateReport(false)">📊 리포트 만들기</button>
+          <button class="btn-gold"      id="rep-btn-ai" onclick="generateReport(true)">✨ AI 피드백 포함</button>
         </div>
         <div class="status-msg" id="rep-status"></div>
       </div>
@@ -2221,6 +2233,26 @@ function reportContentsText(d) {
   return f.map(([l, k]) => `${l}: ${(d[k] || []).filter(Boolean).length ? [...new Set(d[k])].filter(Boolean).join(', ') : '진도 없음'}`).join('\n');
 }
 
+// ── 리포트 종류 탭 (정기 / 신규생) ──
+let repMode = 'regular';
+function setRepMode(mode) {
+  const nb = mode === 'newbie';
+  document.getElementById('rm-regular').classList.toggle('active', !nb);
+  document.getElementById('rm-newbie').classList.toggle('active', nb);
+  const cb = document.getElementById('rep-newbie');
+  if (cb.checked !== nb) { cb.checked = nb; toggleNewbieMode(); }
+  document.getElementById('rep-btn-plain').textContent = nb ? '🌱 첫 수업 피드백 만들기' : '📊 리포트 만들기';
+  // 다른 종류로 바꾸면 만들어 둔 카드는 치움 (섞이지 않게)
+  const card = document.getElementById('reportCard');
+  if (card && mode !== repMode) {
+    card.style.display = 'none'; card.innerHTML = '';
+    document.getElementById('report-actions').classList.remove('visible');
+    document.getElementById('rep-status').className = 'status-msg';
+  }
+  repMode = mode;
+  const rg = document.getElementById('report-actions')?.querySelector('.btn-regen');
+  if (rg) rg.style.display = nb ? 'none' : '';
+}
 // ── 신규생 모드 토글 ──
 function toggleNewbieMode() {
   const on = document.getElementById('rep-newbie').checked;
