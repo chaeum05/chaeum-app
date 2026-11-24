@@ -1904,6 +1904,7 @@ function expandReportData(d, name, type) {
   const books = st?.books || {};
   const out = { ...d };
   Object.entries(FIELD_ARR).forEach(([f, arr]) => { const list = fieldBooks(books, f); if (list.length && Array.isArray(d[arr])) out[arr] = d[arr].map(v => expandWithBooks(v, list)); });
+  if (d.prev) { out.prev = { ...d.prev }; Object.entries(FIELD_ARR).forEach(([f, arr]) => { const list = fieldBooks(books, f); if (list.length && out.prev[arr]) out.prev[arr] = expandWithBooks(out.prev[arr], list); }); }
   return out;
 }
 function bookOfInput(inp) {   // 이 칸의 교재들 (단어는 2권일 수 있음)
@@ -2082,7 +2083,29 @@ function smartRange(arr) {
   return unique.join(', ');
 }
 
+// 기간 안 기록이 하나뿐이면 직전 기록의 끝 번호를 시작점으로 ("Day 39" + 직전 "Day 25" → "Day 25 ~ 39")
+function rangeFromPrev(arr, prevVal) {
+  const unique = [...new Set(arr || [])].filter(Boolean);
+  if (unique.length !== 1 || !prevVal) return smartRange(unique);
+  const re = /^(.*?)(\d+)(?:\s*[-~–～]\s*(\d+))?(\s*회)?\s*$/;
+  const c = unique[0].match(re), p = String(prevVal).match(re);
+  if (!c || !p || /[,，\/]/.test(c[1])) return unique[0];
+  const norm = x => (x || '').replace(/\s+/g, '');
+  const cb = norm(c[1]), pb = norm(p[1]);
+  if (!cb || !(pb === cb || pb.endsWith(cb) || cb.endsWith(pb)) || (c[4] || '') !== (p[4] || '')) return unique[0];
+  const from = +(p[3] ?? p[2]);
+  const lo = +c[2], to = +(c[3] ?? c[2]);
+  if (!(from < to)) return unique[0];
+  // 직전 끝 번호가 이번 시작보다 앞이면 직전 끝 번호부터 (같은 숫자면 그대로)
+  return `${c[1]}${Math.min(from, lo)} ~ ${to}${c[4] || ''}`;
+}
+
 let lastData = null;
+// AI 피드백용: 이번 기간에 진도가 나간 과목 (없는 과목은 '진도 없음')
+function reportContentsText(d) {
+  const f = [['단어','words'],['문법','grammars'],['독해','readings'],['듣기','listenings'],['내신대비','naesins']];
+  return f.map(([l, k]) => `${l}: ${(d[k] || []).filter(Boolean).length ? [...new Set(d[k])].filter(Boolean).join(', ') : '진도 없음'}`).join('\n');
+}
 
 // ── 신규생 모드 토글 ──
 function toggleNewbieMode() {
@@ -2154,7 +2177,8 @@ async function generateReport(withAI = false) {
     let feedback = [...new Set(d.notes)].join(' ') || '성실하게 학습 중입니다.';
     if (withAI && d.notes.length) {
       const r = await api('polish-feedback', {
-        notes: d.notes, name, grade: d.grade, type,
+        notes: d.notes, name, grade: d.grade, type, start, end,
+        contents: reportContentsText(d),
         attendanceInfo: []   // 피드백에 결석·보강 안내는 넣지 않음
       });
       feedback = r.feedback;
@@ -2201,7 +2225,7 @@ function renderNewbieReport({ name, type, feedback }) {
 }
 
 
-function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, naesins, feedback, progress }) {
+function buildReportHTML({ name, grade, type, start, end, words, grammars, readings, listenings, writings, naesins, feedback, progress, prev }) {
   const hasProg = !!(progress && progress.length);
   const clean = arr => [...new Set(arr || [])].filter(Boolean).join(', ');
   const period = `${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')}`;
@@ -2210,12 +2234,13 @@ function buildReportHTML({ name, grade, type, start, end, words, grammars, readi
   const typeTitle = isHigh ? 'Premium Monthly Report' : isMid ? 'Weekly Middle Report' : 'Weekly Elementary Report';
 
   // 이번 기간에 기록이 있는 항목만 보여줌 (안 하는 과목은 줄 자체를 뺌)
+  const P = (type === '고등' && prev) ? prev : {};   // 고등 월간: 기록 하나뿐이면 직전 진도부터
   const items = [
-    ['단어', smartRange(words || [])],         // 같은 교재끼리 "Unit 1 ~ 4"처럼 합침 (다르면 나열)
-    ['문법', smartRange(grammars || [])],
-    ['독해', smartRange(readings || [])],
-    ['듣기', smartRange(listenings || [])],
-    ['라이팅', smartRange(writings || [])],
+    ['단어', rangeFromPrev(words, P.words)],         // 같은 교재끼리 "Unit 1 ~ 4"처럼 합침 (다르면 나열)
+    ['문법', rangeFromPrev(grammars, P.grammars)],
+    ['독해', rangeFromPrev(readings, P.readings)],
+    ['듣기', rangeFromPrev(listenings, P.listenings)],
+    ['라이팅', rangeFromPrev(writings, P.writings)],
     ['내신대비', clean(naesins)],
   ].filter(([, v]) => v);
   const contentsHTML = items.length
@@ -2290,6 +2315,7 @@ async function regenFeedback() {
     const r = await api('polish-feedback', {
         notes: lastData.notes, name: lastData.name,
         grade: lastData.grade, type: lastData.type,
+        start: lastData.start, end: lastData.end, contents: reportContentsText(lastData),
         attendanceInfo: []   // 피드백에 결석·보강 안내는 넣지 않음
       });
     const feedbackEl = document.querySelector('.rc-feedback-high, .rc-feedback-mid');
