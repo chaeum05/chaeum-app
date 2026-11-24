@@ -234,10 +234,10 @@ export default async function handler(req, res) {
     }
 
     // ── 학생별 가장 최근 시험 결과 (월간보고서와 같이 보내기용) ──
-    // names: 학생 이름 배열, days: 최근 며칠 안에 저장된 결과만 (기본 75일)
+    // names: 학생 이름 배열, days: 최근 며칠 안에 저장된 결과만 (기본 45일 · 지난 시험이 다음 시험 때 다시 붙지 않게)
     if (action === 'get_latest_results') {
       const names = new Set((body.names || []).map(n => String(n).trim()).filter(Boolean));
-      const days = Math.min(Math.max(Number(body.days) || 75, 1), 365);
+      const days = Math.min(Math.max(Number(body.days) || 45, 1), 365);
       const since = new Date(Date.now() - days * 86400000).toISOString();
       const rows = await queryDB(DB_RESULTS,
         { timestamp: 'created_time', created_time: { on_or_after: since } },
