@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
   if (!CLAUDE_KEY) return res.status(500).json({ error: 'Claude API 키가 설정되지 않았습니다.' });
 
-  const { notes, name, grade, type, attendanceInfo, newbieMode, attitude, adapt, learning, note } = req.body;
+  const { notes, name, grade, type, attendanceInfo, start, end, contents, newbieMode, attitude, adapt, learning, note } = req.body;
 
   const typeLabel = type === '초등' ? '초등학생' : type === '중등' ? '중학생' : '고등학생';
 
@@ -98,6 +98,15 @@ export default async function handler(req, res) {
     ? `- 첫 문장은 반드시 다음 문구 그대로 시작하고, 이어서 이번 달 학습 내용을 자연스럽게 연결해 한 문장으로 마무리: "${OCT_OPENING}"`
     : `- 반드시 "이번 달 수업에서"로 시작 ("이번 수업에서", "이번 주"는 쓰지 않음)`;
 
+  // 📌 고등부 11월 월간 보고서: 본격 내신대비 달 + 12월 기말고사 안내
+  const periodMonth = String(end || start || todayKST).slice(0, 7);
+  const novNaesin = type === '고등' && /-11$/.test(periodMonth);
+  const novRule = novNaesin ? `
+- 이번 달은 기말고사 대비를 본격적으로 진행한 달임을 자연스럽게 담기 (내신 범위 학습·문제 풀이 중심)
+- 아래 [이번 달 진도]에서 독해·듣기가 '진도 없음'이면 내신 대비에 집중하느라 해당 과정은 잠시 멈추었다고 짧게 언급, 어휘·문법 진도가 있으면 내신 대비와 함께 필요한 부분은 계속 진행했다고 언급 (진도가 있는 과목을 멈췄다고 쓰지 않음)
+- 마지막 문장은 12월에 내신(기말) 시험이 있으므로 마지막까지 내신 대비를 꼼꼼히 하여 좋은 성적을 거둘 수 있도록 지도하겠다는 내용으로 마무리` : '';
+  const contentsText = contents ? `\n[이번 달 진도]\n${contents}` : '';
+
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -115,14 +124,14 @@ export default async function handler(req, res) {
 
 학생: ${grade} ${name} (${typeLabel})
 수업 메모:
-${notes.join('\n')}${attendanceText}
+${notes.join('\n')}${type === '고등' ? contentsText : ''}${attendanceText}
 
 ${type === '고등' ? `[작성 규칙 — 고등부 월간 보고서 (한 달에 한 번 보내므로 주간보다 조금 더 자세하게)]
 ${openingRule}
 - 5~7문장, 한 문단으로 작성 (문단 나누지 않음, 너무 길지 않게)
   · 이번 달에 학습한 구체적인 내용(교재명, 단원, 문법 항목 등) → 잘한 점 → 보완이 필요한 점 → 다음 달 학습 방향 순서
 - 한 문장은 너무 길지 않게, 같은 내용 반복 없이
-- 결석·보강·출결 이야기는 쓰지 않음
+- 결석·보강·출결 이야기는 쓰지 않음${novRule}
 - 마크다운 기호 없이 본문만, 인사말/서명 불필요` : `[작성 규칙]
 - 3~5문장으로 작성 (너무 길지 않게, 핵심만 간결하게)
 - 이번 주 수업에서 배운 구체적인 내용(교재명, 문법 항목 등)을 반드시 언급
