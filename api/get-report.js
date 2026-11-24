@@ -67,6 +67,32 @@ export default async function handler(req, res) {
       if (g('특이사항')) notes.push(g('특이사항'));
     });
 
+    // 1-1. 고등 월간 보고서: 기간 직전의 마지막 진도 (기간 안 기록이 하나뿐일 때 시작점으로 씀)
+    const prev = {};
+    if (type === '고등') {
+      try {
+        const pr = await fetch(`https://api.notion.com/v1/databases/${DB_LOGS}/query`, {
+          method: 'POST', headers,
+          body: JSON.stringify({
+            filter: { and: [
+              { property: '이름', rich_text: { equals: name } },
+              { property: '구분', select: { equals: type } },
+              { property: '날짜', date: { before: start } }
+            ]},
+            sorts: [{ property: '날짜', direction: 'descending' }],
+            page_size: 30
+          })
+        });
+        const pd = await pr.json();
+        const KEYS = { '단어': 'words', '문법': 'grammars', '독해': 'readings', '듣기': 'listenings', '라이팅': 'writings' };
+        (pd.results || []).forEach(p => {
+          const props = p.properties;
+          const g = k => (props[k]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? '').join('').trim();
+          Object.entries(KEYS).forEach(([k, f]) => { if (!prev[f] && g(k)) prev[f] = g(k); });
+        });
+      } catch (e) {}
+    }
+
     // 2. 출결 기록 조회 (기간 내)
     let attendanceInfo = [];
     if (DB_ATTENDANCE) {
@@ -112,7 +138,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      ok: true, grade, words, grammars, readings, listenings, writings, naesins, notes,
+      ok: true, grade, prev, words, grammars, readings, listenings, writings, naesins, notes,
       attendanceInfo,
       count: queryData.results.length
     });
