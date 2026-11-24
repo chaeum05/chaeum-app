@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>채움영어 관리 시스템</title>
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.52.0/dist/tabler-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <style>
@@ -701,41 +702,70 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .bm-tools select, .bm-tools input { padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-family:'Pretendard',sans-serif; }
 .bm-btn { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; background:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:'Pretendard',sans-serif; }
 .bm-btn.primary { background:#3a5fd9; border-color:#3a5fd9; color:#fff; }
+
+/* 🎨 사이드바 테마: 네이비 + 골드 (리포트와 같은 톤) */
+.sidebar { background: #1d2b3f; border-right: 1px solid rgba(255,255,255,0.04); }
+.sidebar-header { padding: 24px 18px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.sb-brand { display: flex; align-items: center; gap: 11px; }
+.sb-mark { width: 38px; height: 38px; border-radius: 11px; background: #c2a25c; color: #1d2b3f; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sidebar-logo { color: #c2a25c; font-size: 9.5px; letter-spacing: 2.5px; margin-bottom: 3px; }
+.sidebar-title { font-size: 14.5px; }
+.sidebar-nav { padding: 10px 10px 12px; }
+.nav-grp { color: rgba(194,162,92,0.75); font-size: 10.5px; letter-spacing: 1.5px; padding: 16px 12px 6px; display: flex; align-items: center; gap: 8px; }
+.nav-grp::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+.nav-grp:first-child { padding-top: 4px; }
+.nav-item { position: relative; gap: 11px; padding: 10px 12px; color: rgba(255,255,255,0.62); font-size: 14px; border-radius: 9px; }
+.nav-item .ti { font-size: 18px; color: rgba(255,255,255,0.45); transition: color .2s; }
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-item:hover .ti { color: rgba(255,255,255,0.8); }
+.nav-item.active { background: rgba(194,162,92,0.16); color: #fff; font-weight: 600; }
+.nav-item.active .ti { color: #d6bd84; }
+.nav-item.active::before { content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: #c2a25c; }
+.nav-foot { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 10px; }
+.nav-foot .nav-item { border: 1px solid rgba(194,162,92,0.35); color: #d6bd84; font-size: 13px; }
+.nav-foot .nav-item .ti { color: #d6bd84; }
+.nav-foot .nav-item:hover { background: rgba(194,162,92,0.12); }
+.nav-ext { margin-left: auto; font-size: 14px !important; opacity: .7; }
+.m-tabbar { background: #1d2b3f !important; border-top: 1px solid rgba(194,162,92,0.25); }
+.m-tabbar button .ti { font-size: 21px; }
+.m-tabbar button.active { color: #d6bd84 !important; }
+.m-menu-btn { color: #1d2b3f; display: none; align-items: center; justify-content: center; }
+.m-menu-btn .ti { font-size: 20px; }
+@media (max-width: 760px) { .m-menu-btn { display: flex !important; } }
 </style>
 </head>
 <body>
 <div style="display:flex">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">Chaeum English</div>
-      <div class="sidebar-title">관리 시스템</div>
+      <div class="sb-brand"><div class="sb-mark">C</div><div><div class="sidebar-logo">Chaeum English</div><div class="sidebar-title">채움영어학원</div></div></div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-grp">매일</div>
-      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리<span class="nav-badge" id="nb-makeup" title="보강 대기"></span></div>
-      <div class="nav-item"        onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;수업 기록</div>
+      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance"><i class="ti ti-calendar-check"></i>출결 관리</div>
+      <div class="nav-item"        onclick="showPanel('record')"        id="nav-record"><i class="ti ti-pencil"></i>수업 기록</div>
       <div class="nav-grp">학생</div>
-      <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 관리</div>
-      <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books">📚 &nbsp;교재 · 진도</div>
+      <div class="nav-item"        onclick="showPanel('students')"      id="nav-students"><i class="ti ti-users"></i>학생 관리</div>
+      <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books"><i class="ti ti-books"></i>교재 · 진도</div>
       <div class="nav-grp">리포트</div>
-      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📊 &nbsp;리포트 만들기</div>
-      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">📤 &nbsp;발송 현황<span class="nav-badge" id="nb-outbox" title="발송함에 담긴 리포트"></span></div>
+      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report"><i class="ti ti-chart-bar"></i>리포트 만들기</div>
+      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status"><i class="ti ti-send"></i>발송 현황</div>
       <div class="nav-grp">시험</div>
-      <div class="nav-item"        onclick="showPanel('exam')"          id="nav-exam">📝 &nbsp;시험 관리</div>
-      <div class="nav-item"        onclick="showPanel('analysis')"      id="nav-analysis">📈 &nbsp;성적 분석</div>
+      <div class="nav-item"        onclick="showPanel('exam')"          id="nav-exam"><i class="ti ti-clipboard-text"></i>시험 관리</div>
+      <div class="nav-item"        onclick="showPanel('analysis')"      id="nav-analysis"><i class="ti ti-chart-line"></i>성적 분석</div>
       <div class="nav-foot">
-        <div class="nav-item" onclick="window.open('/checkin.html','_blank')" title="학원 태블릿용 등원 체크인 화면을 새 창으로 열어요">📱 &nbsp;체크인 화면 열기</div>
+        <div class="nav-item" onclick="window.open('/checkin.html','_blank')" title="학원 태블릿용 등원 체크인 화면을 새 창으로 열어요"><i class="ti ti-device-tablet"></i>체크인 화면 열기<i class="ti ti-external-link nav-ext"></i></div>
       </div>
     </nav>
   </aside>
-  <button class="m-menu-btn" onclick="toggleMobileMenu()" aria-label="메뉴">☰</button>
+  <button class="m-menu-btn" onclick="toggleMobileMenu()" aria-label="메뉴"><i class="ti ti-menu-2"></i></button>
   <div class="m-dim" onclick="toggleMobileMenu(false)"></div>
   <nav class="m-tabbar">
-    <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><span>📋</span>출결</button>
-    <button id="mt-record" onclick="showPanel('record')"><span>✏️</span>기록</button>
-    <button id="mt-students" onclick="showPanel('students')"><span>👨‍🎓</span>학생</button>
-    <button id="mt-report-status" onclick="showPanel('report-status')"><span>📤</span>리포트</button>
-    <button onclick="toggleMobileMenu()"><span>☰</span>전체</button>
+    <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><i class="ti ti-calendar-check"></i>출결</button>
+    <button id="mt-record" onclick="showPanel('record')"><i class="ti ti-pencil"></i>기록</button>
+    <button id="mt-students" onclick="showPanel('students')"><i class="ti ti-users"></i>학생</button>
+    <button id="mt-report-status" onclick="showPanel('report-status')"><i class="ti ti-send"></i>리포트</button>
+    <button onclick="toggleMobileMenu()"><i class="ti ti-layout-grid"></i>전체</button>
   </nav>
 
   <main class="main-content">
