@@ -65,6 +65,28 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom) + 40px);max-width:1100px
 .hint{font-size:13px;color:var(--mut);max-width:280px}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
+.cell.has .no::after{content:"";position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--omr)}
+.no{position:relative}
+.cell{cursor:pointer}
+.sheet{position:fixed;inset:0;z-index:20;display:none}
+.sheet.on{display:block}
+.sheet .bg{position:absolute;inset:0;background:#0007}
+.sheet .pn{position:absolute;left:0;right:0;bottom:0;max-height:88vh;background:var(--bg);border-radius:18px 18px 0 0;display:flex;flex-direction:column;max-width:820px;margin:0 auto;box-shadow:0 -6px 30px #0003}
+.sheet .sh{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)}
+.sheet .sh .q{font-size:13px;color:var(--mut)}
+.sheet .sh .big{font-size:20px;font-weight:800}
+.sheet .sh .big b{color:var(--omr)}
+.sheet .sb{overflow:auto;padding:4px 16px 16px;-webkit-overflow-scrolling:touch}
+.sheet .sf{display:flex;gap:8px;padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);border-top:1px solid var(--rule)}
+.sheet .sf button{flex:1}
+.ex h4{margin:16px 0 6px;font-size:14px;color:var(--omr)}
+.ex p{margin:0;font-size:15.5px;line-height:1.7;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere}
+.voc{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}
+.voc td{border-bottom:1px solid var(--rule);padding:6px 4px;vertical-align:top}
+.voc td:first-child{font-weight:700;white-space:nowrap;padding-right:10px}
+.noexp{color:var(--mut);font-size:14px;padding:16px 0}
+.ocr{font-size:12px;color:var(--mut);margin-top:14px}
+@media(min-width:760px){.sheet .pn{bottom:auto;top:50%;transform:translateY(-50%);border-radius:18px;max-height:84vh}}
 @media(min-width:760px){.grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -72,25 +94,51 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom) + 40px);max-width:1100px
 <body>
 <div id="app"></div>
 <div class="toast" id="toast"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="상세해설"><div class="bg" data-close="1"></div><div class="pn">
+ <div class="sh"><div style="flex:1"><div class="q" id="shq"></div><div class="big" id="sht"></div></div><button class="ic" data-close="1" aria-label="닫기">✕</button></div>
+ <div class="sb" id="shb"></div>
+ <div class="sf"><button id="prv">‹ 이전 문항</button><button id="nxt">다음 문항 ›</button></div>
+</div></div>
 <script>
 (() => {
 const app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const LS = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} }, del(k){ try { localStorage.removeItem(k); } catch {} } };
-let DATA = null, grade = LS.get('ans-grade') || '전체', school = LS.get('ans-school') || '전체', q = '', cur = null, hide = false;
+const LS = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); return true; } catch { return false; } }, del(k){ try { localStorage.removeItem(k); } catch {} } };
+let IDX = null, grade = LS.get('ans-grade') || '전체', school = LS.get('ans-school') || '전체', kind = '전체', q = '', cur = null, SET = null, hide = false, flat = [], pos = -1;
+const MEM = {};
 
-function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1500); }
-
-async function load(pin, silent){
-  try{
-    const r = await fetch('/api/answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
-    if (r.status === 401) { LS.del('ans-pin'); LS.del('ans-cache'); return 'pin'; }
-    if (!r.ok) throw 0;
-    DATA = await r.json(); LS.set('ans-pin', pin); LS.set('ans-cache', JSON.stringify(DATA)); return 'ok';
-  }catch{
-    const c = LS.get('ans-cache');
-    if (c) { DATA = JSON.parse(c); if(!silent) toast('오프라인 — 저장된 정답을 보여줘요'); return 'ok'; }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1600); }
+async function api(body){
+  const r = await fetch('/api/answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin: LS.get('ans-pin') || body.pin, ...body }) });
+  if (r.status === 401) { const e = new Error('pin'); e.pin = 1; throw e; }
+  if (!r.ok) throw new Error('net');
+  return r.json();
+}
+async function loadIndex(pin, silent){
+  try { IDX = await api({ pin }); LS.set('ans-pin', pin); LS.set('ans-idx', JSON.stringify(IDX)); return 'ok'; }
+  catch (e) {
+    if (e.pin) { LS.del('ans-pin'); LS.del('ans-idx'); return 'pin'; }
+    const c = LS.get('ans-idx'); if (c) { IDX = JSON.parse(c); if(!silent) toast('오프라인 — 저장된 목록을 보여줘요'); return 'ok'; }
     return 'net';
+  }
+}
+function cacheSet(s){
+  MEM[s.id] = s;
+  let keys = []; try { keys = JSON.parse(LS.get('ans-keys') || '[]'); } catch {}
+  keys = [s.id, ...keys.filter(k => k !== s.id)];
+  while (keys.length) {
+    if (LS.set('ans-set:' + s.id, JSON.stringify(s))) break;
+    const old = keys.pop(); if (old === s.id) break; LS.del('ans-set:' + old);
+  }
+  keys.slice(8).forEach(k => LS.del('ans-set:' + k)); LS.set('ans-keys', JSON.stringify(keys.slice(0, 8)));
+}
+async function loadSet(id){
+  if (MEM[id]) return MEM[id];
+  try { const s = await api({ id }); cacheSet(s); return s; }
+  catch (e) {
+    if (e.pin) throw e;
+    const c = LS.get('ans-set:' + id); if (c) { toast('오프라인 — 저장된 정답을 보여줘요'); return MEM[id] = JSON.parse(c); }
+    throw e;
   }
 }
 
@@ -106,85 +154,121 @@ function pinView(msg){
   const pi = document.getElementById('pi'); pi.focus();
   document.getElementById('pf').onsubmit = async e => {
     e.preventDefault(); const v = pi.value.trim(); if(!v) return;
-    const r = await load(v);
-    if (r === 'ok') { route(); } else pinView(r === 'pin' ? '비밀번호가 달라요' : '인터넷 연결을 확인해 주세요');
+    const r = await loadIndex(v);
+    if (r === 'ok') listView(); else pinView(r === 'pin' ? '비밀번호가 달라요' : '인터넷 연결을 확인해 주세요');
   };
 }
 
-const sets = () => DATA.sets;
-const grades = () => ['전체', ...[...new Set(sets().map(s=>s.grade))].sort()];
-const schools = () => ['전체', ...[...new Set(sets().filter(s=>grade==='전체'||s.grade===grade).map(s=>s.school))].sort((a,b)=>a.localeCompare(b,'ko'))];
+const sets = () => IDX.sets;
+const uniq = (a) => [...new Set(a)];
+const grades = () => ['전체', ...uniq(sets().map(s=>s.grade)).sort()];
+const kinds = () => ['전체', ...uniq(sets().map(s=>s.kind)).sort((a,b)=> a==='종합문제' ? -1 : b==='종합문제' ? 1 : a.localeCompare(b,'ko'))];
+const schools = () => ['전체', ...uniq(sets().filter(s=>grade==='전체'||s.grade===grade).map(s=>s.school)).sort((a,b)=>a.localeCompare(b,'ko'))];
 function filtered(){
   const k = q.trim().toLowerCase();
-  return sets().filter(s => (grade==='전체'||s.grade===grade) && (school==='전체'||s.school===school) &&
-    (!k || [s.school,s.grade,s.title,s.range].join(' ').toLowerCase().includes(k)));
+  return sets().filter(s => (grade==='전체'||s.grade===grade) && (school==='전체'||s.school===school) && (kind==='전체'||s.kind===kind) &&
+    (!k || [s.school,s.grade,s.title,s.range,s.kind].join(' ').toLowerCase().includes(k)));
 }
-
 function listView(){
   if (!schools().includes(school)) school = '전체';
   const f = filtered(), by = {};
   f.forEach(s => (by[s.grade+' '+s.school] ||= []).push(s));
+  Object.values(by).forEach(a => a.sort((x,y)=> (x.kind==='종합문제'?0:1)-(y.kind==='종합문제'?0:1) || x.title.localeCompare(y.title,'ko')));
   const keys = Object.keys(by).sort((a,b)=>a.localeCompare(b,'ko'));
   app.innerHTML = `<div class="top">
     <div class="bar"><h1>채움 <b>정답지</b></h1><span class="sp"></span><button class="ic" id="lock" aria-label="잠그기" title="잠그기">⏏</button></div>
     <input id="q" type="search" placeholder="학교·교재·단원 검색" value="${esc(q)}" aria-label="검색">
-    <div class="chips" role="group" aria-label="학년">${grades().map(g=>`<button class="chip" data-g="${esc(g)}" aria-pressed="${g===grade}">${esc(g)}</button>`).join('')}</div>
+    <div class="chips" role="group" aria-label="학년">${grades().map(g=>`<button class="chip" data-g="${esc(g)}" aria-pressed="${g===grade}">${esc(g)}</button>`).join('')}
+      <span style="flex:none;width:8px"></span>${kinds().map(g=>`<button class="chip" data-k="${esc(g)}" aria-pressed="${g===kind}">${g==='전체'?'모든 자료':esc(g)}</button>`).join('')}</div>
     <div class="chips" role="group" aria-label="학교">${schools().map(s=>`<button class="chip" data-s="${esc(s)}" aria-pressed="${s===school}">${esc(s)}</button>`).join('')}</div>
   </div>
-  <main>${keys.length ? keys.map(k=>`<div class="grp">${esc(k)}</div><div class="cards">${by[k].map(s=>{
-      const n = s.sections.reduce((a,x)=>a+x.items.length,0);
-      return `<button class="card" data-id="${esc(s.id)}"><b>${esc(s.title)}</b><span>${s.sections.length}개 세트 · ${n}문항${s.exam?' · '+esc(s.exam):''}</span></button>`;}).join('')}</div>`).join('')
+  <main>${keys.length ? keys.map(k=>`<div class="grp">${esc(k)}</div><div class="cards">${by[k].map(s=>
+      `<button class="card" data-id="${esc(s.id)}"><b>${s.kind==='종합문제'?'📚 ':''}${esc(s.title)}</b><span>${s.secs}개 묶음 · ${s.n}문항${s.hasExp?' · 상세해설':''}</span></button>`).join('')}</div>`).join('')
     : '<div class="empty">찾는 정답지가 없어요.</div>'}</main>`;
   const qi = document.getElementById('q');
   qi.oninput = () => { q = qi.value; const p = qi.selectionStart; listView(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(p,p); };
 }
 
 function detailView(){
-  const s = sets().find(x=>x.id===cur); if(!s){ cur=null; return listView(); }
-  const n = s.sections.reduce((a,x)=>a+x.items.length,0);
+  const s = SET;
+  flat = []; s.sections.forEach((x,si)=>x.items.forEach((it,ii)=>flat.push({si,ii,sec:x.name,it})));
+  const n = flat.length, hasE = flat.some(f=>f.it.e && f.it.e.length);
+  let k = 0;
   app.innerHTML = `<div class="top">
     <div class="dh"><button class="ic" id="back" aria-label="목록으로">‹</button><div style="flex:1"><h2>${esc(s.title)}</h2>
-      <div class="meta">${esc([s.grade,s.school,s.exam,s.range].filter(Boolean).join(' · '))} · ${n}문항</div></div></div>
-    <div class="tools"><button id="hide" aria-pressed="${hide}">${hide?'정답 보이기':'정답 가리기'}</button><button id="copy">전체 복사</button></div>
+      <div class="meta">${esc([s.grade,s.school,s.kind,s.range].filter(Boolean).join(' · '))} · ${n}문항</div></div></div>
+    <div class="tools"><button id="hide" aria-pressed="${hide}">${hide?'정답 보이기':'정답 가리기'}</button><button id="copy">정답 복사</button></div>
     ${s.sections.length>1?`<div class="chips">${s.sections.map((x,i)=>`<button class="chip" data-jump="${i}">${esc(x.name)}</button>`).join('')}</div>`:''}
   </div>
-  <main class="${hide?'hide':''}">${s.sections.map((x,i)=>`<section class="sec" id="sec${i}">
+  <main class="${hide?'hide':''}">${hasE?'<p class="meta" style="margin:4px 0 0">문항 칸을 누르면 상세해설이 열려요.</p>':''}
+  ${s.sections.map((x,i)=>`<section class="sec" id="sec${i}">
     <div class="sech"><h3>${esc(x.name)}</h3><span>${x.items.length}문항</span></div>
-    <div class="grid">${x.items.map(it=>{ const wide = String(it.a).length>10 || (it.x && String(it.x).length>18);
-      return `<div class="cell${wide?' wide':''}"><div class="no">${esc(it.n)}</div><div class="ans">${esc(it.a)}${it.x?`<small>${esc(it.x)}</small>`:''}</div></div>`;}).join('')}</div>
+    <div class="grid">${x.items.map(it=>{ const idx=k++; const wide = String(it.a).length>10 || (it.x && String(it.x).length>18);
+      return `<div class="cell${wide?' wide':''}${it.e&&it.e.length?' has':''}" data-i="${idx}" role="button" tabindex="0"><div class="no">${esc(it.n)}</div><div class="ans">${esc(it.a)}${it.x?`<small>${esc(it.x)}</small>`:''}</div></div>`;}).join('')}</div>
   </section>`).join('')}
-  ${hide?'<p class="meta" style="margin-top:14px">가린 칸을 누르면 그 문항만 보여요.</p>':''}</main>`;
-  window.scrollTo(0,0);
+  ${hide?'<p class="meta" style="margin-top:14px">가린 칸을 누르면 정답과 해설이 열려요.</p>':''}</main>`;
 }
 
-function route(){ cur ? detailView() : listView(); }
+function openSheet(i){
+  pos = i; const f = flat[i]; if (!f) return; const it = f.it;
+  document.getElementById('shq').textContent = `${SET.title} · ${f.sec}`;
+  document.getElementById('sht').innerHTML = `${esc(it.n)}번 &nbsp;<b>${esc(it.a)}</b>`;
+  const ex = (it.e||[]).map(([t,b])=>`<h4>${esc(t)}</h4><p>${esc(b)}</p>`).join('');
+  const vo = it.v && it.v.length ? `<h4>핵심 어휘</h4><table class="voc">${it.v.map(([w,m])=>`<tr><td>${esc(w)}</td><td>${esc(m)}</td></tr>`).join('')}</table>` : '';
+  document.getElementById('shb').innerHTML = `<div class="ex">${it.x?`<h4>메모</h4><p>${esc(it.x)}</p>`:''}${ex}${vo}${!ex&&!vo&&!it.x?'<div class="noexp">이 문항은 상세해설이 없어요.</div>':''}${SET.ocr?'<div class="ocr">스캔본에서 글자를 읽어 옮긴 해설이라 일부 글자가 틀릴 수 있어요.</div>':''}</div>`;
+  document.getElementById('shb').scrollTop = 0;
+  document.getElementById('prv').disabled = i<=0; document.getElementById('nxt').disabled = i>=flat.length-1;
+  const sh = document.getElementById('sheet'); if (!sh.classList.contains('on')) { sh.classList.add('on'); history.pushState({s:1},''); }
+}
+function closeSheet(fromPop){ const sh=document.getElementById('sheet'); if(!sh.classList.contains('on')) return false; sh.classList.remove('on'); if(!fromPop) history.back(); return true; }
+document.getElementById('sheet').addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) closeSheet();
+  else if (e.target.closest('#prv')) openSheet(pos-1);
+  else if (e.target.closest('#nxt')) openSheet(pos+1);
+});
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('sheet').classList.contains('on')) return;
+  if (e.key==='Escape') closeSheet(); else if (e.key==='ArrowLeft') openSheet(pos-1); else if (e.key==='ArrowRight') openSheet(pos+1);
+});
+
+async function openSet(id){
+  cur = id; hide = false;
+  app.querySelector('main').innerHTML = '<div class="empty">정답지를 여는 중…</div>';
+  try { SET = await loadSet(id); history.pushState({d:1},''); detailView(); window.scrollTo(0,0); }
+  catch (e) { cur = null; if (e.pin) pinView('비밀번호가 바뀌었어요. 다시 넣어 주세요'); else { toast('인터넷 연결을 확인해 주세요'); listView(); } }
+}
 
 app.addEventListener('click', async e => {
-  const b = e.target.closest('button,.ans'); if(!b) return;
+  const cell = e.target.closest('.cell');
+  if (cell) {
+    if (hide) { const a = cell.querySelector('.ans'); if (!a.classList.contains('on')) { a.classList.add('on'); return; } }
+    return openSheet(+cell.dataset.i);
+  }
+  const b = e.target.closest('button'); if(!b) return;
   if (b.dataset.g){ grade=b.dataset.g; LS.set('ans-grade',grade); school='전체'; LS.set('ans-school',school); listView(); }
+  else if (b.dataset.k){ kind=b.dataset.k; listView(); }
   else if (b.dataset.s){ school=b.dataset.s; LS.set('ans-school',school); listView(); }
-  else if (b.dataset.id){ cur=b.dataset.id; hide=false; history.pushState({d:1},''); detailView(); }
+  else if (b.dataset.id){ openSet(b.dataset.id); }
   else if (b.id==='back'){ history.back(); }
   else if (b.id==='hide'){ hide=!hide; detailView(); }
   else if (b.dataset.jump){ document.getElementById('sec'+b.dataset.jump).scrollIntoView({behavior:'smooth'}); }
   else if (b.id==='copy'){
-    const s = sets().find(x=>x.id===cur);
-    const t = s.title+'\n'+s.sections.map(x=>`[${x.name}]\n`+x.items.map(it=>`${it.n}. ${it.a}`).join('\n')).join('\n\n');
-    try { await navigator.clipboard.writeText(t); toast('복사했어요'); } catch { toast('복사하지 못했어요'); }
+    const t = SET.title+'\n'+SET.sections.map(x=>`[${x.name}]\n`+x.items.map(it=>`${it.n}. ${it.a}`).join('\n')).join('\n\n');
+    try { await navigator.clipboard.writeText(t); toast('정답을 복사했어요'); } catch { toast('복사하지 못했어요'); }
   }
-  else if (b.id==='lock'){ LS.del('ans-pin'); LS.del('ans-cache'); DATA=null; pinView(''); }
-  else if (b.classList.contains('ans') && hide){ b.classList.toggle('on'); }
+  else if (b.id==='lock'){ ['ans-pin','ans-idx'].forEach(LS.del); IDX=null; pinView(''); }
 });
-window.addEventListener('popstate', () => { if (cur){ cur=null; listView(); } });
+app.addEventListener('keydown', e => { if ((e.key==='Enter'||e.key===' ') && e.target.classList.contains('cell')) { e.preventDefault(); openSheet(+e.target.dataset.i); } });
+window.addEventListener('popstate', () => { if (closeSheet(true)) return; if (cur){ cur=null; SET=null; listView(); } });
 
 (async () => {
   const pin = LS.get('ans-pin');
   if (!pin) return pinView('');
-  const c = LS.get('ans-cache'); if (c) { try { DATA = JSON.parse(c); route(); } catch {} }
-  const r = await load(pin, true);
-  if (r === 'ok') { if (!c) route(); else if (!cur) listView(); }
+  const c = LS.get('ans-idx'); if (c) { try { IDX = JSON.parse(c); listView(); } catch {} }
+  const r = await loadIndex(pin, true);
+  if (r === 'ok') { if (!cur) listView(); }
   else if (r === 'pin') pinView('비밀번호가 바뀌었어요. 다시 넣어 주세요');
-  else if (!DATA) pinView('인터넷 연결을 확인해 주세요');
+  else if (!IDX) pinView('인터넷 연결을 확인해 주세요');
 })();
 })();
 </script>
