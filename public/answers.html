@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>채움 정답지</title>
+<link rel="manifest" href="/answers.webmanifest">
+<meta name="theme-color" content="#d6405e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="채움 정답지">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/icons/answers-180.png">
+<style>
+/* 채움 정답지 — 휴대폰·태블릿용 교사 정답 확인 (OMR 답안지 느낌: 흰 종이, 분홍 격자, 먹색 정답) */
+:root{--bg:#fff;--ink:#1b2433;--mut:#6a7383;--line:#f2c6cf;--omr:#d6405e;--omrS:#fdf0f2;--rule:#e6e8ec;--card:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#15181e;--ink:#e8ebf0;--mut:#9aa3b2;--line:#5a2f39;--omr:#f07890;--omrS:#2a1d22;--rule:#2c313b;--card:#1c2028}}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;overflow-x:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--rule);background:var(--card);border-radius:10px;min-height:44px;padding:0 14px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--omr);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 10px) 16px 8px;border-bottom:1px solid var(--rule)}
+.bar{display:flex;align-items:center;gap:10px;min-height:44px}
+h1{font-size:22px;margin:0;letter-spacing:-.4px}h1 b{color:var(--omr)}
+.bar .sp{flex:1}
+.ic{width:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:20px}
+#q{width:100%;min-height:44px;border:1px solid var(--rule);border-radius:10px;padding:0 12px;background:var(--card);font-size:16px;margin-top:8px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:38px;border-radius:999px;padding:0 14px;font-size:15px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+main{padding:12px 16px calc(env(safe-area-inset-bottom) + 40px);max-width:1100px;margin:0 auto}
+.grp{margin:14px 0 6px;font-size:13px;color:var(--mut);font-weight:700}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.card{text-align:left;padding:12px 14px;min-height:64px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.card b{font-size:16px}.card span{font-size:13px;color:var(--mut)}
+.empty{color:var(--mut);padding:40px 0;text-align:center}
+/* detail */
+.dh{display:flex;align-items:center;gap:8px}
+.dh h2{font-size:18px;margin:0;line-height:1.25;flex:1}
+.meta{font-size:13px;color:var(--mut);margin-top:2px}
+.tools{display:flex;gap:6px;margin-top:8px}.tools button{flex:1;font-size:14px;min-height:40px}
+.tools button[aria-pressed=true]{background:var(--omr);border-color:var(--omr);color:#fff;font-weight:700}
+.sec{margin:16px 0 0;scroll-margin-top:190px}
+.sech{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.sech h3{margin:0;font-size:16px;color:var(--omr)}.sech span{font-size:13px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));border-left:1px solid var(--line);border-top:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cell{display:grid;grid-template-columns:36px minmax(0,1fr);border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:48px;background:var(--card)}
+.cell.wide{grid-column:1/-1}
+.no{background:var(--omrS);color:var(--omr);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line)}
+.ans{padding:10px;font-weight:700;font-size:18px;line-height:1.35;overflow-wrap:anywhere;display:flex;flex-direction:column;justify-content:center}
+.cell.wide .ans{font-size:15px;font-weight:600}
+.ans small{font-weight:400;font-size:13px;color:var(--mut);margin-top:2px}
+.hide .ans{color:transparent;cursor:pointer;background:repeating-linear-gradient(90deg,var(--rule) 0 6px,transparent 6px 10px) center/70% 2px no-repeat}
+.hide .ans small{display:none}
+.hide .ans.on{color:inherit;background:none}.hide .ans.on small{display:block}
+/* pin */
+.pin{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:14px;text-align:center}
+.pin .logo{width:84px;height:84px;border-radius:20px}
+.pin h1{font-size:26px}
+.pin input{width:200px;text-align:center;font-size:26px;letter-spacing:8px;min-height:56px;border:2px solid var(--line);border-radius:12px;background:var(--card)}
+.pin button{background:var(--omr);color:#fff;border:0;font-weight:700;width:200px;min-height:50px}
+.err{color:var(--omr);font-size:14px;min-height:20px}
+.hint{font-size:13px;color:var(--mut);max-width:280px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+@media(min-width:760px){.grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} }, del(k){ try { localStorage.removeItem(k); } catch {} } };
+let DATA = null, grade = LS.get('ans-grade') || '전체', school = LS.get('ans-school') || '전체', q = '', cur = null, hide = false;
+
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1500); }
+
+async function load(pin, silent){
+  try{
+    const r = await fetch('/api/answers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
+    if (r.status === 401) { LS.del('ans-pin'); LS.del('ans-cache'); return 'pin'; }
+    if (!r.ok) throw 0;
+    DATA = await r.json(); LS.set('ans-pin', pin); LS.set('ans-cache', JSON.stringify(DATA)); return 'ok';
+  }catch{
+    const c = LS.get('ans-cache');
+    if (c) { DATA = JSON.parse(c); if(!silent) toast('오프라인 — 저장된 정답을 보여줘요'); return 'ok'; }
+    return 'net';
+  }
+}
+
+function pinView(msg){
+  app.innerHTML = `<form class="pin" id="pf">
+    <img class="logo" src="/icons/answers-180.png" alt="">
+    <h1>채움 <b>정답지</b></h1>
+    <input id="pi" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="선생님 비밀번호" placeholder="••••">
+    <div class="err">${esc(msg||'')}</div>
+    <button type="submit">열기</button>
+    <div class="hint">선생님 비밀번호를 넣으세요. 한 번 열면 이 기기에서는 다시 묻지 않아요.</div>
+  </form>`;
+  const pi = document.getElementById('pi'); pi.focus();
+  document.getElementById('pf').onsubmit = async e => {
+    e.preventDefault(); const v = pi.value.trim(); if(!v) return;
+    const r = await load(v);
+    if (r === 'ok') { route(); } else pinView(r === 'pin' ? '비밀번호가 달라요' : '인터넷 연결을 확인해 주세요');
+  };
+}
+
+const sets = () => DATA.sets;
+const grades = () => ['전체', ...[...new Set(sets().map(s=>s.grade))].sort()];
+const schools = () => ['전체', ...[...new Set(sets().filter(s=>grade==='전체'||s.grade===grade).map(s=>s.school))].sort((a,b)=>a.localeCompare(b,'ko'))];
+function filtered(){
+  const k = q.trim().toLowerCase();
+  return sets().filter(s => (grade==='전체'||s.grade===grade) && (school==='전체'||s.school===school) &&
+    (!k || [s.school,s.grade,s.title,s.range].join(' ').toLowerCase().includes(k)));
+}
+
+function listView(){
+  if (!schools().includes(school)) school = '전체';
+  const f = filtered(), by = {};
+  f.forEach(s => (by[s.grade+' '+s.school] ||= []).push(s));
+  const keys = Object.keys(by).sort((a,b)=>a.localeCompare(b,'ko'));
+  app.innerHTML = `<div class="top">
+    <div class="bar"><h1>채움 <b>정답지</b></h1><span class="sp"></span><button class="ic" id="lock" aria-label="잠그기" title="잠그기">⏏</button></div>
+    <input id="q" type="search" placeholder="학교·교재·단원 검색" value="${esc(q)}" aria-label="검색">
+    <div class="chips" role="group" aria-label="학년">${grades().map(g=>`<button class="chip" data-g="${esc(g)}" aria-pressed="${g===grade}">${esc(g)}</button>`).join('')}</div>
+    <div class="chips" role="group" aria-label="학교">${schools().map(s=>`<button class="chip" data-s="${esc(s)}" aria-pressed="${s===school}">${esc(s)}</button>`).join('')}</div>
+  </div>
+  <main>${keys.length ? keys.map(k=>`<div class="grp">${esc(k)}</div><div class="cards">${by[k].map(s=>{
+      const n = s.sections.reduce((a,x)=>a+x.items.length,0);
+      return `<button class="card" data-id="${esc(s.id)}"><b>${esc(s.title)}</b><span>${s.sections.length}개 세트 · ${n}문항${s.exam?' · '+esc(s.exam):''}</span></button>`;}).join('')}</div>`).join('')
+    : '<div class="empty">찾는 정답지가 없어요.</div>'}</main>`;
+  const qi = document.getElementById('q');
+  qi.oninput = () => { q = qi.value; const p = qi.selectionStart; listView(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(p,p); };
+}
+
+function detailView(){
+  const s = sets().find(x=>x.id===cur); if(!s){ cur=null; return listView(); }
+  const n = s.sections.reduce((a,x)=>a+x.items.length,0);
+  app.innerHTML = `<div class="top">
+    <div class="dh"><button class="ic" id="back" aria-label="목록으로">‹</button><div style="flex:1"><h2>${esc(s.title)}</h2>
+      <div class="meta">${esc([s.grade,s.school,s.exam,s.range].filter(Boolean).join(' · '))} · ${n}문항</div></div></div>
+    <div class="tools"><button id="hide" aria-pressed="${hide}">${hide?'정답 보이기':'정답 가리기'}</button><button id="copy">전체 복사</button></div>
+    ${s.sections.length>1?`<div class="chips">${s.sections.map((x,i)=>`<button class="chip" data-jump="${i}">${esc(x.name)}</button>`).join('')}</div>`:''}
+  </div>
+  <main class="${hide?'hide':''}">${s.sections.map((x,i)=>`<section class="sec" id="sec${i}">
+    <div class="sech"><h3>${esc(x.name)}</h3><span>${x.items.length}문항</span></div>
+    <div class="grid">${x.items.map(it=>{ const wide = String(it.a).length>10 || (it.x && String(it.x).length>18);
+      return `<div class="cell${wide?' wide':''}"><div class="no">${esc(it.n)}</div><div class="ans">${esc(it.a)}${it.x?`<small>${esc(it.x)}</small>`:''}</div></div>`;}).join('')}</div>
+  </section>`).join('')}
+  ${hide?'<p class="meta" style="margin-top:14px">가린 칸을 누르면 그 문항만 보여요.</p>':''}</main>`;
+  window.scrollTo(0,0);
+}
+
+function route(){ cur ? detailView() : listView(); }
+
+app.addEventListener('click', async e => {
+  const b = e.target.closest('button,.ans'); if(!b) return;
+  if (b.dataset.g){ grade=b.dataset.g; LS.set('ans-grade',grade); school='전체'; LS.set('ans-school',school); listView(); }
+  else if (b.dataset.s){ school=b.dataset.s; LS.set('ans-school',school); listView(); }
+  else if (b.dataset.id){ cur=b.dataset.id; hide=false; history.pushState({d:1},''); detailView(); }
+  else if (b.id==='back'){ history.back(); }
+  else if (b.id==='hide'){ hide=!hide; detailView(); }
+  else if (b.dataset.jump){ document.getElementById('sec'+b.dataset.jump).scrollIntoView({behavior:'smooth'}); }
+  else if (b.id==='copy'){
+    const s = sets().find(x=>x.id===cur);
+    const t = s.title+'\n'+s.sections.map(x=>`[${x.name}]\n`+x.items.map(it=>`${it.n}. ${it.a}`).join('\n')).join('\n\n');
+    try { await navigator.clipboard.writeText(t); toast('복사했어요'); } catch { toast('복사하지 못했어요'); }
+  }
+  else if (b.id==='lock'){ LS.del('ans-pin'); LS.del('ans-cache'); DATA=null; pinView(''); }
+  else if (b.classList.contains('ans') && hide){ b.classList.toggle('on'); }
+});
+window.addEventListener('popstate', () => { if (cur){ cur=null; listView(); } });
+
+(async () => {
+  const pin = LS.get('ans-pin');
+  if (!pin) return pinView('');
+  const c = LS.get('ans-cache'); if (c) { try { DATA = JSON.parse(c); route(); } catch {} }
+  const r = await load(pin, true);
+  if (r === 'ok') { if (!c) route(); else if (!cur) listView(); }
+  else if (r === 'pin') pinView('비밀번호가 바뀌었어요. 다시 넣어 주세요');
+  else if (!DATA) pinView('인터넷 연결을 확인해 주세요');
+})();
+})();
+</script>
+</body>
+</html>

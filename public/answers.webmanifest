@@ -1,0 +1,14 @@
+{
+  "name": "채움영어 정답지",
+  "short_name": "채움 정답지",
+  "start_url": "/answers.html",
+  "scope": "/answers.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#d6405e",
+  "icons": [
+    { "src": "/icons/answers-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/answers-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
