@@ -29,6 +29,26 @@ body { font-family: 'Pretendard', sans-serif; background: var(--surface2); color
 .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
 .nav-item.active { background: rgba(176,28,46,0.35); color: #fff; }
 
+.nav-grp { font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 2px; padding: 14px 14px 5px; }
+.nav-grp:first-child { padding-top: 2px; }
+.sidebar-nav { display: flex; flex-direction: column; overflow-y: auto; }
+.nav-foot { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
+.nav-foot .nav-item { font-size: 13px; }
+.nav-badge { margin-left: auto; background: #d4a017; color: #1a1a2e; font-size: 11px; font-weight: 800; border-radius: 10px; padding: 0 7px; line-height: 18px; display: none; }
+.m-menu-btn, .m-tabbar, .m-dim { display: none; }
+@media (max-width: 760px) {
+  .sidebar { transform: translateX(-100%); transition: transform .2s; z-index: 1001; }
+  body.m-menu-open .sidebar { transform: none; }
+  body.m-menu-open .m-dim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; }
+  body .main-content { margin-left: 0; padding-bottom: 70px; }
+  body .panel { padding: 56px 14px 20px; }
+  .m-menu-btn { display: block; position: fixed; top: 10px; left: 10px; z-index: 999; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 18px; box-shadow: var(--shadow); cursor: pointer; }
+  .m-tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 998; background: var(--dark); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .m-tabbar button { flex: 1; background: none; border: none; color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 700; font-family: 'Pretendard', sans-serif; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; cursor: pointer; }
+  .m-tabbar button span { font-size: 18px; }
+  .m-tabbar button.active { color: #fff; }
+  body .panel-title { margin-left: 44px; }
+}
 .main-content { margin-left: 220px; flex: 1; min-height: 100vh; min-width: 0; }
 .panel { display: none; padding: 36px 40px; }
 .panel.active { display: block; }
@@ -691,15 +711,32 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="sidebar-title">관리 시스템</div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리</div>
-      <div class="nav-item"        onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;일일 기록</div>
-      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📊 &nbsp;보고서 생성</div>
-      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">✅ &nbsp;보고서 현황</div>
+      <div class="nav-grp">매일</div>
+      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance">📋 &nbsp;출결 관리<span class="nav-badge" id="nb-makeup" title="보강 대기"></span></div>
+      <div class="nav-item"        onclick="showPanel('record')"        id="nav-record">✏️ &nbsp;수업 기록</div>
+      <div class="nav-grp">학생</div>
+      <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 관리</div>
+      <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books">📚 &nbsp;교재 · 진도</div>
+      <div class="nav-grp">리포트</div>
+      <div class="nav-item"        onclick="showPanel('report')"        id="nav-report">📊 &nbsp;리포트 만들기</div>
+      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status">📤 &nbsp;발송 현황<span class="nav-badge" id="nb-outbox" title="발송함에 담긴 리포트"></span></div>
+      <div class="nav-grp">시험</div>
       <div class="nav-item"        onclick="showPanel('exam')"          id="nav-exam">📝 &nbsp;시험 관리</div>
-      <div class="nav-item"        onclick="showPanel('students')"      id="nav-students">👨‍🎓 &nbsp;학생 목록</div>
-      <div class="nav-item" onclick="window.open('/exam-analysis.html','_blank')" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;">📊 &nbsp;성적 분석 리포트</div>
+      <div class="nav-item"        onclick="showPanel('analysis')"      id="nav-analysis">📈 &nbsp;성적 분석</div>
+      <div class="nav-foot">
+        <div class="nav-item" onclick="window.open('/checkin.html','_blank')" title="학원 태블릿용 등원 체크인 화면을 새 창으로 열어요">📱 &nbsp;체크인 화면 열기</div>
+      </div>
     </nav>
   </aside>
+  <button class="m-menu-btn" onclick="toggleMobileMenu()" aria-label="메뉴">☰</button>
+  <div class="m-dim" onclick="toggleMobileMenu(false)"></div>
+  <nav class="m-tabbar">
+    <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><span>📋</span>출결</button>
+    <button id="mt-record" onclick="showPanel('record')"><span>✏️</span>기록</button>
+    <button id="mt-students" onclick="showPanel('students')"><span>👨‍🎓</span>학생</button>
+    <button id="mt-report-status" onclick="showPanel('report-status')"><span>📤</span>리포트</button>
+    <button onclick="toggleMobileMenu()"><span>☰</span>전체</button>
+  </nav>
 
   <main class="main-content">
 
@@ -707,7 +744,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     <div class="panel" id="panel-record">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
-          <div class="panel-title">일일 수업 기록</div>
+          <div class="panel-title">수업 기록</div>
           <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
         </div>
         <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
@@ -810,7 +847,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
     <!-- 보고서 생성 -->
     <div class="panel" id="panel-report">
-      <div class="panel-title">학습 보고서 생성</div>
+      <div class="panel-title">리포트 만들기</div>
       <div class="panel-sub">노션 기록을 불러와 AI가 피드백을 자동으로 다듬습니다</div>
       <div class="report-controls">
         <!-- 신규생 모드 토글 -->
@@ -1139,11 +1176,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
     <!-- 학생 목록 패널 -->
     <div class="panel" id="panel-students">
-      <div class="panel-title">학생 목록</div>
+      <div class="panel-title">학생 관리</div>
       <div class="panel-sub">이름을 누르면 그 학생 보고서 화면으로 가요 · 검색과 필터로 빠르게 찾을 수 있어요</div>
       <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-bottom:14px;width:fit-content;">
         <button class="rs-tab active" id="sv-cards" onclick="setStudentView('cards')">👤 학생 목록</button>
-        <button class="rs-tab" id="sv-books" onclick="setStudentView('books')">📚 교재 관리</button>
+        <button class="rs-tab" id="sv-books" onclick="setStudentView('books')">📚 교재 · 진도</button>
       </div>
       <!-- ➕ 학생 추가 (학생 목록에서) -->
       <details class="att-add-form" id="sl-add" style="margin:0 0 14px;">
@@ -1321,8 +1358,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <!-- 보고서 현황 패널 -->
+    <div class="panel" id="panel-analysis">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;">
+        <div class="panel-title" style="margin:0;">성적 분석</div>
+        <a href="/exam-analysis.html" target="_blank" style="font-size:12px;color:var(--text2);">새 창으로 열기 ↗</a>
+      </div>
+      <iframe id="analysis-frame" title="성적 분석 리포트" style="width:100%;height:calc(100vh - 110px);border:1px solid var(--border);border-radius:12px;background:#fff;"></iframe>
+    </div>
+
     <div class="panel" id="panel-report-status">
-      <div class="panel-title">보고서 현황</div>
+      <div class="panel-title">발송 현황</div>
 
       <!-- 상단 컨트롤 -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
@@ -1555,14 +1600,26 @@ window.onload = function() {
   document.getElementById('rep-start').value = weekAgo;
   updateGrades();
   initAttendance(); // 첫 화면이 출결이므로 바로 로드
+  refreshOutboxCount();   // 메뉴의 발송함 숫자
 };
 
-function showPanel(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+function setNavActive(id) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.m-tabbar button').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + id)?.classList.add('active');
+  document.getElementById('mt-' + (id === 'books' ? 'students' : id))?.classList.add('active');
+}
+function toggleMobileMenu(force) {
+  document.body.classList.toggle('m-menu-open', force);
+}
+function showPanel(name, sub) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'students')       loadStudents();
+  setNavActive(name === 'students' && sub === 'books' ? 'books' : name);
+  toggleMobileMenu(false);
+  window.scrollTo(0, 0);
+  if (name === 'students')       { loadStudents(); setStudentView(sub === 'books' ? 'books' : 'cards'); }
+  if (name === 'analysis') { const f = document.getElementById('analysis-frame'); if (!f.src) f.src = '/exam-analysis.html'; }
   if (name === 'attendance')     initAttendance();
   if (name === 'report-status')  initReportStatus();
   if (name === 'exam')           initExam();
@@ -4331,6 +4388,7 @@ function renderMakeupList() {
   const list = document.getElementById('makeup-list');
   const cnt  = document.getElementById('makeup-count');
   cnt.textContent = attMakeup.length ? `(${attMakeup.length}명)` : '';
+  setNavBadge('nb-makeup', attMakeup.length);
   if (!attMakeup.length) {
     list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">보강 대기 없음 🎉</div>';
     return;
@@ -5383,11 +5441,16 @@ function rsLocalSet(it, status, hasDraft) {
   }
 }
 
+function setNavBadge(id, n) {
+  const b = document.getElementById(id);
+  if (b) { b.textContent = n > 0 ? n : ''; b.style.display = n > 0 ? 'inline-block' : 'none'; }
+}
 async function refreshOutboxCount() {
   try {
     const d = await api('update-report-status', { action: 'get_outbox', summary: true });
     const el = document.getElementById('outbox-count');
     if (el) el.textContent = (d.items || []).length;
+    setNavBadge('nb-outbox', (d.items || []).length);
   } catch(e) {}
 }
 
@@ -6883,6 +6946,7 @@ let bmStudents = [], bmHist = {}, bmSugg = {}, bmChecked = new Set(), bmLevel = 
 const bmKey = s => `${s.name}|${s.type}`;
 
 function setStudentView(v) {
+  if (document.getElementById('panel-students')?.classList.contains('active')) setNavActive(v === 'books' ? 'books' : 'students');
   document.getElementById('sv-cards').classList.toggle('active', v === 'cards');
   document.getElementById('sv-books').classList.toggle('active', v === 'books');
   document.getElementById('student-list-container').style.display = v === 'cards' ? '' : 'none';
