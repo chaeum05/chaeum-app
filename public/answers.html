@@ -220,7 +220,8 @@ function openSheet(i){
   document.getElementById('prv').disabled = i<=0; document.getElementById('nxt').disabled = i>=flat.length-1;
   const sh = document.getElementById('sheet'); if (!sh.classList.contains('on')) { sh.classList.add('on'); history.pushState({s:1},''); }
 }
-function closeSheet(fromPop){ const sh=document.getElementById('sheet'); if(!sh.classList.contains('on')) return false; sh.classList.remove('on'); if(!fromPop) history.back(); return true; }
+let skipPop = false;
+function closeSheet(fromPop){ const sh=document.getElementById('sheet'); if(!sh.classList.contains('on')) return false; sh.classList.remove('on'); if(!fromPop){ skipPop = true; history.back(); } return true; }
 document.getElementById('sheet').addEventListener('click', e => {
   if (e.target.closest('[data-close]')) closeSheet();
   else if (e.target.closest('#prv')) openSheet(pos-1);
@@ -259,7 +260,7 @@ app.addEventListener('click', async e => {
   else if (b.id==='lock'){ ['ans-pin','ans-idx'].forEach(LS.del); IDX=null; pinView(''); }
 });
 app.addEventListener('keydown', e => { if ((e.key==='Enter'||e.key===' ') && e.target.classList.contains('cell')) { e.preventDefault(); openSheet(+e.target.dataset.i); } });
-window.addEventListener('popstate', () => { if (closeSheet(true)) return; if (cur){ cur=null; SET=null; listView(); } });
+window.addEventListener('popstate', () => { if (skipPop) { skipPop = false; return; } if (closeSheet(true)) return; if (cur){ cur=null; SET=null; listView(); } });
 
 (async () => {
   const pin = LS.get('ans-pin');
