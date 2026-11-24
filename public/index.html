@@ -407,6 +407,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .att-body { display:flex; gap:16px; align-items:flex-start; }
 .att-left { flex:1; min-width:0; }
 .att-right { width:240px; flex:0 0 240px; position:sticky; top:20px; }
+/* 📱 화면이 좁으면 (휴대폰·태블릿) 달력·메모판·현황을 출결표 위로 올려서 가리지 않게 */
+@media (max-width:1200px) {
+  .att-body { flex-direction:column; }
+  .att-left { width:100%; }
+  .att-right { order:-1; width:100%; flex:none; position:static; display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px; align-items:start; }
+  .att-right > .daily-memo-card { margin:0 !important; }
+}
 
 /* 일일 메모판 */
 .daily-memo-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
