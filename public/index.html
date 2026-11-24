@@ -784,15 +784,11 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
     <!-- 일일 기록 -->
     <div class="panel" id="panel-record">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <div>
-          <div class="panel-title">수업 기록</div>
-          <div class="panel-sub">기록하면 노션에 자동으로 저장됩니다</div>
-        </div>
-        <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
-          <button class="rs-tab active" id="rec-mode-single" onclick="setRecordMode('single')">개별 입력</button>
-          <button class="rs-tab"        id="rec-mode-batch"  onclick="setRecordMode('batch')">📋 일괄 입력</button>
-        </div>
+      <div class="panel-title">수업 기록</div>
+      <div class="panel-sub" style="margin-bottom:16px;">기록하면 노션에 자동으로 저장됩니다</div>
+      <div class="rep-mode" style="max-width:600px;">
+        <button type="button" class="active" id="rec-mode-single" onclick="setRecordMode('single')"><i class="ti ti-user"></i><b>개별 입력</b><small>한 명씩 자세히</small></button>
+        <button type="button" id="rec-mode-batch" onclick="setRecordMode('batch')"><i class="ti ti-users-group"></i><b>일괄 입력</b><small>오늘 온 학생 한 번에</small></button>
       </div>
 
       <!-- 일괄 입력 모드 -->
