@@ -1,3 +1,16 @@
+// 👦 피드백 호칭: "오준석 학생" 대신 "준석이" (받침 있으면 '이' 붙임: 준석→준석이, 민지→민지)
+function callName(full) {
+  const n = String(full || '').trim().replace(/\s+/g, '');
+  const given = /^[가-힣]{4}$/.test(n) ? n.slice(2) : /^[가-힣]{3}$/.test(n) ? n.slice(1) : n;   // 성 빼기 (남궁민수→민수, 2글자 이름은 그대로)
+  const last = given.charCodeAt(given.length - 1);
+  const batchim = last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 !== 0;
+  return batchim ? given + '이' : given;
+}
+function nameRule(full) {
+  const c = callName(full);
+  return `- 학생 호칭: "${full} 학생", "학생은"처럼 쓰지 말고 이름만 친근하게 "${c}"로 부름 (예: "${c}는", "${c}가", "${c}의"). 호칭은 1~2번만 자연스럽게 사용`;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -586,7 +599,8 @@ export default async function handler(req, res) {
 - 전체 4~5문장, 공백 포함 350자 이내 (넘치면 덜 중요한 설명부터 줄이기)
 - 순서: ① 점수와 전반적인 평가 1문장 → ② 틀린 문항의 영역·유형과 원인 1~2문장 (문항 번호는 묶어서 간단히) → ③ 앞으로의 학습 방향 1~2문장 (학원에서 무엇을 어떻게 보완할지 구체적으로)
 - 문법 개념 설명을 길게 늘어놓지 말 것
-- 마크다운 기호·제목·목록 없이 한 문단 본문만`;
+- 마크다운 기호·제목·목록 없이 한 문단 본문만
+${nameRule(studentName)}`;
       const prompt = hasTeacherMemo
         ? `채움영어학원 선생님이 쓴 피드백을 아래 성적 데이터에 맞춰 간결하게 다듬어 주세요. 선생님 피드백의 핵심 내용과 말투는 살리되, 길면 줄이고, 앞으로의 학습 방향이 없으면 꼭 넣어 주세요.
 

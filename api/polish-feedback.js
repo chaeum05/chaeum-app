@@ -1,3 +1,16 @@
+// 👦 피드백 호칭: "오준석 학생" 대신 "준석이" (받침 있으면 '이' 붙임: 준석→준석이, 민지→민지)
+function callName(full) {
+  const n = String(full || '').trim().replace(/\s+/g, '');
+  const given = /^[가-힣]{4}$/.test(n) ? n.slice(2) : /^[가-힣]{3}$/.test(n) ? n.slice(1) : n;   // 성 빼기 (남궁민수→민수, 2글자 이름은 그대로)
+  const last = given.charCodeAt(given.length - 1);
+  const batchim = last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 !== 0;
+  return batchim ? given + '이' : given;
+}
+function nameRule(full) {
+  const c = callName(full);
+  return `- 학생 호칭: "${full} 학생", "학생은"처럼 쓰지 말고 이름만 친근하게 "${c}"로 부름 (예: "${c}는", "${c}가", "${c}의"). 호칭은 1~2번만 자연스럽게 사용`;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -38,6 +51,7 @@ export default async function handler(req, res) {
 - 앞으로 세심하게 지도하겠다는 다짐
 - 궁금한 점 문의 안내
 - 마지막 줄에 "형곡동은 채움입니다." 서명
+${nameRule(name)}
 - 따뜻하고 진심 어린 어투, 존댓말 격식체
 - 과장된 칭찬보다 구체적 관찰 중심
 - 마크다운 기호 없이 본문만`
@@ -132,11 +146,13 @@ ${openingRule}
   · 이번 달에 학습한 구체적인 내용(교재명, 단원, 문법 항목 등) → 잘한 점 → 보완이 필요한 점 → 다음 달 학습 방향 순서
 - 한 문장은 너무 길지 않게, 같은 내용 반복 없이
 - 결석·보강·출결 이야기는 쓰지 않음${novRule}
+${nameRule(name)}
 - 마크다운 기호 없이 본문만, 인사말/서명 불필요` : `[작성 규칙]
 - 3~5문장으로 작성 (너무 길지 않게, 핵심만 간결하게)
 - 이번 주 수업에서 배운 구체적인 내용(교재명, 문법 항목 등)을 반드시 언급
 - 잘한 점과 보완이 필요한 점을 균형 있게 서술
 - 결석·보강·출결 이야기는 쓰지 않음
+${nameRule(name)}
 - 마크다운 기호 없이 본문만, 인사말/서명 불필요`}
 
 [반드시 지켜야 할 어투]
