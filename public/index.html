@@ -286,6 +286,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .rc-plan-box[contenteditable="true"]:focus { background: #fffde0; }
 
+/* 🎨 고등 월간 리포트: 차분한 네이비 + 골드 (성적 분석 리포트와 같은 톤) */
+.rc-header-high { background: #24364f; border-bottom: 3px solid #c2a25c; padding: 26px 24px 22px; }
+.rc-header-high .rc-academy { color: #d6bd84; }
+.rc-period-high { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 11px 24px; background: #f6f3ec; border-bottom: 1px solid #ebe4d4; }
+.rc-period-label { font-size: 12px; font-weight: 700; color: #8a6d2f; letter-spacing: 1px; }
+.rc-date-high { color: #24364f; }
+.rc-period-high .rc-date-high { display: inline; margin: 0; font-size: 15px; color: #24364f; letter-spacing: 0.3px; }
+.rc-section-title-high { border-left-color: #c2a25c; color: #24364f; }
+.rc-feedback-high { background: #f7f8fb; border-color: #dde3ec; }
 .rc-footer { text-align: center; padding: 14px; font-size: 11px; color: #aaa; background: #fafafa; border-top: 1px solid #f0ece5; font-family: 'Pretendard', sans-serif; }
 
 /* 학생 목록 */
@@ -2257,16 +2266,13 @@ function buildReportHTML({ name, grade, type, start, end, words, grammars, readi
         <div class="rc-report-title">${typeTitle}</div>
         <div class="rc-student-high">${grade} ${name} 학생</div>
       </div>
+      <div class="rc-period-high"><span class="rc-period-label">학습 기간</span><span class="rc-date-high">${period}</span></div>
       <div class="rc-section">
-        <div class="rc-section-title-high">01. 학습 기간</div>
-        <span class="rc-date-high">${period}</span>
-      </div>
-      <div class="rc-section">
-        <div class="rc-section-title-high">02. 학습 내용 (Contents)</div>
+        <div class="rc-section-title-high">01. 학습 내용 (Contents)</div>
         <div class="rc-content-box" contenteditable="true">${contentsHTML}</div>
-      </div>${buildProgressSectionHTML(progress, true, '03')}
+      </div>${buildProgressSectionHTML(progress, true, '02')}
       <div class="rc-section">
-        <div class="rc-section-title-high">${hasProg ? '04' : '03'}. 선생님 전달사항 (Feedback)</div>
+        <div class="rc-section-title-high">${hasProg ? '03' : '02'}. 선생님 전달사항 (Feedback)</div>
         <div class="rc-feedback-high" contenteditable="true">${feedback}</div>
       </div>
       <div class="rc-footer">채움영어학원 프리미엄 학습 분석 리포트</div>
@@ -6834,7 +6840,7 @@ async function reportBookProgress(name, type, start, end, histAll) {
 
 function buildProgressSectionHTML(progress, isHigh, num) {
   if (!progress || !progress.length) return '';
-  const color = isHigh ? '#b01c2e' : '#3498db';
+  const color = isHigh ? '#2c4a6e' : '#3498db';
   const rows = progress.map(p => `
     <div style="margin:0 0 10px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;">
