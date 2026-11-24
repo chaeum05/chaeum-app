@@ -5208,8 +5208,25 @@ function renderExams() {
     return html;
   };
 
+  // 시험종류가 '전체'일 때 중간(1차)·기말(2차)이 한 표에 섞이지 않도록 시험종류별로 나눠서, 최근 시험부터 보여줌
+  const typeOrder = t => t === '2차 지필' ? 0 : t === '1차 지필' ? 1 : t === '모의고사' ? 2 : 3;
+  const semKey = e => { const m = /(\d{4})-(\d)/.exec(e.semester || ''); return m ? +m[1] * 10 + +m[2] : 0; };
+  const splitByType = (list, isHigh) => {
+    if (typeFilter) return renderGroup(list, isHigh);
+    const groups = {};
+    list.forEach(e => { const k = (e.semester || '') + '|' + (e.examType || '기타'); (groups[k] ||= []).push(e); });
+    const keys = Object.keys(groups).sort((a, b) => {
+      const ea = groups[a][0], eb = groups[b][0];
+      return semKey(eb) - semKey(ea) || typeOrder(ea.examType || '기타') - typeOrder(eb.examType || '기타');
+    });
+    if (keys.length <= 1) return renderGroup(list, isHigh);
+    return keys.map(k => {
+      const [sem, type] = k.split('|');
+      return `<div style="margin:18px 0 4px;font-size:14px;font-weight:800;color:var(--text);">📝 ${sem ? sem + ' · ' : ''}${type}</div>` + renderGroup(groups[k], isHigh);
+    }).join('');
+  };
   document.getElementById('exam-list').innerHTML =
-    renderGroup(highList, true) + renderGroup(midList, false);
+    splitByType(highList, true) + splitByType(midList, false);
 }
 
 function openExamForm(id) {
