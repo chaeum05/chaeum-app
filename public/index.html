@@ -997,14 +997,14 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <button class="exam-tab"        id="exam-school-tab-high" onclick="filterExamSchool('high')">고등</button>
             <button class="exam-tab"        id="exam-school-tab-mid"  onclick="filterExamSchool('mid')">중등</button>
           </div>
-          <select id="exam-semester-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--burgundy);border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;color:var(--burgundy);">
+          <select id="exam-semester-filter" onchange="examFilterTouched=true;renderExams()" style="padding:6px 10px;border:1.5px solid var(--burgundy);border-radius:8px;font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;color:var(--burgundy);">
             <option value="2027-2학기">2027-2학기</option>
             <option value="2027-1학기">2027-1학기</option>
             <option value="2026-2학기">2026-2학기</option>
             <option value="2026-1학기">2026-1학기</option>
             <option value="">전체 학기</option>
           </select>
-          <select id="exam-type-filter" onchange="renderExams()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none;">
+          <select id="exam-type-filter" onchange="examFilterTouched=true;renderExams()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Pretendard',sans-serif;outline:none;">
             <option value="">전체 시험종류</option>
             <option value="1차 지필">1차 지필</option>
             <option value="2차 지필">2차 지필</option>
@@ -5048,12 +5048,39 @@ async function togglePeriodAtt(name, dateStr) {
   }
 }
 
+
+// 🆕 첫 화면은 가장 최근 시험(최신 학기 + 그 학기의 가장 최근 시험종류)으로 자동 선택
+//    선생님이 학기·시험종류를 직접 바꾸면 그다음부터는 손대지 않음
+let examFilterTouched = false;
+function pickLatestExamFilter() {
+  if (examFilterTouched || !examsCache.length) return;
+  const semKey = s => { const m = /(\d{4})-(\d)/.exec(s || ''); return m ? +m[1] * 10 + +m[2] : 0; };
+  const withSem = examsCache.filter(e => e.semester);
+  if (!withSem.length) return;
+  const latestSem = withSem.reduce((a, e) => semKey(e.semester) > semKey(a) ? e.semester : a, withSem[0].semester);
+  const inSem = withSem.filter(e => e.semester === latestSem && e.examType);
+  const dateOf = e => e.periodStart || e.examDate || e.periodEnd || '';
+  const typeRank = t => t === '2차 지필' ? 2 : t === '1차 지필' ? 1 : 0;
+  const latest = inSem.slice().sort((a, b) => dateOf(b).localeCompare(dateOf(a)) || typeRank(b.examType) - typeRank(a.examType))[0];
+  const semSel = document.getElementById('exam-semester-filter');
+  const typeSel = document.getElementById('exam-type-filter');
+  if (semSel) {
+    if (![...semSel.options].some(o => o.value === latestSem)) semSel.add(new Option(latestSem, latestSem), 0);
+    semSel.value = latestSem;
+  }
+  if (typeSel && latest) {
+    if (![...typeSel.options].some(o => o.value === latest.examType)) typeSel.add(new Option(latest.examType, latest.examType));
+    typeSel.value = latest.examType;
+  }
+}
+
 async function loadExams() {
   const examType = document.getElementById('exam-type-filter')?.value || '';
   document.getElementById('exam-list').innerHTML = '<div class="loading-spinner">불러오는 중...</div>';
   try {
     const d = await api('exam', { action:'get_exams' });
     examsCache = d.exams || [];
+    pickLatestExamFilter();
     renderExams();
     // 캘린더 탭이 활성화되어 있으면 캘린더도 갱신
     if (examCurrentTab === 'calendar') renderExamCalendar();
