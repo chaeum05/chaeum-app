@@ -822,6 +822,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cal-ditem .r { font-size:12.5px; color:#9a9aaa; margin-top:6px; line-height:1.55; }
 .cal-ditem .r b { color:var(--text2); font-weight:600; }
 .cal-ditem .memo { font-size:13px; color:var(--text); margin-top:6px; white-space:pre-wrap; line-height:1.55; }
+.cal-sum-on { border-color:#24364f !important; box-shadow:inset 0 0 0 1px #24364f; background:#f4f6fa !important; }
 .cal-sum-pre { border-color:#e8b4bb !important; background:#fff6f7 !important; }
 .cal-sum-pre b { color:#b01c2e; }
 .cal-list { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
@@ -7819,7 +7820,7 @@ function initSchedule() {
   calSetView(calView, true);
   calLoad();
 }
-function calSetMe(v) { calMe = v; try { localStorage.setItem('cal-me', v); } catch (e) {} calRender(); }
+function calSetMe(v) { calMe = v; if (!v && calOwnerFilter === 'me') calOwnerFilter = ''; try { localStorage.setItem('cal-me', v); } catch (e) {} calRender(); }
 function calSetView(v, silent) {
   calView = v;
   document.getElementById('cal-v-month').classList.toggle('on', v === 'month');
@@ -7922,7 +7923,13 @@ function calRenderSummary() {
     <div onclick="calSetView('list')" class="cal-sum-pre"><small>다음 직전보강</small><b>${pre ? dd(pre.start) : '없음'}</b>${pre ? `<em>${escH(pre.target)}</em>` : ''}</div>
     <div onclick="calSetView('list')"><small>가장 가까운 영어 시험</small><b>${exam ? dd(exam.start) : '없음'}</b>${exam ? `<em>${escH(exam.title)}</em>` : ''}</div>
     <div onclick="showPanel('attendance')"><small>이번 주 보강</small><b>${mkNames}명</b>${dl.length ? `<em>마감 ${dl.length}건</em>` : ''}</div>
-    <div onclick="calOwnerFilter='me';calRender()"><small>${calMe ? escH(calMe) + ' 선생님 일정' : '내 일정 (위에서 "나는" 선택)'}</small><b>${calMe ? mine.length + '건' : '-'}</b></div>`;
+    <div onclick="calToggleMine()" class="${calOwnerFilter === 'me' ? 'cal-sum-on' : ''}"><small>${calMe ? escH(calMe) + ' 선생님 이번 주 일정' : '내 일정 (위에서 "나는" 선택)'}</small><b>${calMe ? mine.length + '건' : '-'}</b>${calOwnerFilter === 'me' ? '<em>내 일정만 보는 중 · 다시 누르면 전체</em>' : calMe ? '<em>누르면 내 일정만</em>' : ''}</div>`;
+}
+// 내 일정 카드: 누르면 내 일정만, 다시 누르면 전체로
+function calToggleMine() {
+  if (!calMe) { toast('먼저 위의 "나는"에서 본인을 골라주세요'); return document.getElementById('cal-me').focus(); }
+  calOwnerFilter = calOwnerFilter === 'me' ? '' : 'me';
+  calRender();
 }
 
 function calRenderFilter() {
