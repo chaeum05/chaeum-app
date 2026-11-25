@@ -385,6 +385,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sh-tools { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
 .sh-tools .att-tt { padding:6px 12px; border:0; border-radius:7px; background:transparent; font-size:12.5px; }
 .sh-tools .att-tt.active { background:var(--burgundy); color:#fff; }
+.sh-tools .af-seg { flex-wrap:wrap; }
+.sh-custom { display:none; align-items:center; gap:8px; margin:-4px 0 12px; font-size:13px; color:var(--text3); }
+.sh-custom.on { display:flex; }
+.sh-custom input { padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; }
+.sh-apply { padding:7px 16px; border:0; border-radius:8px; background:var(--burgundy); color:#fff; font-size:13px; font-weight:700; font-family:'Pretendard',sans-serif; cursor:pointer; }
+.sh-period { font-size:12px; color:var(--text3); margin:-4px 0 8px; }
+.sh-card small { display:block; font-size:10.5px; color:var(--text3); font-weight:600; margin-top:1px; }
 .sh-sum { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:14px; }
 .sh-card { background:var(--surface2); border-radius:10px; padding:10px 12px; }
 .sh-card b { display:block; white-space:nowrap; font-size:20px; font-weight:800; color:#1e293b; line-height:1.2; }
@@ -1674,12 +1681,20 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
         </div>
         <div class="sh-tools">
           <div class="af-seg" id="sh-range">
+            <button class="att-tt" data-r="m0" onclick="shSetRange('m0')">이번 달</button>
+            <button class="att-tt" data-r="m1" onclick="shSetRange('m1')">지난 달</button>
             <button class="att-tt" data-r="3" onclick="shSetRange(3)">3개월</button>
             <button class="att-tt" data-r="6" onclick="shSetRange(6)">6개월</button>
             <button class="att-tt" data-r="12" onclick="shSetRange(12)">1년</button>
             <button class="att-tt" data-r="0" onclick="shSetRange(0)">전체</button>
+            <button class="att-tt" data-r="c" onclick="shSetRange('c')">기간 설정</button>
           </div>
         </div>
+        <div class="sh-custom" id="sh-custom">
+          <input type="date" id="sh-from"> <span>~</span> <input type="date" id="sh-to">
+          <button class="sh-apply" onclick="shApplyCustom()">보기</button>
+        </div>
+        <div class="sh-period" id="sh-period"></div>
         <div class="sh-sum" id="sh-sum"></div>
         <div class="sh-list" id="sh-list"></div>
       </div>
@@ -4360,9 +4375,29 @@ function openStudentHist(name, type) {
   document.getElementById('modal-hist').classList.add('open');
   shSetRange(shRange);
 }
+let shFrom = '', shTo = '';
 function shSetRange(r) {
   shRange = r;
-  document.querySelectorAll('#sh-range .att-tt').forEach(b => b.classList.toggle('active', +b.dataset.r === r));
+  document.querySelectorAll('#sh-range .att-tt').forEach(b => b.classList.toggle('active', b.dataset.r === String(r)));
+  document.getElementById('sh-custom').classList.toggle('on', r === 'c');
+  if (r === 'c') {   // 기간 설정: 지금 보던 기간을 채워두고 고르게
+    const f = document.getElementById('sh-from'), t = document.getElementById('sh-to');
+    if (!f.value) f.value = shFrom || localDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    if (!t.value) t.value = shTo || localDateStr(new Date());
+    return shApplyCustom();
+  }
+  const now = new Date(), today = localDateStr(now);
+  if (r === 'm0') { shFrom = localDateStr(new Date(now.getFullYear(), now.getMonth(), 1)); shTo = today; }
+  else if (r === 'm1') { shFrom = localDateStr(new Date(now.getFullYear(), now.getMonth() - 1, 1)); shTo = localDateStr(new Date(now.getFullYear(), now.getMonth(), 0)); }
+  else if (r) { const d = new Date(); d.setMonth(d.getMonth() - r); shFrom = localDateStr(d); shTo = ''; }
+  else { shFrom = ''; shTo = ''; }
+  shLoad();
+}
+function shApplyCustom() {
+  const f = document.getElementById('sh-from').value, t = document.getElementById('sh-to').value;
+  if (!f || !t) { toast('시작일과 끝나는 날을 골라주세요'); return; }
+  if (f > t) { toast('시작일이 끝나는 날보다 뒤예요'); return; }
+  shFrom = f; shTo = t;
   shLoad();
 }
 async function shLoad() {
@@ -4370,10 +4405,10 @@ async function shLoad() {
   const list = document.getElementById('sh-list');
   document.getElementById('sh-sum').innerHTML = '';
   list.innerHTML = '<div class="sh-empty">⏳ 불러오는 중...</div>';
-  let from = '';
-  if (shRange) { const d = new Date(); d.setMonth(d.getMonth() - shRange); from = localDateStr(d); }
+  const md = x => `${+x.slice(5, 7)}/${+x.slice(8, 10)}`;
+  document.getElementById('sh-period').textContent = shFrom ? `${shFrom.slice(0, 4)}. ${md(shFrom)} ~ ${shTo ? md(shTo) : '오늘'} 기간` : '전체 기간';
   try {
-    const d = await api('save-attendance', { action: 'student_history', name: s.name, type: s.type, from });
+    const d = await api('save-attendance', { action: 'student_history', name: s.name, type: s.type, from: shFrom, to: shTo });
     if (shCur !== s) return;
     shData = d.records || [];
     shRender();
@@ -4413,7 +4448,7 @@ function shRender() {
     <div class="sh-card r"><b>${cnt.a}</b><span>결석</span></div>
     <div class="sh-card v"><b>${cnt.x}</b><span>추가 수업</span></div>
     <div class="sh-card"><b>${rate == null ? '-' : rate + '%'}</b><span>출석률</span></div>
-    <div class="sh-card"><b style="font-size:16px;">${avg == null ? '-' : shFmt(avg)}</b><span>평균 학습시간</span></div>`;
+    <div class="sh-card"><b style="font-size:16px;">${avg == null ? '-' : shFmt(avg)}</b><span>평균 학습시간</span>${durs.length ? `<small>등·하원 기록 ${durs.length}회 기준</small>` : ''}</div>`;
   if (!rows.length) { list.innerHTML = '<div class="sh-empty">이 기간에는 출결 기록이 없어요.</div>'; return; }
   const W = ['일','월','화','수','목','금','토'];
   const byMonth = {};

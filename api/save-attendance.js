@@ -392,6 +392,7 @@ export default async function handler(req, res) {
       const and = [{ property: '학생이름', rich_text: { equals: name } }];
       if (type) and.push({ property: '구분', select: { equals: type } });
       if (body.from) and.push({ property: '날짜', date: { on_or_after: body.from } });
+      if (body.to) and.push({ property: '날짜', date: { on_or_before: body.to } });
       let all = [], cursor;
       do {
         const q = { page_size: 100, filter: { and }, sorts: [{ property: '날짜', direction: 'descending' }] };
