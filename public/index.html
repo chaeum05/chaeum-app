@@ -1803,7 +1803,7 @@ window.onload = function() {
   document.getElementById('rep-end').value   = today;
   document.getElementById('rep-start').value = weekAgo;
   updateGrades();
-  initCalendar();   // 첫 화면은 학원 일정
+  initSchedule();   // 첫 화면은 학원 일정
   refreshOutboxCount();   // 메뉴의 발송함 숫자
 };
 
@@ -1828,7 +1828,7 @@ function showPanel(name, sub) {
   if (name === 'attendance')     initAttendance();
   if (name === 'report-status')  { if (sub && sub !== rsCurrentTab) switchReportTab(sub); else initReportStatus(); rsApplyBoard(); }
   if (name === 'exam')           initExam();
-  if (name === 'calendar')       initCalendar();
+  if (name === 'calendar')       initSchedule();
   if (name === 'record' && allStudentsCache.length) populateRecordDropdown(allStudentsCache);
   if (name === 'record' && !allStudentsCache.length) loadStudentListForRecord();
   if (name === 'report') {
@@ -7813,7 +7813,7 @@ const calDiff = (a, b) => Math.round((calD(b) - calD(a)) / 86400000);
 const calDow = s => '일월화수목금토'[calD(s).getDay()];
 const calMD = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
 
-function initCalendar() {
+function initSchedule() {
   document.getElementById('cal-me').value = calMe;
   calSetView(calView, true);
   calLoad();
