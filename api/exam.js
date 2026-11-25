@@ -178,6 +178,126 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, message: '학생 시험관리 저장 완료' });
     }
 
+    // ═══════════ 🗓️ 학원 일정 (일정 메뉴) ═══════════
+    // 선생님들이 직접 추가·수정하는 일정 + 시험 DB의 학교 시험 + 출결 DB의 보강을 한 달력에 모아서 보여줌
+    if (action === 'cal_list' || action === 'cal_save' || action === 'cal_delete') {
+      const DB_CAL = process.env.NOTION_DB_CALENDAR || '423f94e116a28113a1e9e7a17c681560';
+      const txt = p => (p?.rich_text || p?.title || []).map(t => t.plain_text ?? t.text?.content ?? '').join('');
+      const queryAll = async (db, body) => {
+        let out = [], cursor;
+        do {
+          const r = await fetch(`https://api.notion.com/v1/databases/${db}/query`, {
+            method: 'POST', headers, body: JSON.stringify({ ...body, page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) })
+          });
+          const d = await r.json();
+          if (d.object === 'error') throw new Error(d.message);
+          out = out.concat(d.results || []);
+          cursor = d.has_more ? d.next_cursor : undefined;
+        } while (cursor);
+        return out;
+      };
+
+      if (action === 'cal_list') {
+        const { from, to } = req.body;   // YYYY-MM-DD (달력에 보이는 범위)
+        if (!from || !to) return res.status(400).json({ error: '기간(from, to)이 필요해요' });
+        const events = [];
+
+        // 1) 직접 등록한 일정 — 기간이 걸쳐 있는 것도 보이도록 시작일은 넉넉하게(60일 전부터) 가져와서 걸러냄
+        const fromWide = new Date(new Date(from + 'T00:00:00Z').getTime() - 60 * 86400000).toISOString().slice(0, 10);
+        const own = await queryAll(DB_CAL, { filter: { and: [
+          { property: '날짜', date: { on_or_after: fromWide } },
+          { property: '날짜', date: { on_or_before: to } },
+        ]}, sorts: [{ property: '날짜', direction: 'ascending' }] });
+        own.forEach(p => {
+          const pr = p.properties;
+          const start = pr['날짜']?.date?.start?.slice(0, 10) || '';
+          const end = pr['날짜']?.date?.end?.slice(0, 10) || start;
+          if (!start || end < from) return;
+          events.push({
+            id: p.id, src: 'own', title: txt(pr['제목']), start, end,
+            category: pr['분류']?.select?.name || '기타',
+            time: txt(pr['시간']), target: txt(pr['대상']),
+            owner: pr['담당']?.select?.name || '', status: pr['상태']?.select?.name || '예정',
+            memo: txt(pr['메모']), author: txt(pr['작성자']), editor: txt(pr['수정자']),
+            edited: p.last_edited_time,
+          });
+        });
+
+        // 2) 학교 시험 (시험 관리 메뉴의 시험정보) — 읽기 전용
+        try {
+          const exams = await queryAll(DB_EXAM, {});
+          exams.forEach(p => {
+            const pr = p.properties;
+            const s = pr['시험기간_시작']?.date?.start || pr['시험일']?.date?.start || '';
+            const e = pr['시험기간_종료']?.date?.start || s;
+            if (!s || e.slice(0, 10) < from || s.slice(0, 10) > to) return;
+            const school = txt(pr['학교명']), grade = pr['학년']?.select?.name || '';
+            const kind = pr['시험종류']?.select?.name || '시험';
+            events.push({ id: 'exam-' + p.id, src: 'exam', title: `${school} ${grade} ${kind}`.replace(/\s+/g, ' ').trim(),
+              start: s.slice(0, 10), end: e.slice(0, 10), category: '학교시험', memo: txt(pr['메모']) });
+          });
+        } catch (e) { /* 시험 DB를 못 읽어도 달력은 보여줌 */ }
+
+        // 3) 보강 (출결 관리에서 잡은 보강) — 읽기 전용, 하루에 한 묶음으로
+        const DB_ATT = process.env.NOTION_DB_ATTENDANCE;
+        if (DB_ATT) {
+          try {
+            const mk = await queryAll(DB_ATT, { filter: { and: [
+              { or: ['보강', '보강완료', '시험기간보강'].map(v => ({ property: '출결상태', select: { equals: v } })) },
+              { property: '날짜', date: { on_or_after: from } },
+              { property: '날짜', date: { on_or_before: to } },
+            ]}});
+            const byDay = {};
+            mk.forEach(p => {
+              const d = p.properties['날짜']?.date?.start?.slice(0, 10);
+              const n = txt(p.properties['학생이름']);
+              if (!d || !n) return;
+              (byDay[d] = byDay[d] || new Set()).add(n);
+            });
+            Object.entries(byDay).forEach(([d, names]) => {
+              const list = [...names];
+              events.push({ id: 'mk-' + d, src: 'makeup', title: `보강 ${list.length}명`, start: d, end: d,
+                category: '보강·수업', target: list.join(', ') });
+            });
+          } catch (e) { /* 무시 */ }
+        }
+        return res.status(200).json({ ok: true, events });
+      }
+
+      if (action === 'cal_save') {
+        const { id, title, start, end, category, time, target, owner, status, memo, who } = req.body;
+        if (!title || !start) return res.status(400).json({ error: '제목과 날짜는 꼭 넣어주세요' });
+        const rt = v => ({ rich_text: [{ text: { content: String(v || '').slice(0, 1900) } }] });
+        const props = {
+          '제목': { title: [{ text: { content: String(title).slice(0, 200) } }] },
+          '날짜': { date: { start, end: end && end > start ? end : null } },
+          '분류': { select: { name: category || '기타' } },
+          '시간': rt(time), '대상': rt(target), '메모': rt(memo),
+          '상태': { select: { name: status || '예정' } },
+          '담당': owner ? { select: { name: owner } } : { select: null },
+        };
+        if (id) {
+          props['수정자'] = rt(who);
+          const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ properties: props }) });
+          const d = await r.json(); if (d.object === 'error') throw new Error(d.message);
+          return res.status(200).json({ ok: true, id, message: '일정을 고쳤어요' });
+        }
+        props['작성자'] = rt(who);
+        const r = await fetch('https://api.notion.com/v1/pages', { method: 'POST', headers,
+          body: JSON.stringify({ parent: { database_id: DB_CAL }, properties: props }) });
+        const d = await r.json(); if (d.object === 'error') throw new Error(d.message);
+        return res.status(200).json({ ok: true, id: d.id, message: '일정을 추가했어요' });
+      }
+
+      if (action === 'cal_delete') {
+        const { id } = req.body;
+        if (!id) return res.status(400).json({ error: 'id가 필요해요' });
+        const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ archived: true }) });
+        const d = await r.json(); if (d.object === 'error') throw new Error(d.message);
+        return res.status(200).json({ ok: true, message: '일정을 지웠어요 (노션 휴지통에서 되살릴 수 있어요)' });
+      }
+    }
+
     return res.status(400).json({ error: '알 수 없는 action' });
 
   } catch(e) {

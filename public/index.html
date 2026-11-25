@@ -753,6 +753,72 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .qg-btn .ti { color:#b8923f; font-size:15px; }
 .qg-btn:hover { background:#24364f; color:#fff; border-color:#24364f; }
 .qg-btn:hover .ti { color:#d6bd84; }
+/* 🗓️ 학원 일정 */
+.cal-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.cal-top .cal-month { font-size:20px; font-weight:700; min-width:130px; text-align:center; }
+.cal-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 12px; border:1.5px solid var(--border); background:var(--surface); border-radius:8px; font-size:13px; font-weight:600; color:var(--text2); font-family:'Pretendard',sans-serif; cursor:pointer; }
+.cal-btn:hover { border-color:#c2a25c; color:var(--text); }
+.cal-btn.on { background:#24364f; border-color:#24364f; color:#fff; }
+.cal-btn.main { background:var(--burgundy); border-color:var(--burgundy); color:#fff; }
+.cal-seg { display:inline-flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; }
+.cal-seg button { border:none; background:var(--surface); padding:7px 12px; font-size:13px; font-weight:600; color:var(--text2); cursor:pointer; font-family:'Pretendard',sans-serif; }
+.cal-seg button.on { background:#24364f; color:#fff; }
+.cal-me { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text2); white-space:nowrap; }
+.cal-me select, .cal-filter select { width:auto !important; }
+.cal-me select, .cal-filter select { padding:6px 8px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; background:var(--surface); }
+.cal-quick { display:flex; gap:8px; margin-bottom:14px; }
+.cal-quick input { flex:1; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:'Pretendard',sans-serif; outline:none; background:var(--surface); }
+.cal-quick input:focus { border-color:#c2a25c; }
+.cal-sum { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+.cal-sum > div { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; cursor:pointer; }
+.cal-sum small { display:block; font-size:12px; color:var(--text2); margin-bottom:3px; }
+.cal-sum b { font-size:19px; }
+.cal-sum em { font-style:normal; font-size:12px; color:var(--text3); margin-left:4px; font-weight:500; }
+.cal-filter { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.cal-chip { font-size:12px; font-weight:600; padding:4px 11px; border-radius:20px; border:1.5px solid transparent; cursor:pointer; user-select:none; }
+.cal-chip.off { opacity:.35; text-decoration:line-through; }
+.cc-학교시험 { background:#fdece6; color:#8a2c10; }
+.cc-보강·수업 { background:#e3f4ec; color:#0d5a43; }
+.cc-상담 { background:#eeecfd; color:#3c3489; }
+.cc-마감·행정 { background:#fbf0d9; color:#6b4508; }
+.cc-휴강·휴일 { background:#efeee9; color:#4a4a46; }
+.cc-기타 { background:#eef1f5; color:#33445c; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.cal-dow { font-size:12px; font-weight:700; color:var(--text2); padding:8px; border-bottom:1px solid var(--border); text-align:center; background:var(--surface2); }
+.cal-dow.sun, .cal-cell.sun .cal-dn { color:#c0392b; } .cal-dow.sat, .cal-cell.sat .cal-dn { color:#2c6fb7; }
+.cal-cell { min-height:104px; padding:5px; border-right:1px solid #f0ece3; border-bottom:1px solid #f0ece3; cursor:pointer; min-width:0; }
+.cal-cell:hover { background:#fffcf3; }
+.cal-cell.out { background:#fbfaf7; } .cal-cell.out .cal-dn { opacity:.4; }
+.cal-cell.today { box-shadow:inset 0 0 0 2px #c2a25c; }
+.cal-dn { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:2px; display:flex; justify-content:space-between; }
+.cal-dn i { font-style:normal; font-weight:600; font-size:10.5px; color:#c0392b; }
+.cal-ev { display:block; font-size:11.5px; font-weight:600; padding:2px 6px; border-radius:5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-ev.done { opacity:.5; text-decoration:line-through; }
+.cal-ev.ro { border:1px dashed rgba(0,0,0,.15); }
+.cal-more { font-size:11px; color:var(--text3); margin-top:2px; }
+.cal-list { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.cal-lday { display:flex; gap:14px; padding:12px 16px; border-bottom:1px solid #f0ece3; }
+.cal-lday:last-child { border-bottom:none; }
+.cal-lday .d { min-width:74px; font-size:13px; font-weight:700; }
+.cal-lday .d small { display:block; font-size:11.5px; color:#8a6d2f; font-weight:700; }
+.cal-lday .evs { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+.cal-litem { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; min-width:0; }
+.cal-litem .cal-chip { flex-shrink:0; cursor:pointer; }
+.cal-litem .t { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cal-litem .m { font-size:12px; color:var(--text3); white-space:nowrap; }
+.cal-empty { padding:30px; text-align:center; color:var(--text3); font-size:13px; }
+#modal-cal .modal-box { width:min(440px, calc(100vw - 28px)); max-height:90vh; overflow-y:auto; }
+#modal-cal textarea { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; min-height:64px; resize:vertical; box-sizing:border-box; }
+.cal-row2 { display:flex; gap:8px; } .cal-row2 > div { flex:1; min-width:0; }
+.cal-catpick { display:flex; flex-wrap:wrap; gap:6px; }
+.cal-catpick .cal-chip { opacity:.45; } .cal-catpick .cal-chip.sel { opacity:1; border-color:currentColor; }
+.cal-hist { font-size:11.5px; color:var(--text3); margin-top:6px; }
+@media (max-width: 760px) {
+  .cal-sum { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .cal-cell { min-height:62px; padding:3px; }
+  .cal-ev { font-size:10px; padding:1px 3px; }
+  .cal-top .cal-month { min-width:0; font-size:17px; }
+}
 </style>
 </head>
 <body>
@@ -765,6 +831,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="nav-grp">매일</div>
       <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance"><i class="ti ti-calendar-check"></i>출결 관리</div>
       <div class="nav-item"        onclick="showPanel('record')"        id="nav-record"><i class="ti ti-pencil"></i>수업 기록</div>
+      <div class="nav-item"        onclick="showPanel('calendar')"      id="nav-calendar"><i class="ti ti-calendar-event"></i>학원 일정</div>
       <div class="nav-grp">학생</div>
       <div class="nav-item"        onclick="showPanel('students')"      id="nav-students"><i class="ti ti-users"></i>학생 관리</div>
       <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books"><i class="ti ti-books"></i>교재 · 진도</div>
@@ -785,12 +852,62 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   <nav class="m-tabbar">
     <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><i class="ti ti-calendar-check"></i>출결</button>
     <button id="mt-record" onclick="showPanel('record')"><i class="ti ti-pencil"></i>기록</button>
+    <button id="mt-calendar" onclick="showPanel('calendar')"><i class="ti ti-calendar-event"></i>일정</button>
     <button id="mt-students" onclick="showPanel('students')"><i class="ti ti-users"></i>학생</button>
     <button id="mt-report-status" onclick="showPanel('report-status')"><i class="ti ti-send"></i>리포트</button>
     <button onclick="toggleMobileMenu()"><i class="ti ti-layout-grid"></i>전체</button>
   </nav>
 
   <main class="main-content">
+
+    <!-- 🗓️ 학원 일정 -->
+    <div class="panel" id="panel-calendar">
+      <div class="panel-title">학원 일정</div>
+      <div class="panel-sub" style="margin-bottom:16px;">선생님 누구나 추가·수정할 수 있어요. 학교 시험과 보강은 시험 관리·출결 관리에서 자동으로 들어와요</div>
+      <div class="cal-top">
+        <button class="cal-btn" onclick="calMove(-1)" aria-label="이전"><i class="ti ti-chevron-left"></i></button>
+        <span class="cal-month" id="cal-month"></span>
+        <button class="cal-btn" onclick="calMove(1)" aria-label="다음"><i class="ti ti-chevron-right"></i></button>
+        <button class="cal-btn" onclick="calToday()">오늘</button>
+        <div class="cal-seg"><button id="cal-v-month" class="on" onclick="calSetView('month')">월간</button><button id="cal-v-list" onclick="calSetView('list')">목록</button></div>
+        <span style="flex:1"></span>
+        <label class="cal-me">나는 <select id="cal-me" onchange="calSetMe(this.value)"><option value="">선택</option><option>원장</option><option>이유민</option><option>성형주</option></select></label>
+        <button class="cal-btn main" onclick="calOpen()"><i class="ti ti-plus"></i>일정 추가</button>
+      </div>
+      <div class="cal-quick">
+        <input id="cal-quick" placeholder="한 줄로 빠르게: 12/5 보강 준석 고등 2부 · 12/12 휴강 · 12/9 상담 도현 어머님 4시" onkeydown="if(event.key==='Enter'&&!event.isComposing)calQuick()">
+        <button class="cal-btn" onclick="calQuick()">입력</button>
+      </div>
+      <div class="cal-sum" id="cal-sum"></div>
+      <div class="cal-filter" id="cal-filter"></div>
+      <div id="cal-body"><div class="cal-empty">불러오는 중…</div></div>
+
+      <div id="modal-cal" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-cal')">
+        <div class="modal-box">
+          <div class="modal-title" id="cal-m-title">일정 추가</div>
+          <div class="modal-field"><label>분류</label><div class="cal-catpick" id="cal-m-cat"></div></div>
+          <div class="modal-field"><label>제목</label><input type="text" id="cal-m-name" placeholder="예: 고1 학부모 상담"></div>
+          <div class="cal-row2">
+            <div class="modal-field"><label>날짜</label><input type="date" id="cal-m-start"></div>
+            <div class="modal-field"><label>끝나는 날 (여러 날이면)</label><input type="date" id="cal-m-end"></div>
+          </div>
+          <div class="cal-row2">
+            <div class="modal-field"><label>시간</label><input type="text" id="cal-m-time" list="cal-times" placeholder="예: 고등 2부, 16:00"></div>
+            <div class="modal-field"><label>담당</label><select id="cal-m-owner"><option value="">없음</option><option>전체</option><option>원장</option><option>이유민</option><option>성형주</option></select></div>
+          </div>
+          <datalist id="cal-times"><option value="종일"><option value="중등 1부 (3:30)"><option value="중등 2부 (6:00)"><option value="고등 1부 (6:00)"><option value="고등 2부 (8:30)"></datalist>
+          <div class="modal-field"><label>대상 (학생·학교·학년)</label><input type="text" id="cal-m-target" placeholder="예: 형곡고 1학년, 오준석"></div>
+          <div class="modal-field"><label>메모</label><textarea id="cal-m-memo" placeholder="선생님들이 알아야 할 내용"></textarea></div>
+          <div class="modal-field"><label>상태</label><select id="cal-m-status"><option>예정</option><option>완료</option><option>취소</option></select></div>
+          <div class="cal-hist" id="cal-m-hist"></div>
+          <div class="modal-btn-row">
+            <button class="modal-btn primary" id="cal-m-save" onclick="calSave()">저장</button>
+            <button class="modal-btn" id="cal-m-del" onclick="calDelete()" style="display:none;color:#b01c2e;">삭제</button>
+            <button class="modal-btn" onclick="closeModal('modal-cal')">닫기</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 일일 기록 -->
     <div class="panel" id="panel-record">
@@ -1672,6 +1789,7 @@ function showPanel(name, sub) {
   if (name === 'attendance')     initAttendance();
   if (name === 'report-status')  { if (sub && sub !== rsCurrentTab) switchReportTab(sub); else initReportStatus(); rsApplyBoard(); }
   if (name === 'exam')           initExam();
+  if (name === 'calendar')       initCalendar();
   if (name === 'record' && allStudentsCache.length) populateRecordDropdown(allStudentsCache);
   if (name === 'record' && !allStudentsCache.length) loadStudentListForRecord();
   if (name === 'report') {
@@ -7625,5 +7743,305 @@ async function saveBookEditor(remove) {
   </div>
 </div>
 <div id="sm-capture"></div>
+<script>
+// ════════════════════════════════════════════
+// 🗓️ 학원 일정 — 선생님 누구나 추가·수정 (노션 '🗓️ 학원 일정' DB)
+//   + 학교 시험(시험 관리) · 보강(출결 관리) · 공휴일 · 고등 리포트 마감 자동 표시
+// ════════════════════════════════════════════
+const CAL_CATS = ['학교시험', '보강·수업', '상담', '마감·행정', '휴강·휴일', '기타'];
+// 공휴일 (대체공휴일 포함) — 해가 바뀌면 여기에 추가해요
+const CAL_HOLIDAYS = {
+  '2026-12-25': '성탄절',
+  '2027-01-01': '신정', '2027-02-05': '설날 연휴', '2027-02-06': '설날', '2027-02-07': '설날 연휴', '2027-02-08': '대체공휴일',
+  '2027-03-01': '삼일절', '2027-05-05': '어린이날', '2027-05-13': '부처님오신날', '2027-06-06': '현충일',
+  '2027-08-15': '광복절', '2027-08-16': '대체공휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
+  '2027-10-03': '개천절', '2027-10-04': '대체공휴일', '2027-10-09': '한글날', '2027-10-11': '대체공휴일',
+  '2027-12-25': '성탄절', '2027-12-27': '대체공휴일',
+};
+let calCursor = new Date(); calCursor.setDate(1);
+let calView = window.innerWidth < 760 ? 'list' : 'month';
+let calEvents = [];
+let calOff = new Set();
+let calOwnerFilter = '';
+let calEditing = null;
+let calRange = '';
+let calMe = '';
+try { calMe = localStorage.getItem('cal-me') || ''; calOff = new Set(JSON.parse(localStorage.getItem('cal-off') || '[]')); } catch (e) {}
+
+const calD = s => new Date(s + 'T00:00:00');
+const calAdd = (s, n) => { const d = calD(s); d.setDate(d.getDate() + n); return localDateStr(d); };
+const calDiff = (a, b) => Math.round((calD(b) - calD(a)) / 86400000);
+const calDow = s => '일월화수목금토'[calD(s).getDay()];
+const calMD = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+
+function initCalendar() {
+  document.getElementById('cal-me').value = calMe;
+  calSetView(calView, true);
+  calLoad();
+}
+function calSetMe(v) { calMe = v; try { localStorage.setItem('cal-me', v); } catch (e) {} calRender(); }
+function calSetView(v, silent) {
+  calView = v;
+  document.getElementById('cal-v-month').classList.toggle('on', v === 'month');
+  document.getElementById('cal-v-list').classList.toggle('on', v === 'list');
+  if (!silent) calRender();
+}
+function calMove(n) { calCursor.setMonth(calCursor.getMonth() + n); calLoad(); }
+function calToday() { calCursor = new Date(); calCursor.setDate(1); calLoad(); }
+
+// 달력에 보이는 칸 범위 (월요일 시작)
+function calGridRange() {
+  const first = new Date(calCursor.getFullYear(), calCursor.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+  const last = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 0);
+  const end = new Date(last); end.setDate(last.getDate() + (7 - ((last.getDay() + 6) % 7) - 1));
+  return [localDateStr(start), localDateStr(end)];
+}
+
+async function calLoad() {
+  const [gs, ge] = calGridRange();
+  const today = localDateStr(new Date());
+  const from = gs < today ? gs : today;
+  const plus = calAdd(today, 60);   // 요약(다가오는 시험 D-day)용으로 60일 앞까지
+  const to = ge > plus ? ge : plus;
+  const key = from + '~' + to;
+  calRange = key;
+  document.getElementById('cal-month').textContent = `${calCursor.getFullYear()}년 ${calCursor.getMonth() + 1}월`;
+  if (!calEvents.length) document.getElementById('cal-body').innerHTML = '<div class="cal-empty">불러오는 중…</div>';
+  try {
+    const d = await api('exam', { action: 'cal_list', from, to });
+    if (calRange !== key) return;
+    calEvents = d.events.concat(calAutoEvents(from, to));
+  } catch (e) {
+    calEvents = calAutoEvents(from, to);
+    toast('일정을 못 불러왔어요: ' + e.message);
+  }
+  calRender();
+}
+
+// 자동 일정: 공휴일 + 매달 마지막 금요일 고등 월간 리포트 발송 마감
+function calAutoEvents(from, to) {
+  const out = [];
+  Object.entries(CAL_HOLIDAYS).forEach(([d, n]) => { if (d >= from && d <= to) out.push({ id: 'hol-' + d, src: 'auto', title: n, start: d, end: d, category: '휴강·휴일', holiday: true }); });
+  let m = calD(from); m.setDate(1);
+  while (localDateStr(m) <= to) {
+    const last = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+    last.setDate(last.getDate() - ((last.getDay() + 2) % 7));   // 그 달 마지막 금요일
+    const s = localDateStr(last);
+    if (s >= from && s <= to) out.push({ id: 'rep-' + s, src: 'auto', title: '고등 월간 리포트 발송 마감', start: s, end: s, category: '마감·행정' });
+    m.setMonth(m.getMonth() + 1);
+  }
+  return out;
+}
+
+const calVisible = e => !calOff.has(e.category) &&
+  (!calOwnerFilter || (calOwnerFilter === 'me' ? (e.owner === calMe || e.owner === '전체') : e.owner === calOwnerFilter));
+const calOn = (e, day) => e.start <= day && (e.end || e.start) >= day;
+const calSort = (a, b) => (a.src === 'auto') - (b.src === 'auto') || CAL_CATS.indexOf(a.category) - CAL_CATS.indexOf(b.category) || (a.time || '').localeCompare(b.time || '');
+
+function calRender() {
+  if (!document.getElementById('panel-calendar').classList.contains('active')) return;
+  calRenderSummary();
+  calRenderFilter();
+  if (calView === 'month') calRenderMonth(); else calRenderList();
+}
+
+function calRenderSummary() {
+  const today = localDateStr(new Date());
+  const mon = calAdd(today, -((calD(today).getDay() + 6) % 7)), sun = calAdd(mon, 6);
+  const inWeek = e => e.start <= sun && (e.end || e.start) >= mon;
+  const exam = calEvents.filter(e => e.category === '학교시험' && (e.end || e.start) >= today).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const mkNames = calEvents.filter(e => e.src === 'makeup' && inWeek(e)).reduce((n, e) => n + (e.target ? e.target.split(', ').length : 0), 0)
+    + calEvents.filter(e => e.src === 'own' && e.category === '보강·수업' && inWeek(e) && e.status !== '취소').length;
+  const dl = calEvents.filter(e => e.category === '마감·행정' && inWeek(e) && e.status !== '완료' && e.status !== '취소');
+  const mine = calMe ? calEvents.filter(e => e.src === 'own' && (e.owner === calMe || e.owner === '전체') && inWeek(e) && e.status === '예정') : [];
+  const dday = exam ? (exam.start <= today ? '진행 중' : 'D-' + calDiff(today, exam.start)) : '';
+  document.getElementById('cal-sum').innerHTML = `
+    <div onclick="calSetView('list')"><small>가장 가까운 시험</small><b>${exam ? escH(dday) : '없음'}</b>${exam ? `<em>${escH(exam.title)}</em>` : ''}</div>
+    <div onclick="showPanel('attendance')"><small>이번 주 보강</small><b>${mkNames}명</b></div>
+    <div onclick="calSetView('list')"><small>이번 주 마감</small><b>${dl.length}건</b>${dl[0] ? `<em>${escH(dl[0].title)}</em>` : ''}</div>
+    <div onclick="calOwnerFilter='me';calRender()"><small>${calMe ? escH(calMe) + ' 선생님 일정' : '내 일정 (위에서 "나는" 선택)'}</small><b>${calMe ? mine.length + '건' : '-'}</b></div>`;
+}
+
+function calRenderFilter() {
+  const chips = CAL_CATS.map(c => `<span class="cal-chip cc-${c}${calOff.has(c) ? ' off' : ''}" onclick="calToggleCat('${c}')">${c}</span>`).join('');
+  document.getElementById('cal-filter').innerHTML = chips + `<span style="flex:1"></span>
+    <select onchange="calOwnerFilter=this.value;calRender()" title="담당 선생님">
+      <option value="">담당: 전체</option>
+      <option value="me"${calOwnerFilter === 'me' ? ' selected' : ''}>내 일정만</option>
+      ${['원장', '이유민', '성형주'].map(t => `<option${calOwnerFilter === t ? ' selected' : ''}>${t}</option>`).join('')}
+    </select>`;
+}
+function calToggleCat(c) {
+  calOff.has(c) ? calOff.delete(c) : calOff.add(c);
+  try { localStorage.setItem('cal-off', JSON.stringify([...calOff])); } catch (e) {}
+  calRender();
+}
+
+function calEvHtml(e) {
+  const ro = e.src !== 'own';
+  const t = (e.time && e.time !== '종일' ? e.time.replace(/\s*\(.*\)/, '') + ' ' : '') + e.title;
+  return `<span class="cal-ev cc-${e.category}${ro ? ' ro' : ''}${e.status === '완료' || e.status === '취소' ? ' done' : ''}" title="${escH(t + (e.target ? ' · ' + e.target : ''))}" onclick="event.stopPropagation();calClick('${e.id}')">${escH(t)}</span>`;
+}
+
+function calRenderMonth() {
+  const [gs, ge] = calGridRange();
+  const today = localDateStr(new Date());
+  const month = calCursor.getMonth();
+  const max = window.innerWidth < 760 ? 2 : 4;
+  let html = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="cal-dow${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${d}</div>`).join('');
+  for (let day = gs; day <= ge; day = calAdd(day, 1)) {
+    const dd = calD(day), dw = dd.getDay();
+    const evs = calEvents.filter(e => calOn(e, day) && calVisible(e)).sort(calSort);
+    const hol = CAL_HOLIDAYS[day];
+    html += `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${dw === 0 || hol ? ' sun' : dw === 6 ? ' sat' : ''}" onclick="calOpen(null,'${day}')">
+      <div class="cal-dn"><span>${dd.getDate()}</span>${hol ? `<i>${escH(hol)}</i>` : ''}</div>
+      ${evs.filter(e => !e.holiday).slice(0, max).map(calEvHtml).join('')}
+      ${evs.filter(e => !e.holiday).length > max ? `<div class="cal-more">+${evs.filter(e => !e.holiday).length - max}개 더</div>` : ''}
+    </div>`;
+  }
+  document.getElementById('cal-body').innerHTML = `<div class="cal-grid">${html}</div>`;
+}
+
+function calRenderList() {
+  const today = localDateStr(new Date());
+  const [gs, ge] = calGridRange();
+  const monthStart = localDateStr(new Date(calCursor.getFullYear(), calCursor.getMonth(), 1));
+  const isThisMonth = today.slice(0, 7) === monthStart.slice(0, 7);
+  const from = isThisMonth ? today : monthStart;
+  const to = isThisMonth ? calAdd(today, 45) : localDateStr(new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 0));
+  let html = '';
+  for (let day = from; day <= to; day = calAdd(day, 1)) {
+    const evs = calEvents.filter(e => calOn(e, day) && calVisible(e)).sort(calSort);
+    if (!evs.length) continue;
+    const diff = calDiff(today, day);
+    const dl = diff === 0 ? '오늘' : diff === 1 ? '내일' : diff > 0 ? 'D-' + diff : '';
+    html += `<div class="cal-lday"><div class="d">${calMD(day)} (${calDow(day)})<small>${dl}</small></div><div class="evs">${evs.map(e => `
+      <div class="cal-litem" onclick="calClick('${e.id}')">
+        <span class="cal-chip cc-${e.category}">${e.category}</span>
+        <span class="t"${e.status === '완료' || e.status === '취소' ? ' style="text-decoration:line-through;opacity:.55"' : ''}>${escH(e.title)}${e.target ? ` <span style="color:var(--text3)">· ${escH(e.target)}</span>` : ''}</span>
+        <span class="m">${escH([e.time, e.owner].filter(Boolean).join(' · '))}</span>
+      </div>`).join('')}</div></div>`;
+  }
+  document.getElementById('cal-body').innerHTML = `<div class="cal-list">${html || '<div class="cal-empty">이 기간에는 일정이 없어요</div>'}</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:8px;">${isThisMonth ? '오늘부터 45일 동안의 일정이에요' : '이 달의 일정이에요'}</div>`;
+}
+
+function calClick(id) {
+  const e = calEvents.find(x => x.id === id);
+  if (!e) return;
+  if (e.src === 'own') return calOpen(e);
+  if (e.src === 'exam') { toast(`${e.title} — 시험 관리에서 고칠 수 있어요`); return showPanel('exam'); }
+  if (e.src === 'makeup') { toast(`${calMD(e.start)} 보강: ${e.target} — 출결 관리에서 고칠 수 있어요`); return; }
+  toast(e.title + ' (자동으로 들어간 일정이에요)');
+}
+
+function calPickCat(c) {
+  document.querySelectorAll('#cal-m-cat .cal-chip').forEach(x => x.classList.toggle('sel', x.dataset.c === c));
+}
+function calOpen(e, day, preset) {
+  if (!calMe) toast('위의 "나는"에서 본인을 골라두면 누가 썼는지 남아요');
+  calEditing = e || null;
+  const v = e || preset || {};
+  document.getElementById('cal-m-title').textContent = e ? '일정 고치기' : '일정 추가';
+  document.getElementById('cal-m-cat').innerHTML = CAL_CATS.map(c => `<span class="cal-chip cc-${c}" data-c="${c}" onclick="calPickCat('${c}')">${c}</span>`).join('');
+  calPickCat(v.category || '기타');
+  document.getElementById('cal-m-name').value = v.title || '';
+  document.getElementById('cal-m-start').value = v.start || day || localDateStr(new Date());
+  document.getElementById('cal-m-end').value = v.end && v.end !== v.start ? v.end : '';
+  document.getElementById('cal-m-time').value = v.time || '';
+  document.getElementById('cal-m-owner').value = v.owner || (e ? '' : calMe);
+  document.getElementById('cal-m-target').value = v.target || '';
+  document.getElementById('cal-m-memo').value = v.memo || '';
+  document.getElementById('cal-m-status').value = v.status || '예정';
+  document.getElementById('cal-m-del').style.display = e ? '' : 'none';
+  document.getElementById('cal-m-hist').textContent = e
+    ? [e.author && '작성 ' + e.author, e.editor && '마지막 수정 ' + e.editor, e.edited && new Date(e.edited).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })].filter(Boolean).join(' · ')
+    : '';
+  document.getElementById('modal-cal').classList.add('open');
+  setTimeout(() => document.getElementById('cal-m-name').focus(), 50);
+}
+
+async function calSave() {
+  const body = {
+    action: 'cal_save', id: calEditing?.id,
+    category: document.querySelector('#cal-m-cat .cal-chip.sel')?.dataset.c || '기타',
+    title: document.getElementById('cal-m-name').value.trim(),
+    start: document.getElementById('cal-m-start').value,
+    end: document.getElementById('cal-m-end').value,
+    time: document.getElementById('cal-m-time').value.trim(),
+    owner: document.getElementById('cal-m-owner').value,
+    target: document.getElementById('cal-m-target').value.trim(),
+    memo: document.getElementById('cal-m-memo').value.trim(),
+    status: document.getElementById('cal-m-status').value,
+    who: calMe,
+  };
+  if (!body.title) { toast('제목을 넣어주세요'); return document.getElementById('cal-m-name').focus(); }
+  if (!body.start) { toast('날짜를 골라주세요'); return; }
+  if (body.end && body.end < body.start) { toast('끝나는 날이 시작일보다 앞이에요'); return; }
+  const btn = document.getElementById('cal-m-save');
+  btn.disabled = true; btn.textContent = '저장 중…';
+  try {
+    const d = await api('exam', body);
+    toast(d.message);
+    closeModal('modal-cal');
+    calLoad();
+  } catch (e) { toast('저장 못 했어요: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+
+async function calDelete() {
+  if (!calEditing) return;
+  if (!confirm(`"${calEditing.title}" 일정을 지울까요?`)) return;
+  try {
+    const d = await api('exam', { action: 'cal_delete', id: calEditing.id });
+    toast(d.message);
+    closeModal('modal-cal');
+    calLoad();
+  } catch (e) { toast('삭제 못 했어요: ' + e.message); }
+}
+
+// ⚡ 한 줄 입력 → 분류·날짜·시간을 알아서 채워서 확인창으로 (저장은 확인 후)
+function calQuick() {
+  const inp = document.getElementById('cal-quick');
+  let s = inp.value.trim();
+  if (!s) return;
+  const p = { category: '기타' };
+  const now = new Date();
+  const md = s.match(/(\d{1,2})\s*[\/.월]\s*(\d{1,2})일?(?:\s*[~-]\s*(?:(\d{1,2})\s*[\/.월]\s*)?(\d{1,2})일?)?/);
+  if (md) {
+    let y = now.getFullYear();
+    if (+md[1] < now.getMonth() + 1 - 2) y++;   // 지난 달보다 한참 앞이면 내년으로
+    const mk = (m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    p.start = mk(md[1], md[2]);
+    if (md[4]) p.end = mk(md[3] || md[1], md[4]);
+    s = s.replace(md[0], ' ');
+  } else if (/내일/.test(s)) { p.start = calAdd(localDateStr(now), 1); s = s.replace('내일', ' '); }
+  else if (/오늘/.test(s)) { p.start = localDateStr(now); s = s.replace('오늘', ' '); }
+  s = s.replace(/\(?[월화수목금토일]\)?(?=\s|$)/, ' ');
+  const tm = s.match(/(중등|고등)\s*([12])\s*부/) || s.match(/([12])\s*부/);
+  if (tm) {
+    const lv = tm.length === 3 ? tm[1] : '', n = tm.length === 3 ? tm[2] : tm[1];
+    const at = { '중등1': '3:30', '중등2': '6:00', '고등1': '6:00', '고등2': '8:30' }[lv + n];
+    p.time = lv ? `${lv} ${n}부 (${at})` : `${n}부`;
+    s = s.replace(tm[0], ' ');
+  } else {
+    const hm = s.match(/(오전|오후)?\s*(\d{1,2})(?::(\d{2})|시(?:\s*(\d{1,2})분|\s*반)?)/);
+    if (hm) {
+      let h = +hm[2]; const mi = hm[3] || hm[4] || (/반/.test(hm[0]) ? '30' : '00');
+      if (hm[1] === '오후' && h < 12) h += 12; else if (!hm[1] && h >= 1 && h <= 9) h += 12;   // 학원은 오후 기준
+      p.time = `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+      s = s.replace(hm[0], ' ');
+    }
+  }
+  const rules = [['학교시험', /시험|중간고사|기말고사|모의고사/], ['휴강·휴일', /휴강|휴원|휴일|쉬는\s*날|방학/], ['상담', /상담|면담|통화/],
+    ['마감·행정', /마감|제출|교육청|발송|인쇄|서류|수강기간/], ['보강·수업', /보강|수업|특강|클리닉/]];
+  for (const [c, re] of rules) if (re.test(s)) { p.category = c; break; }
+  for (const t of ['이유민', '성형주', '원장']) if (s.includes(t)) { p.owner = t; s = s.replace(t, ' '); break; }
+  p.title = s.replace(/\s+/g, ' ').trim() || p.category;
+  inp.value = '';
+  calOpen(null, null, p);
+}
+</script>
 </body>
 </html>
