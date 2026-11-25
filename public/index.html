@@ -806,6 +806,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cal-period { background:#f1f0ec; color:#8d8c86; font-weight:600; }
 .cal-period .cal-sub { color:#b4b2a9 !important; }
 .cal-pre { background:#b01c2e; color:#fff; box-shadow:0 1px 4px rgba(176,28,46,.3); }
+.cal-pre.mid { background:#7a1f5c; box-shadow:0 1px 4px rgba(122,31,92,.3); }
+.cal-lv { display:inline-block; font-size:10px; font-weight:800; line-height:14px; padding:0 4px; border-radius:3px; background:#fff; color:#b01c2e; margin-right:2px; vertical-align:1px; }
+.cal-pre.mid .cal-lv { color:#7a1f5c; }
 .cal-pre .ti { font-size:12px; margin-right:3px; vertical-align:-1px; }
 .cal-pre .cal-sub { color:rgba(255,255,255,.85) !important; font-weight:600 !important; }
 .cal-lev { display:inline-block; margin:0; max-width:100%; font-size:13px; padding:3px 9px; }
@@ -7898,12 +7901,17 @@ function calApplyOverrides(list, autos) {
 // 직전보강: 같은 날 여러 학교를 한 줄로 묶음 (같은 학교는 학년 묶기: 형곡고1·2)
 function calMergePre(list) {
   const pre = list.filter(e => e.kind === 'premakeup'), rest = list.filter(e => e.kind !== 'premakeup');
-  const byDay = {};
-  pre.forEach(e => { const m = (byDay[e.start] = byDay[e.start] || {}); (m[e.school] = m[e.school] || new Set()).add(e.grade); });
-  Object.entries(byDay).forEach(([d, m]) => {
-    const label = Object.entries(m).map(([sc, gs]) => sc + [...gs].filter(Boolean).sort().join('·')).join(', ');
-    rest.push({ id: 'pre-' + d, src: 'exam', kind: 'premakeup', title: '직전보강', target: label, start: d, end: d, category: '보강·수업' });
+  const byDay = {};   // 날짜 → 고등/중등 → 학교 → 학년들
+  pre.forEach(e => {
+    const lv = e.level || (/중$/.test(e.school) ? '중등' : '고등');
+    const m = ((byDay[e.start] = byDay[e.start] || {})[lv] = byDay[e.start]?.[lv] || {});
+    (m[e.school] = m[e.school] || new Set()).add(e.grade);
   });
+  Object.entries(byDay).forEach(([d, lvs]) => ['고등', '중등'].forEach(lv => {
+    if (!lvs[lv]) return;
+    const label = Object.entries(lvs[lv]).map(([sc, gs]) => sc + [...gs].filter(Boolean).sort().join('·')).join(', ');
+    rest.push({ id: `pre-${d}-${lv}`, src: 'exam', kind: 'premakeup', level: lv, title: '직전보강', target: label, start: d, end: d, category: '보강·수업' });
+  }));
   return rest;
 }
 const calHol = day => (calEvents.find(e => e.holiday && e.start === day) || {}).title || '';
@@ -7920,7 +7928,7 @@ function calRenderSummary() {
   const mine = calMe ? calEvents.filter(e => e.src === 'own' && (e.owner === calMe || e.owner === '전체') && inWeek(e) && e.status === '예정') : [];
   const dd = s => { const n = calDiff(today, s); return n === 0 ? '오늘' : n === 1 ? '내일' : 'D-' + n; };
   document.getElementById('cal-sum').innerHTML = `
-    <div onclick="calSetView('list')" class="cal-sum-pre"><small>다음 직전보강</small><b>${pre ? dd(pre.start) : '없음'}</b>${pre ? `<em>${escH(pre.target)}</em>` : ''}</div>
+    <div onclick="calSetView('list')" class="cal-sum-pre"><small>다음 직전보강</small><b>${pre ? dd(pre.start) : '없음'}</b>${pre ? `<em>${pre.level === '중등' ? '중' : '고'} · ${escH(pre.target)}</em>` : ''}</div>
     <div onclick="calSetView('list')"><small>가장 가까운 영어 시험</small><b>${exam ? dd(exam.start) : '없음'}</b>${exam ? `<em>${escH(exam.title)}</em>` : ''}</div>
     <div onclick="showPanel('attendance')"><small>이번 주 보강</small><b>${mkNames}명</b>${dl.length ? `<em>마감 ${dl.length}건</em>` : ''}</div>
     <div onclick="calToggleMine()" class="${calOwnerFilter === 'me' ? 'cal-sum-on' : ''}"><small>${calMe ? escH(calMe) + ' 선생님 이번 주 일정' : '내 일정 (위에서 "나는" 선택)'}</small><b>${calMe ? mine.length + '건' : '-'}</b>${calOwnerFilter === 'me' ? '<em>내 일정만 보는 중 · 다시 누르면 전체</em>' : calMe ? '<em>누르면 내 일정만</em>' : ''}</div>`;
@@ -7950,12 +7958,12 @@ function calToggleCat(c) {
 // 일정 한 줄: 제목은 진하게, 시간·대상은 연한 회색
 function calEvClass(e) {
   if (e.kind === 'period') return 'cal-ev cal-period';
-  if (e.kind === 'premakeup') return 'cal-ev cal-pre';
+  if (e.kind === 'premakeup') return 'cal-ev cal-pre' + (e.level === '중등' ? ' mid' : '');
   return `cal-ev cc-${e.category}${e.src !== 'own' ? ' ro' : ''}${e.status === '완료' || e.status === '취소' ? ' done' : ''}`;
 }
 function calEvInner(e) {
   const time = e.time && e.time !== '종일' ? e.time.replace(/\s*\(.*\)/, '') : '';
-  if (e.kind === 'premakeup') return `<i class="ti ti-flame"></i>직전보강 <span class="cal-sub">${escH(e.target)}</span>`;
+  if (e.kind === 'premakeup') return `<i class="ti ti-flame"></i>직전보강 <b class="cal-lv">${e.level === '중등' ? '중' : '고'}</b> <span class="cal-sub">${escH(e.target)}</span>`;
   if (e.kind === 'period') return `${escH(e.title)} <span class="cal-sub">시험기간</span>`;
   return `${escH(e.title)}${time ? ` <span class="cal-sub">${escH(time)}</span>` : ''}${e.src === 'makeup' && e.target ? ` <span class="cal-sub">${escH(e.target)}</span>` : ''}`;
 }
@@ -8069,7 +8077,7 @@ function calClick(id) {
   const e = calEvents.find(x => x.id === id);
   if (!e) return;
   if (e.src === 'own') return calOpen(e);
-  if (e.kind === 'premakeup') { toast(`${calMD(e.start)} 직전보강: ${e.target} — 시험 관리에서 시험일을 고치면 같이 바뀌어요`); return; }
+  if (e.kind === 'premakeup') { toast(`${calMD(e.start)} ${e.level || ''} 직전보강: ${e.target} — 시험 관리에서 시험일을 고치면 같이 바뀌어요`); return; }
   if (e.src === 'exam') { toast(`${e.title} — 시험 관리에서 고칠 수 있어요`); return showPanel('exam'); }
   if (e.src === 'makeup') { toast(`${calMD(e.start)} 보강: ${e.target} — 출결 관리에서 고칠 수 있어요`); return; }
   calOpen(null, null, { ...e, autoId: e.id });   // 자동 일정 → 고치면 내 일정으로 저장돼서 대신 보임

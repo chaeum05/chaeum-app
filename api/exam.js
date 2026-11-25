@@ -230,7 +230,9 @@ export default async function handler(req, res) {
           const fromP = new Date(new Date(from + 'T00:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
           exams.forEach(p => {
             const pr = p.properties;
-            const school = txt(pr['학교명']).replace(/(고등학교|중학교)/g, '').trim();
+            const rawSchool = txt(pr['학교명']).trim();
+            const school = rawSchool.replace(/고등학교$/, '고').replace(/중학교$/, '중');   // 형곡고 · 형남중 (고등/중등 구분 남김)
+            const level = /중(학교)?$/.test(rawSchool) ? '중등' : '고등';
             const grade = (pr['학년']?.select?.name || '').replace('학년', '');
             const kind = pr['시험종류']?.select?.name || '시험';
             const label = `${school}${grade}`;
@@ -238,16 +240,16 @@ export default async function handler(req, res) {
             const pe = pr['시험기간_종료']?.date?.start?.slice(0, 10) || ps;
             const ed = pr['시험일']?.date?.start?.slice(0, 10) || '';
             if (ps && pe >= from && ps <= to)
-              events.push({ id: 'exp-' + p.id, src: 'exam', kind: 'period', title: `${label} ${kind}`, school, grade,
+              events.push({ id: 'exp-' + p.id, src: 'exam', kind: 'period', title: `${label} ${kind}`, school, grade, level,
                 start: ps, end: pe, category: '학교시험', memo: txt(pr['메모']) });
             if (ed && ed >= from && ed <= to)
-              events.push({ id: 'exd-' + p.id, src: 'exam', kind: 'examday', title: `${label} 영어`, school, grade,
+              events.push({ id: 'exd-' + p.id, src: 'exam', kind: 'examday', title: `${label} 영어`, school, grade, level,
                 start: ed, end: ed, category: '학교시험' });
             if (ed && ed >= fromP && ed <= to) {
               const d = new Date(ed + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
               const pd = d.toISOString().slice(0, 10);
               if (pd >= from && pd <= to)
-                events.push({ id: 'exm-' + p.id, src: 'exam', kind: 'premakeup', title: label, school, grade,
+                events.push({ id: 'exm-' + p.id, src: 'exam', kind: 'premakeup', title: label, school, grade, level,
                   start: pd, end: pd, category: '보강·수업' });
             }
           });
