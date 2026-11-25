@@ -783,19 +783,35 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cc-마감·행정 { background:#fbf0d9; color:#6b4508; }
 .cc-휴강·휴일 { background:#efeee9; color:#4a4a46; }
 .cc-기타 { background:#eef1f5; color:#33445c; }
-.cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.cal-grid { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.cal-dows, .cal-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.cal-week { min-height:112px; border-bottom:1px solid #f0ece3; padding-bottom:4px; row-gap:2px; }
+.cal-week:last-child { border-bottom:none; }
 .cal-dow { font-size:12px; font-weight:700; color:var(--text2); padding:8px; border-bottom:1px solid var(--border); text-align:center; background:var(--surface2); }
-.cal-dow.sun, .cal-cell.sun .cal-dn { color:#c0392b; } .cal-dow.sat, .cal-cell.sat .cal-dn { color:#2c6fb7; }
-.cal-cell { min-height:104px; padding:5px; border-right:1px solid #f0ece3; border-bottom:1px solid #f0ece3; cursor:pointer; min-width:0; }
+.cal-dow.sun, .cal-dn.sun { color:#c0392b; } .cal-dow.sat, .cal-dn.sat { color:#2c6fb7; }
+.cal-cell { border-right:1px solid #f0ece3; cursor:pointer; min-width:0; }
 .cal-cell:hover { background:#fffcf3; }
-.cal-cell.out { background:#fbfaf7; } .cal-cell.out .cal-dn { opacity:.4; }
+.cal-cell.out { background:#fbfaf7; }
 .cal-cell.today { box-shadow:inset 0 0 0 2px #c2a25c; }
-.cal-dn { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:2px; display:flex; justify-content:space-between; }
-.cal-dn i { font-style:normal; font-weight:600; font-size:10.5px; color:#c0392b; }
-.cal-ev { display:block; font-size:11.5px; font-weight:600; padding:2px 6px; border-radius:5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-dn { position:relative; z-index:1; pointer-events:none; font-size:12px; font-weight:700; color:var(--text2); padding:5px 6px 2px; display:flex; gap:4px; align-items:baseline; min-width:0; }
+.cal-dn.out { opacity:.4; }
+.cal-dn i { font-style:normal; font-weight:600; font-size:10.5px; color:#c0392b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-dn .cal-more { pointer-events:auto; margin-left:auto; cursor:pointer; font-size:10.5px; color:var(--text3); font-weight:700; }
+.cal-ev { position:relative; z-index:1; display:block; font-size:11.5px; font-weight:700; line-height:1.5; padding:1px 7px; border-radius:5px; margin:0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; }
+.cal-ev.cl { margin-left:0; border-top-left-radius:0; border-bottom-left-radius:0; }
+.cal-ev.cr { margin-right:0; border-top-right-radius:0; border-bottom-right-radius:0; }
+.cal-ev .cal-sub, .cal-litem .cal-sub { font-weight:500; color:#9a9aaa; }
 .cal-ev.done { opacity:.5; text-decoration:line-through; }
-.cal-ev.ro { border:1px dashed rgba(0,0,0,.15); }
-.cal-more { font-size:11px; color:var(--text3); margin-top:2px; }
+.cal-ev.ro { box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); }
+.cal-period { background:#f1f0ec; color:#8d8c86; font-weight:600; }
+.cal-period .cal-sub { color:#b4b2a9 !important; }
+.cal-pre { background:#b01c2e; color:#fff; box-shadow:0 1px 4px rgba(176,28,46,.3); }
+.cal-pre .ti { font-size:12px; margin-right:3px; vertical-align:-1px; }
+.cal-pre .cal-sub { color:rgba(255,255,255,.85) !important; font-weight:600 !important; }
+.cal-lev { display:inline-block; margin:0; max-width:100%; font-size:13px; padding:3px 9px; }
+.cal-litem.done .cal-lev { opacity:.5; text-decoration:line-through; }
+.cal-sum-pre { border-color:#e8b4bb !important; background:#fff6f7 !important; }
+.cal-sum-pre b { color:#b01c2e; }
 .cal-list { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
 .cal-lday { display:flex; gap:14px; padding:12px 16px; border-bottom:1px solid #f0ece3; }
 .cal-lday:last-child { border-bottom:none; }
@@ -803,9 +819,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cal-lday .d small { display:block; font-size:11.5px; color:#8a6d2f; font-weight:700; }
 .cal-lday .evs { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
 .cal-litem { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; min-width:0; }
-.cal-litem .cal-chip { flex-shrink:0; cursor:pointer; }
-.cal-litem .t { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.cal-litem .m { font-size:12px; color:var(--text3); white-space:nowrap; }
+.cal-litem .m { font-size:12px; color:#b4b2a9; white-space:nowrap; margin-left:auto; }
 .cal-empty { padding:30px; text-align:center; color:var(--text3); font-size:13px; }
 #modal-cal .modal-box { width:min(440px, calc(100vw - 28px)); max-height:90vh; overflow-y:auto; }
 #modal-cal textarea { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; min-height:64px; resize:vertical; box-sizing:border-box; }
@@ -815,8 +829,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cal-hist { font-size:11.5px; color:var(--text3); margin-top:6px; }
 @media (max-width: 760px) {
   .cal-sum { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .cal-cell { min-height:62px; padding:3px; }
-  .cal-ev { font-size:10px; padding:1px 3px; }
+  .cal-week { min-height:70px; }
+  .cal-ev { font-size:10px; padding:0 3px; margin:0 1px; }
+  .cal-ev .cal-sub, .cal-dn i { display:none; }
   .cal-top .cal-month { min-width:0; font-size:17px; }
 }
 </style>
@@ -7811,7 +7826,7 @@ async function calLoad() {
   try {
     const d = await api('exam', { action: 'cal_list', from, to });
     if (calRange !== key) return;
-    calEvents = d.events.concat(calAutoEvents(from, to));
+    calEvents = calMergePre(d.events).concat(calAutoEvents(from, to));
   } catch (e) {
     calEvents = calAutoEvents(from, to);
     toast('일정을 못 불러왔어요: ' + e.message);
@@ -7846,20 +7861,33 @@ function calRender() {
   if (calView === 'month') calRenderMonth(); else calRenderList();
 }
 
+// 직전보강: 같은 날 여러 학교를 한 줄로 묶음 (같은 학교는 학년 묶기: 형곡고1·2)
+function calMergePre(list) {
+  const pre = list.filter(e => e.kind === 'premakeup'), rest = list.filter(e => e.kind !== 'premakeup');
+  const byDay = {};
+  pre.forEach(e => { const m = (byDay[e.start] = byDay[e.start] || {}); (m[e.school] = m[e.school] || new Set()).add(e.grade); });
+  Object.entries(byDay).forEach(([d, m]) => {
+    const label = Object.entries(m).map(([sc, gs]) => sc + [...gs].filter(Boolean).sort().join('·')).join(', ');
+    rest.push({ id: 'pre-' + d, src: 'exam', kind: 'premakeup', title: '직전보강', target: label, start: d, end: d, category: '보강·수업' });
+  });
+  return rest;
+}
+const calIsWeekend = s => { const w = calD(s).getDay(); return w === 0 || w === 6; };
+
 function calRenderSummary() {
   const today = localDateStr(new Date());
   const mon = calAdd(today, -((calD(today).getDay() + 6) % 7)), sun = calAdd(mon, 6);
   const inWeek = e => e.start <= sun && (e.end || e.start) >= mon;
-  const exam = calEvents.filter(e => e.category === '학교시험' && (e.end || e.start) >= today).sort((a, b) => a.start.localeCompare(b.start))[0];
-  const mkNames = calEvents.filter(e => e.src === 'makeup' && inWeek(e)).reduce((n, e) => n + (e.target ? e.target.split(', ').length : 0), 0)
-    + calEvents.filter(e => e.src === 'own' && e.category === '보강·수업' && inWeek(e) && e.status !== '취소').length;
+  const exam = calEvents.filter(e => e.kind === 'examday' && e.start >= today).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const pre = calEvents.filter(e => e.kind === 'premakeup' && e.start >= today).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const mkNames = calEvents.filter(e => e.src === 'makeup' && inWeek(e)).reduce((n, e) => n + (e.target ? e.target.split(', ').length : 0), 0);
   const dl = calEvents.filter(e => e.category === '마감·행정' && inWeek(e) && e.status !== '완료' && e.status !== '취소');
   const mine = calMe ? calEvents.filter(e => e.src === 'own' && (e.owner === calMe || e.owner === '전체') && inWeek(e) && e.status === '예정') : [];
-  const dday = exam ? (exam.start <= today ? '진행 중' : 'D-' + calDiff(today, exam.start)) : '';
+  const dd = s => { const n = calDiff(today, s); return n === 0 ? '오늘' : n === 1 ? '내일' : 'D-' + n; };
   document.getElementById('cal-sum').innerHTML = `
-    <div onclick="calSetView('list')"><small>가장 가까운 시험</small><b>${exam ? escH(dday) : '없음'}</b>${exam ? `<em>${escH(exam.title)}</em>` : ''}</div>
-    <div onclick="showPanel('attendance')"><small>이번 주 보강</small><b>${mkNames}명</b></div>
-    <div onclick="calSetView('list')"><small>이번 주 마감</small><b>${dl.length}건</b>${dl[0] ? `<em>${escH(dl[0].title)}</em>` : ''}</div>
+    <div onclick="calSetView('list')" class="cal-sum-pre"><small>다음 직전보강</small><b>${pre ? dd(pre.start) : '없음'}</b>${pre ? `<em>${escH(pre.target)}</em>` : ''}</div>
+    <div onclick="calSetView('list')"><small>가장 가까운 영어 시험</small><b>${exam ? dd(exam.start) : '없음'}</b>${exam ? `<em>${escH(exam.title)}</em>` : ''}</div>
+    <div onclick="showPanel('attendance')"><small>이번 주 보강</small><b>${mkNames}명</b>${dl.length ? `<em>마감 ${dl.length}건</em>` : ''}</div>
     <div onclick="calOwnerFilter='me';calRender()"><small>${calMe ? escH(calMe) + ' 선생님 일정' : '내 일정 (위에서 "나는" 선택)'}</small><b>${calMe ? mine.length + '건' : '-'}</b></div>`;
 }
 
@@ -7878,50 +7906,92 @@ function calToggleCat(c) {
   calRender();
 }
 
-function calEvHtml(e) {
-  const ro = e.src !== 'own';
-  const t = (e.time && e.time !== '종일' ? e.time.replace(/\s*\(.*\)/, '') + ' ' : '') + e.title;
-  return `<span class="cal-ev cc-${e.category}${ro ? ' ro' : ''}${e.status === '완료' || e.status === '취소' ? ' done' : ''}" title="${escH(t + (e.target ? ' · ' + e.target : ''))}" onclick="event.stopPropagation();calClick('${e.id}')">${escH(t)}</span>`;
+// 일정 한 줄: 제목은 진하게, 시간·대상은 연한 회색
+function calEvClass(e) {
+  if (e.kind === 'period') return 'cal-ev cal-period';
+  if (e.kind === 'premakeup') return 'cal-ev cal-pre';
+  return `cal-ev cc-${e.category}${e.src !== 'own' ? ' ro' : ''}${e.status === '완료' || e.status === '취소' ? ' done' : ''}`;
+}
+function calEvInner(e) {
+  const time = e.time && e.time !== '종일' ? e.time.replace(/\s*\(.*\)/, '') : '';
+  if (e.kind === 'premakeup') return `<i class="ti ti-flame"></i>직전보강 <span class="cal-sub">${escH(e.target)}</span>`;
+  if (e.kind === 'period') return `${escH(e.title)} <span class="cal-sub">시험기간</span>`;
+  return `${escH(e.title)}${time ? ` <span class="cal-sub">${escH(time)}</span>` : ''}${e.src === 'makeup' && e.target ? ` <span class="cal-sub">${escH(e.target)}</span>` : ''}`;
 }
 
+// 주 단위로 그림: 여러 날 일정은 한 줄로 이어서(시험기간은 주말 빼고), 하루 일정은 그 칸에
 function calRenderMonth() {
   const [gs, ge] = calGridRange();
   const today = localDateStr(new Date());
   const month = calCursor.getMonth();
-  const max = window.innerWidth < 760 ? 2 : 4;
-  let html = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="cal-dow${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${d}</div>`).join('');
-  for (let day = gs; day <= ge; day = calAdd(day, 1)) {
-    const dd = calD(day), dw = dd.getDay();
-    const evs = calEvents.filter(e => calOn(e, day) && calVisible(e)).sort(calSort);
-    const hol = CAL_HOLIDAYS[day];
-    html += `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${dw === 0 || hol ? ' sun' : dw === 6 ? ' sat' : ''}" onclick="calOpen(null,'${day}')">
-      <div class="cal-dn"><span>${dd.getDate()}</span>${hol ? `<i>${escH(hol)}</i>` : ''}</div>
-      ${evs.filter(e => !e.holiday).slice(0, max).map(calEvHtml).join('')}
-      ${evs.filter(e => !e.holiday).length > max ? `<div class="cal-more">+${evs.filter(e => !e.holiday).length - max}개 더</div>` : ''}
-    </div>`;
+  const maxLanes = window.innerWidth < 760 ? 3 : 4;
+  let html = '<div class="cal-dows">' + ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="cal-dow${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${d}</div>`).join('') + '</div>';
+  const order = { premakeup: 0, examday: 1 };
+  for (let ws = gs; ws <= ge; ws = calAdd(ws, 7)) {
+    const we = calAdd(ws, 6);
+    const days = [...Array(7)].map((_, i) => calAdd(ws, i));
+    // 이 주에 걸친 조각 만들기 (col 0~6)
+    const segs = [];
+    calEvents.filter(e => !e.holiday && calVisible(e) && e.start <= we && (e.end || e.start) >= ws).forEach(e => {
+      const a = e.start < ws ? 0 : calDiff(ws, e.start);
+      const b = (e.end || e.start) > we ? 6 : calDiff(ws, e.end || e.start);
+      if (e.kind === 'period') {   // 시험기간은 주말 빼고 평일 구간만
+        const a2 = Math.min(a, 5), b2 = Math.min(b, 4);
+        if (a2 <= b2) segs.push({ e, a: a2, b: b2 });
+      } else segs.push({ e, a, b });
+    });
+    segs.sort((x, y) => (order[x.e.kind] ?? 2) - (order[y.e.kind] ?? 2) || (y.b - y.a) - (x.b - x.a) || x.a - y.a || calSort(x.e, y.e));
+    const lanes = [];   // lanes[l][col] = 사용 중
+    const hidden = Array(7).fill(0);
+    let bars = '';
+    segs.forEach(sg => {
+      let l = 0;
+      while (lanes[l] && lanes[l].slice(sg.a, sg.b + 1).some(Boolean)) l++;
+      if (l >= maxLanes) { for (let c = sg.a; c <= sg.b; c++) hidden[c]++; return; }
+      (lanes[l] = lanes[l] || Array(7).fill(false)).fill(true, sg.a, sg.b + 1);
+      const contL = sg.e.start < days[sg.a] && sg.e.kind !== 'period', contR = (sg.e.end || sg.e.start) > days[sg.b] && sg.e.kind !== 'period';
+      bars += `<div class="${calEvClass(sg.e)}${contL ? ' cl' : ''}${contR ? ' cr' : ''}" style="grid-column:${sg.a + 1} / ${sg.b + 2};grid-row:${l + 2};"
+        title="${escH(sg.e.title + (sg.e.target ? ' · ' + sg.e.target : '') + (sg.e.end && sg.e.end !== sg.e.start ? ` (${calMD(sg.e.start)}~${calMD(sg.e.end)})` : ''))}"
+        onclick="event.stopPropagation();calClick('${sg.e.id}')">${calEvInner(sg.e)}</div>`;
+    });
+    const cells = days.map((day, i) => {
+      const dd = calD(day), hol = CAL_HOLIDAYS[day];
+      return `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1 / -1;" onclick="calOpen(null,'${day}')"></div>
+        <div class="cal-dn${dd.getMonth() !== month ? ' out' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1;"><span>${dd.getDate()}</span>${hol ? `<i>${escH(hol)}</i>` : ''}${hidden[i] ? `<b class="cal-more" onclick="event.stopPropagation();calShowDay('${day}')">+${hidden[i]}</b>` : ''}</div>`;
+    }).join('');
+    html += `<div class="cal-week" style="grid-template-rows:auto repeat(${maxLanes}, auto) 1fr;">${cells}${bars}</div>`;
   }
   document.getElementById('cal-body').innerHTML = `<div class="cal-grid">${html}</div>`;
+}
+function calShowDay(day) {
+  const evs = calEvents.filter(e => calOn(e, day) && calVisible(e) && !(e.kind === 'period' && calIsWeekend(day))).sort(calSort);
+  toast(`${calMD(day)} (${calDow(day)}) · ` + evs.map(e => e.kind === 'premakeup' ? '직전보강 ' + e.target : e.title).join(' / '));
 }
 
 function calRenderList() {
   const today = localDateStr(new Date());
-  const [gs, ge] = calGridRange();
   const monthStart = localDateStr(new Date(calCursor.getFullYear(), calCursor.getMonth(), 1));
   const isThisMonth = today.slice(0, 7) === monthStart.slice(0, 7);
   const from = isThisMonth ? today : monthStart;
   const to = isThisMonth ? calAdd(today, 45) : localDateStr(new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 0));
+  const order = { premakeup: 0, examday: 1 };
+  const shown = new Set();   // 여러 날 일정은 처음 보이는 날에 한 번만, 기간은 회색으로
   let html = '';
   for (let day = from; day <= to; day = calAdd(day, 1)) {
-    const evs = calEvents.filter(e => calOn(e, day) && calVisible(e)).sort(calSort);
+    const evs = calEvents.filter(e => calOn(e, day) && calVisible(e) && !shown.has(e.id) && !(e.kind === 'period' && calIsWeekend(day)))
+      .sort((x, y) => (order[x.kind] ?? 2) - (order[y.kind] ?? 2) || calSort(x, y));
     if (!evs.length) continue;
+    evs.forEach(e => shown.add(e.id));
     const diff = calDiff(today, day);
     const dl = diff === 0 ? '오늘' : diff === 1 ? '내일' : diff > 0 ? 'D-' + diff : '';
-    html += `<div class="cal-lday"><div class="d">${calMD(day)} (${calDow(day)})<small>${dl}</small></div><div class="evs">${evs.map(e => `
-      <div class="cal-litem" onclick="calClick('${e.id}')">
-        <span class="cal-chip cc-${e.category}">${e.category}</span>
-        <span class="t"${e.status === '완료' || e.status === '취소' ? ' style="text-decoration:line-through;opacity:.55"' : ''}>${escH(e.title)}${e.target ? ` <span style="color:var(--text3)">· ${escH(e.target)}</span>` : ''}</span>
-        <span class="m">${escH([e.time, e.owner].filter(Boolean).join(' · '))}</span>
-      </div>`).join('')}</div></div>`;
+    html += `<div class="cal-lday"><div class="d">${calMD(day)} (${calDow(day)})<small>${dl}</small></div><div class="evs">${evs.map(e => {
+      const multi = e.end && e.end !== e.start;
+      const meta = [multi ? `${calMD(e.start)}~${calMD(e.end)}` : '', e.owner].filter(Boolean).join(' · ');
+      const sub = e.kind === 'premakeup' || e.kind === 'period' ? '' : (e.target ? ` <span class="cal-sub">${escH(e.target)}</span>` : '');
+      return `<div class="cal-litem${e.status === '완료' || e.status === '취소' ? ' done' : ''}" onclick="calClick('${e.id}')">
+        <span class="${calEvClass(e)} cal-lev">${calEvInner(e)}${sub}</span>
+        ${meta ? `<span class="m">${escH(meta)}</span>` : ''}
+      </div>`; }).join('')}</div></div>`;
   }
   document.getElementById('cal-body').innerHTML = `<div class="cal-list">${html || '<div class="cal-empty">이 기간에는 일정이 없어요</div>'}</div>
     <div style="font-size:12px;color:var(--text3);margin-top:8px;">${isThisMonth ? '오늘부터 45일 동안의 일정이에요' : '이 달의 일정이에요'}</div>`;
@@ -7931,6 +8001,7 @@ function calClick(id) {
   const e = calEvents.find(x => x.id === id);
   if (!e) return;
   if (e.src === 'own') return calOpen(e);
+  if (e.kind === 'premakeup') { toast(`${calMD(e.start)} 직전보강: ${e.target} — 시험 관리에서 시험일을 고치면 같이 바뀌어요`); return; }
   if (e.src === 'exam') { toast(`${e.title} — 시험 관리에서 고칠 수 있어요`); return showPanel('exam'); }
   if (e.src === 'makeup') { toast(`${calMD(e.start)} 보강: ${e.target} — 출결 관리에서 고칠 수 있어요`); return; }
   toast(e.title + ' (자동으로 들어간 일정이에요)');

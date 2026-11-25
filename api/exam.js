@@ -224,17 +224,32 @@ export default async function handler(req, res) {
         });
 
         // 2) 학교 시험 (시험 관리 메뉴의 시험정보) — 읽기 전용
+        //    시험기간(period) · 영어 시험일(examday) · 직전보강(premakeup = 시험일 전날, 시험 관리 달력과 같은 규칙)
         try {
           const exams = await queryAll(DB_EXAM, {});
+          const fromP = new Date(new Date(from + 'T00:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
           exams.forEach(p => {
             const pr = p.properties;
-            const s = pr['시험기간_시작']?.date?.start || pr['시험일']?.date?.start || '';
-            const e = pr['시험기간_종료']?.date?.start || s;
-            if (!s || e.slice(0, 10) < from || s.slice(0, 10) > to) return;
-            const school = txt(pr['학교명']), grade = pr['학년']?.select?.name || '';
+            const school = txt(pr['학교명']).replace(/(고등학교|중학교)/g, '').trim();
+            const grade = (pr['학년']?.select?.name || '').replace('학년', '');
             const kind = pr['시험종류']?.select?.name || '시험';
-            events.push({ id: 'exam-' + p.id, src: 'exam', title: `${school} ${grade} ${kind}`.replace(/\s+/g, ' ').trim(),
-              start: s.slice(0, 10), end: e.slice(0, 10), category: '학교시험', memo: txt(pr['메모']) });
+            const label = `${school}${grade}`;
+            const ps = pr['시험기간_시작']?.date?.start?.slice(0, 10) || '';
+            const pe = pr['시험기간_종료']?.date?.start?.slice(0, 10) || ps;
+            const ed = pr['시험일']?.date?.start?.slice(0, 10) || '';
+            if (ps && pe >= from && ps <= to)
+              events.push({ id: 'exp-' + p.id, src: 'exam', kind: 'period', title: `${label} ${kind}`, school, grade,
+                start: ps, end: pe, category: '학교시험', memo: txt(pr['메모']) });
+            if (ed && ed >= from && ed <= to)
+              events.push({ id: 'exd-' + p.id, src: 'exam', kind: 'examday', title: `${label} 영어`, school, grade,
+                start: ed, end: ed, category: '학교시험' });
+            if (ed && ed >= fromP && ed <= to) {
+              const d = new Date(ed + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+              const pd = d.toISOString().slice(0, 10);
+              if (pd >= from && pd <= to)
+                events.push({ id: 'exm-' + p.id, src: 'exam', kind: 'premakeup', title: label, school, grade,
+                  start: pd, end: pd, category: '보강·수업' });
+            }
           });
         } catch (e) { /* 시험 DB를 못 읽어도 달력은 보여줌 */ }
 
