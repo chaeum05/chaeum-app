@@ -392,6 +392,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .sh-apply { white-space:nowrap; flex:0 0 auto; padding:7px 16px; border:0; border-radius:8px; background:var(--burgundy); color:#fff; font-size:13px; font-weight:700; font-family:'Pretendard',sans-serif; cursor:pointer; }
 .sh-period { font-size:12px; color:var(--text3); margin:-4px 0 8px; }
 .sh-card small { display:block; font-size:10.5px; color:var(--text3); font-weight:600; margin-top:1px; }
+.sp-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; font-size:12.5px; color:var(--text2); font-weight:600; }
+.sp-tools select { padding:6px 8px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Pretendard',sans-serif; margin-left:4px; }
+.sp-mini { padding:5px 10px; border:1.5px solid var(--border); background:var(--surface); border-radius:7px; font-size:12px; font-weight:600; font-family:'Pretendard',sans-serif; cursor:pointer; }
+.sp-list { overflow-y:auto; flex:1; min-height:160px; border:1px solid var(--border); border-radius:10px; }
+.sp-row { display:grid; grid-template-columns:22px 80px 44px 70px 1fr 64px; align-items:center; gap:6px; padding:7px 12px; border-bottom:1px solid #f1f5f9; font-size:13px; cursor:pointer; }
+.sp-row span { color:var(--text2); font-size:12.5px; } .sp-row .sp-warn { color:#b45309; font-weight:700; }
+.sp-foot { display:flex; align-items:center; justify-content:space-between; margin-top:12px; font-size:13px; color:var(--text2); font-weight:600; }
 .sh-sum { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:14px; }
 .sh-card { background:var(--surface2); border-radius:10px; padding:10px 12px; }
 .sh-card b { display:block; white-space:nowrap; font-size:20px; font-weight:800; color:#1e293b; line-height:1.2; }
@@ -1396,6 +1403,24 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;margin-bottom:14px;width:fit-content;">
         <button class="rs-tab active" id="sv-cards" onclick="setStudentView('cards')">👤 학생 목록</button>
         <button class="rs-tab" id="sv-books" onclick="setStudentView('books')">📚 교재 · 진도</button>
+        <button class="rs-tab" onclick="openSchedPrint()" title="공통 학습 스케줄 양식에 학생 이름·학년·담임·수업 요일·교재를 채워서 PDF로">🖨 스케줄 양식 출력</button>
+      </div>
+      <div id="modal-sched-print" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-sched-print')">
+        <div class="modal-box sh-box">
+          <div class="sh-head">
+            <div><div class="modal-title" style="margin:0;">🖨 학습 스케줄 양식 출력</div><div class="sh-sub">공통 양식(앞·뒤)에 이름·학년·담임·수업 요일·교재를 채워서 학생마다 2쪽씩 · 양면 인쇄</div></div>
+            <button class="sh-x" onclick="closeModal('modal-sched-print')">✕</button>
+          </div>
+          <div class="sp-tools">
+            <label>달 <select id="sp-month"></select></label>
+            <label>구분 <select id="sp-type" onchange="spFilterChanged()"><option value="">전체</option><option>초등</option><option>중등</option><option>고등</option></select></label>
+            <label>담임 <select id="sp-teacher" onchange="spFilterChanged()"><option value="">전체</option><option>이유민</option><option>성형주</option><option value="__none__">미지정</option></select></label>
+            <span style="flex:1"></span>
+            <button class="sp-mini" onclick="spAll(true)">모두 선택</button><button class="sp-mini" onclick="spAll(false)">모두 해제</button>
+          </div>
+          <div class="sp-list" id="sp-list"></div>
+          <div class="sp-foot"><span id="sp-count"></span><button class="sh-apply" id="sp-make" onclick="spMake()">🖨 PDF 만들기</button></div>
+        </div>
       </div>
       <!-- ➕ 학생 추가 (학생 목록에서) -->
       <details class="att-add-form" id="sl-add" style="margin:0 0 14px;">
@@ -7821,6 +7846,167 @@ async function saveBookEditor(remove) {
   </div>
 </div>
 <div id="sm-capture"></div>
+<script>
+// ════════════════════════════════════════════
+// 🖨 학습 스케줄 양식 출력 — 공통 양식 PDF(앞·뒤) 위에 학생 이름·학년·담임·수업 요일·교재만 얹어서
+//   양식: /schedule/schedule-2026-11_2027-12.pdf (달마다 앞·뒤 2쪽, 2026-11부터)
+// ════════════════════════════════════════════
+const SP_TPL = { url: '/schedule/schedule-2026-11_2027-12.pdf', y: 2026, m: 11, months: 14 };
+const SP_FONT = '/fonts/Pretendard-SemiBold.ttf';
+// 양식 위 칸 위치 (pt, 왼쪽 위 기준 — 양식 PDF에서 잰 값)
+const SP_POS = {
+  name:    { x: 537, w: 51, base: 28 },
+  grade:   { x: 619, w: 31, base: 28 },
+  teacher: { x: 681, w: 41, base: 28 },
+  days:    { '월': 758.25, '화': 774.0, '수': 789.75, '목': 805.5, '금': 821.25, cy: 27.0, r: 6.6 },
+  books:   { x: 57, w: 237, rows: { word: 67.5, grammar: 82.5, reading: 97.5, listening: 112.5, writing: 127.5, naesin: 142.5 } },
+  backName: { x: 776, w: 51, base: 28 },
+};
+let spLibs = null, spSel = new Set();
+
+function spMonths() {
+  const out = [];
+  for (let i = 0; i < SP_TPL.months; i++) {
+    const d = new Date(SP_TPL.y, SP_TPL.m - 1 + i, 1);
+    out.push({ i, v: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: `${d.getFullYear()}년 ${d.getMonth() + 1}월` });
+  }
+  return out;
+}
+async function openSchedPrint() {
+  await ensureStudentsCache();
+  const ms = spMonths();
+  const now = new Date();
+  const nextM = `${new Date(now.getFullYear(), now.getMonth() + (now.getDate() > 20 ? 1 : 0), 1).getFullYear()}-${String(new Date(now.getFullYear(), now.getMonth() + (now.getDate() > 20 ? 1 : 0), 1).getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('sp-month').innerHTML = ms.map(m => `<option value="${m.i}"${m.v === nextM ? ' selected' : ''}>${m.label}</option>`).join('');
+  spSel = new Set(allStudentsCache.filter(spMatch).map(spKey));
+  spRender();
+  document.getElementById('modal-sched-print').classList.add('open');
+}
+const spKey = s => s.name + '|' + s.type;
+function spMatch(s) {
+  const t = document.getElementById('sp-type').value, te = document.getElementById('sp-teacher').value;
+  if (t && s.type !== t) return false;
+  if (te) {
+    const ts = [s.teacher, ...Object.values(s.teachers || {})].filter(Boolean);
+    if (te === '__none__' ? ts.length : !ts.includes(te)) return false;
+  }
+  return true;
+}
+function spFilterChanged() { spSel = new Set(allStudentsCache.filter(spMatch).map(spKey)); spRender(); }
+function spToggle(k, on) { on ? spSel.add(k) : spSel.delete(k); spCount(); }
+function spAll(on) { allStudentsCache.filter(spMatch).forEach(s => on ? spSel.add(spKey(s)) : spSel.delete(spKey(s))); spRender(); }
+function spCount() { document.getElementById('sp-count').textContent = `${[...spSel].length}명 선택 · ${[...spSel].length * 2}쪽 (앞·뒤)`; }
+function spRender() {
+  const order = { '초등': 0, '중등': 1, '고등': 2 };
+  const list = allStudentsCache.filter(spMatch).sort((a, b) => (order[a.type] ?? 3) - (order[b.type] ?? 3) || String(a.grade).localeCompare(String(b.grade)) || a.name.localeCompare(b.name, 'ko'));
+  document.getElementById('sp-list').innerHTML = list.map(s => {
+    const k = spKey(s), nb = Object.values(s.books || {}).filter(b => b?.b).length;
+    return `<label class="sp-row"><input type="checkbox" ${spSel.has(k) ? 'checked' : ''} onchange="spToggle('${escH(k)}',this.checked)">
+      <b>${escH(s.name)}</b><span>${escH(spGrade(s))}</span><span>${escH((s.days || []).join('·'))}</span><span>${escH(spTeacher(s))}</span><span class="${nb ? '' : 'sp-warn'}">${nb ? '교재 ' + nb : '교재 없음'}</span></label>`;
+  }).join('') || '<div class="sh-empty">조건에 맞는 학생이 없어요</div>';
+  spCount();
+}
+const spGrade = s => (s.type || '').slice(0, 1) + String(s.grade || '').replace('학년', '');
+const spTeacher = s => [...new Set([s.teacher, ...(s.days || []).map(d => s.teachers?.[d])].filter(Boolean))].join('·');
+function spBooks(s) {
+  const b = s.books || {}, n = k => (b[k]?.b || '').trim();
+  return { word: [n('word'), n('word2')].filter(Boolean).join(' / '), grammar: n('grammar'), reading: n('reading'), listening: n('listening'), writing: n('writing'), naesin: n('naesin') };
+}
+
+async function spLoadLibs() {
+  if (spLibs) return spLibs;
+  const load = src => new Promise((ok, no) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => no(new Error(src + ' 불러오기 실패')); document.head.appendChild(el); });
+  if (!window.PDFLib) await load('/vendor/pdf-lib.min.js');
+  if (!window.fontkit) await load('/vendor/fontkit.umd.min.js');
+  const [tpl, font] = await Promise.all([fetch(SP_TPL.url).then(r => { if (!r.ok) throw new Error('양식 PDF를 못 불러왔어요'); return r.arrayBuffer(); }),
+    fetch(SP_FONT).then(r => { if (!r.ok) throw new Error('글꼴을 못 불러왔어요'); return r.arrayBuffer(); })]);
+  spLibs = { tpl, font };
+  return spLibs;
+}
+
+async function spMake() {
+  const students = allStudentsCache.filter(s => spSel.has(spKey(s)));
+  if (!students.length) { toast('출력할 학생을 골라주세요'); return; }
+  const mi = +document.getElementById('sp-month').value;
+  const btn = document.getElementById('sp-make');
+  btn.disabled = true; btn.textContent = '⏳ 만드는 중…';
+  try {
+    const { tpl, font } = await spLoadLibs();
+    const { PDFDocument, rgb } = PDFLib;
+    const src = await PDFDocument.load(tpl);
+    const out = await PDFDocument.create();
+    out.registerFontkit(fontkit);
+    const f = await out.embedFont(font);   // subset은 한글이 빠지는 문제가 있어서 통째로
+    const ink = rgb(0.06, 0.20, 0.42), white = rgb(1, 1, 1);
+    const order = { '초등': 0, '중등': 1, '고등': 2 };
+    students.sort((a, b) => (order[a.type] ?? 3) - (order[b.type] ?? 3) || String(a.grade).localeCompare(String(b.grade)) || a.name.localeCompare(b.name, 'ko'));
+    for (const s of students) {
+      const [front, back] = await out.copyPages(src, [mi * 2, mi * 2 + 1]);
+      out.addPage(front); out.addPage(back);
+      const H = front.getHeight();
+      // 칸 너비에 맞게 글자 크기 줄이기
+      const put = (pg, text, p, size = 10) => {
+        if (!text) return;
+        let sz = size; while (sz > 5.5 && f.widthOfTextAtSize(text, sz) > p.w) sz -= 0.25;
+        let t = text; while (f.widthOfTextAtSize(t, sz) > p.w && t.length > 1) t = t.slice(0, -1);
+        pg.drawText(t, { x: p.x, y: H - p.base, size: sz, font: f, color: ink });
+      };
+      const spFillHead = (pg, s) => {
+        put(pg, s.name, SP_POS.name, 10.5);
+        put(pg, spGrade(s), SP_POS.grade, 10);
+        put(pg, spTeacher(s), SP_POS.teacher, 10);
+        (s.days || []).forEach(d => {   // 수업 요일 동그라미 칠하기
+          const cx = SP_POS.days[d]; if (!cx) return;
+          const cy = H - SP_POS.days.cy;
+          pg.drawCircle({ x: cx, y: cy, size: SP_POS.days.r, color: ink });
+          const w = f.widthOfTextAtSize(d, 7.5);
+          pg.drawText(d, { x: cx - w / 2, y: cy - 2.7, size: 7.5, font: f, color: white });
+        });
+      };
+      spFillHead(front, s);
+      const bk = spBooks(s);
+      Object.entries(SP_POS.books.rows).forEach(([k, cy]) => put(front, bk[k], { x: SP_POS.books.x, w: SP_POS.books.w, base: cy + 3.2 }, 9));
+      // 뒷면: 앞면과 같은 이름·학년·담임·수업 칸을 그려 넣고 채움 + 빈 머리 공간에 교재 요약
+      back.drawRectangle({ x: 735, y: H - 36, width: 95, height: 20, color: white });   // 뒷면 원래 '이름' 칸 지우기
+      const lab = rgb(0.12, 0.16, 0.22), line = rgb(0.61, 0.64, 0.69);
+      [['이름', 515.5, 536.2, 588.7], ['학년', 597.5, 618, 651], ['담임', 660, 680.2, 722.2]].forEach(([t, lx, a, b]) => {
+        back.drawText(t, { x: lx, y: H - 31.3, size: 9, font: f, color: lab });
+        back.drawRectangle({ x: a, y: H - 30, width: b - a, height: 0.8, color: line });
+      });
+      back.drawText('수업', { x: 731.6, y: H - 30.5, size: 9, font: f, color: lab });
+      ['월', '화', '수', '목', '금'].forEach(d => {
+        const cx = SP_POS.days[d], cy = H - SP_POS.days.cy;
+        back.drawCircle({ x: cx, y: cy, size: SP_POS.days.r, borderColor: line, borderWidth: 0.7 });
+        const w = f.widthOfTextAtSize(d, 7.5);
+        back.drawText(d, { x: cx - w / 2, y: cy - 2.7, size: 7.5, font: f, color: lab });
+      });
+      spFillHead(back, s);
+      const subj = [['단어', 'word'], ['문법', 'grammar'], ['독해', 'reading'], ['듣기', 'listening'], ['라이팅', 'writing'], ['내신', 'naesin']].filter(([, k]) => bk[k]);
+      for (let i = 0; i < subj.length; i += 2) {   // 두 과목씩 한 줄, 최대 3줄
+        const y = 15.5 + (i / 2) * 7.6;
+        subj.slice(i, i + 2).forEach(([lb, k], j) => {
+          const x0 = 356 + j * 80;
+          back.drawText(lb, { x: x0, y: H - y - 5, size: 6, font: f, color: line });
+          put(back, bk[k], { x: x0 + f.widthOfTextAtSize(lb, 6) + 3, w: 76 - f.widthOfTextAtSize(lb, 6) - 3, base: y + 5 }, 6.3);
+        });
+      }
+    }
+    const bytes = await out.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const m = spMonths()[mi];
+    const a = document.createElement('a');
+    a.href = url; a.download = `학습스케줄_${m.v}_${students.length}명.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    window.open(url, '_blank');
+    toast(`🖨 ${m.label} 스케줄 ${students.length}명 (${students.length * 2}쪽) 만들었어요 · 양면 인쇄하세요`);
+  } catch (e) {
+    toast('만들지 못했어요: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '🖨 PDF 만들기';
+  }
+}
+</script>
 <script>
 // ════════════════════════════════════════════
 // 🗓️ 학원 일정 — 선생님 누구나 추가·수정 (노션 '🗓️ 학원 일정' DB)
