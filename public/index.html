@@ -810,6 +810,18 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .cal-pre .cal-sub { color:rgba(255,255,255,.85) !important; font-weight:600 !important; }
 .cal-lev { display:inline-block; margin:0; max-width:100%; font-size:13px; padding:3px 9px; }
 .cal-litem.done .cal-lev { opacity:.5; text-decoration:line-through; }
+#modal-calday .modal-box { width:min(460px, calc(100vw - 28px)); max-height:88vh; overflow-y:auto; }
+.cal-dtop { display:flex; align-items:center; gap:6px; margin-bottom:14px; } .cal-dtop > div { flex:1; }
+.cal-d-sub { font-size:12px; color:#9a9aaa; margin-top:3px; }
+.cal-ditem { border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+.cal-ditem:hover { border-color:#c2a25c; }
+.cal-ditem.pre { border-color:#e8b4bb; background:#fff6f7; }
+.cal-ditem .h { display:flex; align-items:center; gap:8px; }
+.cal-ditem .h .cal-ev { margin:0; flex-shrink:0; max-width:70%; }
+.cal-ditem .h .w { margin-left:auto; font-size:12px; color:#9a9aaa; white-space:nowrap; }
+.cal-ditem .r { font-size:12.5px; color:#9a9aaa; margin-top:6px; line-height:1.55; }
+.cal-ditem .r b { color:var(--text2); font-weight:600; }
+.cal-ditem .memo { font-size:13px; color:var(--text); margin-top:6px; white-space:pre-wrap; line-height:1.55; }
 .cal-sum-pre { border-color:#e8b4bb !important; background:#fff6f7 !important; }
 .cal-sum-pre b { color:#b01c2e; }
 .cal-list { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
@@ -831,7 +843,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   .cal-sum { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .cal-week { min-height:70px; }
   .cal-ev { font-size:10px; padding:0 3px; margin:0 1px; }
-  .cal-ev .cal-sub, .cal-dn i { display:none; }
+  .cal-week .cal-ev .cal-sub, .cal-dn i { display:none; }
   .cal-top .cal-month { min-width:0; font-size:17px; }
 }
 </style>
@@ -844,9 +856,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
     <nav class="sidebar-nav">
       <div class="nav-grp">매일</div>
+      <div class="nav-item"        onclick="showPanel('calendar')"      id="nav-calendar"><i class="ti ti-calendar-event"></i>학원 일정</div>
       <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance"><i class="ti ti-calendar-check"></i>출결 관리</div>
       <div class="nav-item"        onclick="showPanel('record')"        id="nav-record"><i class="ti ti-pencil"></i>수업 기록</div>
-      <div class="nav-item"        onclick="showPanel('calendar')"      id="nav-calendar"><i class="ti ti-calendar-event"></i>학원 일정</div>
       <div class="nav-grp">학생</div>
       <div class="nav-item"        onclick="showPanel('students')"      id="nav-students"><i class="ti ti-users"></i>학생 관리</div>
       <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books"><i class="ti ti-books"></i>교재 · 진도</div>
@@ -865,9 +877,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   <button class="m-menu-btn" onclick="toggleMobileMenu()" aria-label="메뉴"><i class="ti ti-menu-2"></i></button>
   <div class="m-dim" onclick="toggleMobileMenu(false)"></div>
   <nav class="m-tabbar">
+    <button id="mt-calendar" onclick="showPanel('calendar')"><i class="ti ti-calendar-event"></i>일정</button>
     <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><i class="ti ti-calendar-check"></i>출결</button>
     <button id="mt-record" onclick="showPanel('record')"><i class="ti ti-pencil"></i>기록</button>
-    <button id="mt-calendar" onclick="showPanel('calendar')"><i class="ti ti-calendar-event"></i>일정</button>
     <button id="mt-students" onclick="showPanel('students')"><i class="ti ti-users"></i>학생</button>
     <button id="mt-report-status" onclick="showPanel('report-status')"><i class="ti ti-send"></i>리포트</button>
     <button onclick="toggleMobileMenu()"><i class="ti ti-layout-grid"></i>전체</button>
@@ -919,6 +931,18 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
             <button class="modal-btn primary" id="cal-m-save" onclick="calSave()">저장</button>
             <button class="modal-btn" id="cal-m-del" onclick="calDelete()" style="display:none;color:#b01c2e;">삭제</button>
             <button class="modal-btn" onclick="closeModal('modal-cal')">닫기</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="modal-calday" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-calday')">
+        <div class="modal-box">
+          <div class="cal-dtop"><div><div class="modal-title" id="cal-d-title" style="margin:0;"></div><div class="cal-d-sub" id="cal-d-sub"></div></div>
+            <button class="cal-btn" onclick="calDayMove(-1)" aria-label="전날"><i class="ti ti-chevron-left"></i></button><button class="cal-btn" onclick="calDayMove(1)" aria-label="다음날"><i class="ti ti-chevron-right"></i></button></div>
+          <div id="cal-d-list"></div>
+          <div class="modal-btn-row">
+            <button class="modal-btn primary" onclick="closeModal('modal-calday');calOpen(null,calDay)"><i class="ti ti-plus"></i> 이 날 일정 추가</button>
+            <button class="modal-btn" onclick="closeModal('modal-calday')">닫기</button>
           </div>
         </div>
       </div>
@@ -7956,16 +7980,43 @@ function calRenderMonth() {
     });
     const cells = days.map((day, i) => {
       const dd = calD(day), hol = CAL_HOLIDAYS[day];
-      return `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1 / -1;" onclick="calOpen(null,'${day}')"></div>
+      return `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1 / -1;" onclick="calShowDay('${day}')"></div>
         <div class="cal-dn${dd.getMonth() !== month ? ' out' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1;"><span>${dd.getDate()}</span>${hol ? `<i>${escH(hol)}</i>` : ''}${hidden[i] ? `<b class="cal-more" onclick="event.stopPropagation();calShowDay('${day}')">+${hidden[i]}</b>` : ''}</div>`;
     }).join('');
     html += `<div class="cal-week" style="grid-template-rows:auto repeat(${maxLanes}, auto) 1fr;">${cells}${bars}</div>`;
   }
   document.getElementById('cal-body').innerHTML = `<div class="cal-grid">${html}</div>`;
 }
+let calDay = '';
+function calDayMove(n) { calShowDay(calAdd(calDay, n)); }
+// 📅 날짜를 누르면 그날 일정을 자세히
 function calShowDay(day) {
-  const evs = calEvents.filter(e => calOn(e, day) && calVisible(e) && !(e.kind === 'period' && calIsWeekend(day))).sort(calSort);
-  toast(`${calMD(day)} (${calDow(day)}) · ` + evs.map(e => e.kind === 'premakeup' ? '직전보강 ' + e.target : e.title).join(' / '));
+  calDay = day;
+  const today = localDateStr(new Date()), diff = calDiff(today, day);
+  const hol = CAL_HOLIDAYS[day];
+  const order = { premakeup: 0, examday: 1 };
+  const evs = calEvents.filter(e => !e.holiday && calOn(e, day) && !(e.kind === 'period' && calIsWeekend(day)))
+    .sort((x, y) => (order[x.kind] ?? 2) - (order[y.kind] ?? 2) || (x.kind === 'period') - (y.kind === 'period') || calSort(x, y));
+  document.getElementById('cal-d-title').textContent = `${+day.slice(5, 7)}월 ${+day.slice(8, 10)}일 (${calDow(day)})`;
+  document.getElementById('cal-d-sub').textContent = [diff === 0 ? '오늘' : diff === 1 ? '내일' : diff === -1 ? '어제' : diff > 0 ? 'D-' + diff : -diff + '일 전', hol, evs.length ? `일정 ${evs.length}개` : ''].filter(Boolean).join(' · ');
+  const src = { own: '', exam: '시험 관리에서 자동', makeup: '출결 관리에서 자동', auto: '자동' };
+  document.getElementById('cal-d-list').innerHTML = evs.length ? evs.map(e => {
+    const multi = e.end && e.end !== e.start;
+    const rows = [
+      multi && `<b>기간</b> ${calMD(e.start)}(${calDow(e.start)}) ~ ${calMD(e.end)}(${calDow(e.end)})${e.kind === 'period' ? ' · 주말 제외' : ''}`,
+      e.time && `<b>시간</b> ${escH(e.time)}`,
+      e.target && `<b>${e.kind === 'premakeup' ? '학교' : e.src === 'makeup' ? '학생' : '대상'}</b> ${escH(e.target)}`,
+      e.kind === 'premakeup' && '시험 전날 직전보강이에요',
+      e.status && e.status !== '예정' && `<b>상태</b> ${escH(e.status)}`,
+      e.author && `작성 ${escH(e.author)}${e.editor ? ' · 수정 ' + escH(e.editor) : ''}`,
+    ].filter(Boolean);
+    return `<div class="cal-ditem${e.kind === 'premakeup' ? ' pre' : ''}" onclick="${e.src === 'own' ? `closeModal('modal-calday');calClick('${e.id}')` : `calClick('${e.id}')`}">
+      <div class="h"><span class="${calEvClass(e)}">${calEvInner(e)}</span><span class="w">${escH(e.owner || src[e.src] || '')}</span></div>
+      ${rows.length ? `<div class="r">${rows.join('<br>')}</div>` : ''}
+      ${e.memo ? `<div class="memo">${escH(e.memo)}</div>` : ''}
+    </div>`; }).join('')
+    : '<div class="cal-empty" style="padding:22px;">이 날은 일정이 없어요</div>';
+  document.getElementById('modal-calday').classList.add('open');
 }
 
 function calRenderList() {
@@ -7984,7 +8035,7 @@ function calRenderList() {
     evs.forEach(e => shown.add(e.id));
     const diff = calDiff(today, day);
     const dl = diff === 0 ? '오늘' : diff === 1 ? '내일' : diff > 0 ? 'D-' + diff : '';
-    html += `<div class="cal-lday"><div class="d">${calMD(day)} (${calDow(day)})<small>${dl}</small></div><div class="evs">${evs.map(e => {
+    html += `<div class="cal-lday"><div class="d" style="cursor:pointer" onclick="calShowDay('${day}')">${calMD(day)} (${calDow(day)})<small>${dl}</small></div><div class="evs">${evs.map(e => {
       const multi = e.end && e.end !== e.start;
       const meta = [multi ? `${calMD(e.start)}~${calMD(e.end)}` : '', e.owner].filter(Boolean).join(' · ');
       const sub = e.kind === 'premakeup' || e.kind === 'period' ? '' : (e.target ? ` <span class="cal-sub">${escH(e.target)}</span>` : '');
