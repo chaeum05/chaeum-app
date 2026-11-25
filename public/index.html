@@ -744,6 +744,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 .rep-mode button.active .ti { color: #24364f; }
 #rm-newbie.active { border-color: #15803d; background: #f0fdf4; box-shadow: inset 0 0 0 1px #15803d; }
 #rm-newbie.active .ti, #rm-newbie.active b { color: #15803d; }
+
+.rs-dday { display:inline-block; margin-left:8px; font-size:11.5px; font-weight:700; color:#8a6d2f; background:#f6f1e4; border:1px solid #e8dcbc; border-radius:20px; padding:1px 9px; vertical-align:1px; }
 </style>
 </head>
 <body>
@@ -761,7 +763,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="nav-item"        onclick="showPanel('students','books')" id="nav-books"><i class="ti ti-books"></i>교재 · 진도</div>
       <div class="nav-grp">리포트</div>
       <div class="nav-item"        onclick="showPanel('report')"        id="nav-report"><i class="ti ti-chart-bar"></i>리포트 만들기</div>
-      <div class="nav-item"        onclick="showPanel('report-status')" id="nav-report-status"><i class="ti ti-send"></i>발송 현황</div>
+      <div class="nav-item"        onclick="showPanel('report-status','weekly')"  id="nav-rs-weekly"><i class="ti ti-send"></i>초·중등 주간 발송</div>
+      <div class="nav-item"        onclick="showPanel('report-status','monthly')" id="nav-rs-monthly"><i class="ti ti-send-2"></i>고등 월간 발송</div>
       <div class="nav-grp">시험</div>
       <div class="nav-item"        onclick="showPanel('exam')"          id="nav-exam"><i class="ti ti-clipboard-text"></i>시험 관리</div>
       <div class="nav-item"        onclick="showPanel('analysis')"      id="nav-analysis"><i class="ti ti-chart-line"></i>성적 분석</div>
@@ -1405,18 +1408,18 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <div class="panel" id="panel-report-status">
-      <div class="panel-title">발송 현황</div>
+      <div class="panel-title" id="rs-title">초·중등 주간 발송</div>
 
       <!-- 상단 컨트롤 -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
         <!-- 주간/월간 탭 -->
-        <div style="display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px;">
+        <div style="display:none;">
           <button class="rs-tab active" id="rs-tab-weekly"  onclick="switchReportTab('weekly')">📅 주간 (초·중등)</button>
           <button class="rs-tab"        id="rs-tab-monthly" onclick="switchReportTab('monthly')">📆 월간 (고등)</button>
         </div>
         <!-- 기준일 -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <label style="font-size:12px;color:var(--text2);">기준일</label>
+          <label style="font-size:12px;color:var(--text2);white-space:nowrap;">기준일</label>
           <input type="date" id="rs-base-date" onchange="snapRsBaseDate();loadReportStatus(false)" title="아무 날짜나 골라도 주간은 그 주 월요일, 월간은 그달 1일로 맞춰져요" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Pretendard',sans-serif;outline:none;">
         </div>
         <button onclick="loadReportStatus()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:'Pretendard',sans-serif;cursor:pointer;">🔄 불러오기</button>
@@ -1433,7 +1436,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       </div>
 
       <!-- 담임 필터 -->
-      <div style="display:flex;gap:6px;margin:-8px 0 14px;flex-wrap:wrap;align-items:center;">
+      <div id="rs-teacher-row" style="display:flex;gap:6px;margin:-8px 0 14px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:12px;color:var(--text2);font-weight:600;margin-right:2px;">담임</span>
         <button class="att-tt rs-tt active" data-teacher="" onclick="setRsTeacher('')">전체</button>
         <button class="att-tt rs-tt" data-teacher="이유민" onclick="setRsTeacher('이유민')">이유민</button>
@@ -1645,7 +1648,7 @@ function setNavActive(id) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.m-tabbar button').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + id)?.classList.add('active');
-  document.getElementById('mt-' + (id === 'books' ? 'students' : id))?.classList.add('active');
+  document.getElementById('mt-' + (id === 'books' ? 'students' : id.startsWith('rs-') ? 'report-status' : id))?.classList.add('active');
 }
 function toggleMobileMenu(force) {
   document.body.classList.toggle('m-menu-open', force);
@@ -1653,13 +1656,14 @@ function toggleMobileMenu(force) {
 function showPanel(name, sub) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  setNavActive(name === 'students' && sub === 'books' ? 'books' : name);
+  setNavActive(name === 'students' && sub === 'books' ? 'books'
+             : name === 'report-status' ? 'rs-' + (sub || rsCurrentTab) : name);
   toggleMobileMenu(false);
   window.scrollTo(0, 0);
   if (name === 'students')       { loadStudents(); setStudentView(sub === 'books' ? 'books' : 'cards'); }
   if (name === 'analysis') { const f = document.getElementById('analysis-frame'); if (!f.src) f.src = '/exam-analysis.html'; }
   if (name === 'attendance')     initAttendance();
-  if (name === 'report-status')  initReportStatus();
+  if (name === 'report-status')  { if (sub && sub !== rsCurrentTab) switchReportTab(sub); else initReportStatus(); rsApplyBoard(); }
   if (name === 'exam')           initExam();
   if (name === 'record' && allStudentsCache.length) populateRecordDropdown(allStudentsCache);
   if (name === 'record' && !allStudentsCache.length) loadStudentListForRecord();
@@ -2843,6 +2847,27 @@ function initReportStatus() {
   }
 }
 
+// 🗂 발송 화면 분리: 초·중등 주간 / 고등 월간 (발송함·일괄 생성·담임 필터 따로)
+function rsDivisionOf(item) { return item.type === '고등' ? 'monthly' : 'weekly'; }
+function rsApplyBoard() {
+  const m = rsCurrentTab === 'monthly';
+  const t = document.getElementById('rs-title');
+  if (t) t.textContent = m ? '고등 월간 발송' : '초·중등 주간 발송';
+  const tr = document.getElementById('rs-teacher-row');
+  if (tr) tr.style.display = m ? 'none' : 'flex';
+  if (m && rsTeacher) { rsTeacher = ''; document.querySelectorAll('.rs-tt').forEach(b => b.classList.toggle('active', !b.dataset.teacher)); }
+  refreshOutboxCount();
+}
+function rsDeadline(baseDate) {
+  // 주간: 그 주 금요일 · 월간: 그달 마지막 주 금요일
+  return rsCurrentTab === 'monthly' ? getLastFridayOfMonth(baseDate) : getWeekFriday(getWeekMonday(baseDate));
+}
+function rsDdayText(deadline) {
+  const t = new Date(localDateStr(new Date()) + 'T00:00:00'), d = new Date(deadline + 'T00:00:00');
+  const n = Math.round((d - t) / 86400000);
+  const md = `${+deadline.slice(5,7)}/${+deadline.slice(8,10)}(금)`;
+  return n > 0 ? `${md} 발송 · D-${n}` : n === 0 ? `${md} 오늘 발송` : `${md} 발송일 지남`;
+}
 function switchReportTab(tab) {
   rsCurrentTab = tab;
   document.getElementById('rs-tab-weekly').classList.toggle('active',  tab==='weekly');
@@ -3001,8 +3026,8 @@ function renderReportStatusGrid(baseDate, reportType) {
   prog.innerHTML = `
     <div class="rs-progress-card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:700;">${label}</span>
-        <span style="font-size:12px;color:var(--text2);">전송완료 ${sent} / 전체 ${total}명</span>
+        <span style="font-size:13px;font-weight:700;">${label} <span class="rs-dday">${rsDdayText(rsDeadline(baseDate))}</span></span>
+        <span style="font-size:12px;color:var(--text2);">발송함 <b id="rs-outbox-n">${rsOutboxN}</b> · 전송완료 ${sent} / 전체 ${total}명</span>
       </div>
       <div class="rs-progress-bar-bg">
         <div class="rs-progress-bar-fill" style="width:${pct}%"></div>
@@ -5547,12 +5572,16 @@ function setNavBadge(id, n) {
   const b = document.getElementById(id);
   if (b) { b.textContent = n > 0 ? n : ''; b.style.display = n > 0 ? 'inline-block' : 'none'; }
 }
+let rsOutboxN = 0;
 async function refreshOutboxCount() {
   try {
     const d = await api('update-report-status', { action: 'get_outbox', summary: true });
+    const n = (d.items || []).filter(i => rsDivisionOf(i) === rsCurrentTab).length;   // 지금 화면(주간/월간) 것만
+    rsOutboxN = n;
     const el = document.getElementById('outbox-count');
-    if (el) el.textContent = (d.items || []).length;
-    setNavBadge('nb-outbox', (d.items || []).length);
+    if (el) el.textContent = n;
+    const el2 = document.getElementById('rs-outbox-n');
+    if (el2) el2.textContent = n;
   } catch(e) {}
 }
 
@@ -5750,6 +5779,7 @@ async function saveAndSendNow() {
 
 // 발송 모드 열기 (items 주면 그것만, 없으면 발송함 전체)
 async function openSendMode(items, presetType) {
+  document.getElementById('sm-title').textContent = items ? '📤 발송 모드' : (rsCurrentTab === 'monthly' ? '📤 고등 월간 발송함' : '📤 초·중등 주간 발송함');
   document.getElementById('send-mode').classList.add('open');
   document.body.style.overflow = 'hidden';
   const body = document.getElementById('sm-body');
@@ -5761,7 +5791,7 @@ async function openSendMode(items, presetType) {
       smQueue = items;
     } else {
       const d = await api('update-report-status', { action: 'get_outbox' });
-      smQueue = d.items || [];
+      smQueue = (d.items || []).filter(i => rsDivisionOf(i) === rsCurrentTab);   // 초·중등 / 고등 발송함 따로
     }
   } catch(e) {
     body.innerHTML = `<div class="sm-empty">불러오기 실패: ${e.message}</div>`;
@@ -7460,7 +7490,7 @@ async function saveBookEditor(remove) {
 <div class="sm-overlay" id="send-mode">
   <div class="sm-box">
     <div class="sm-top">
-      <b style="font-size:15px;">📤 발송 모드</b>
+      <b style="font-size:15px;" id="sm-title">📤 발송 모드</b>
       <span id="sm-progress" style="font-size:12px;color:#FEE500;font-weight:700;"></span>
       <select id="sm-filter-type" onchange="smApplyFilter()" style="display:none;">
         <option value="">전체 보고서</option>
