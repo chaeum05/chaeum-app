@@ -746,6 +746,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 #rm-newbie.active .ti, #rm-newbie.active b { color: #15803d; }
 
 .rs-dday { display:inline-block; margin-left:8px; font-size:11.5px; font-weight:700; color:#8a6d2f; background:#f6f1e4; border:1px solid #e8dcbc; border-radius:20px; padding:1px 9px; vertical-align:1px; }
+
+.qg-box { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(0,0,0,0.12); }
+.qg-head { font-size:12px; font-weight:700; color:#24364f; margin-right:4px; }
+.qg-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; border:1.5px solid #c2a25c; background:#fffdf6; color:#24364f; font-size:12.5px; font-weight:700; font-family:'Pretendard',sans-serif; cursor:pointer; }
+.qg-btn .ti { color:#b8923f; font-size:15px; }
+.qg-btn:hover { background:#24364f; color:#fff; border-color:#24364f; }
+.qg-btn:hover .ti { color:#d6bd84; }
 </style>
 </head>
 <body>
@@ -2086,6 +2093,46 @@ document.addEventListener('input', e => {
   inp.classList.toggle('has-sugg', !inp.value && !!inp.dataset.sugg);
 });
 
+// ⚡ 수업 기록 저장 후 바로 리포트 만들기
+// 기록 날짜 기준으로 기간 자동: 초·중등 = 그 주 월~금, 고등 = 그달 1일 ~ 마지막 주 금요일
+function quickGenOffer(statusEl, list) {
+  if (!list || !list.length) return;
+  const box = document.createElement('div');
+  box.className = 'qg-box';
+  const head = document.createElement('span');
+  head.className = 'qg-head';
+  head.textContent = list.length === 1 ? '바로 리포트 만들기' : '저장한 학생 리포트 바로 만들기';
+  box.appendChild(head);
+  list.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qg-btn';
+    b.innerHTML = `<i class="ti ti-sparkles"></i>${escapeHtmlSafe(it.name)}`;
+    b.title = `${it.name} ${it.type === '고등' ? '월간' : '주간'} 리포트를 AI 피드백 포함으로 만들어요`;
+    b.onclick = () => quickGenReport(it);
+    box.appendChild(b);
+  });
+  statusEl.appendChild(box);
+}
+function quickGenReport({ name, type, date }) {
+  const d = date || localDateStr(new Date());
+  showPanel('report');
+  setRepMode('regular');
+  document.getElementById('rep-name').value = name;
+  document.getElementById('rep-type').value = type;
+  const sel = document.getElementById('rep-student-select');
+  if (sel) { const v = JSON.stringify({ name, type }); if ([...sel.options].some(o => o.value === v)) sel.value = v; }
+  if (type === '고등') {
+    document.getElementById('rep-start').value = getMonthFirst(d);
+    document.getElementById('rep-end').value   = getLastFridayOfMonth(d);
+  } else {
+    const mon = getWeekMonday(d);
+    document.getElementById('rep-start').value = mon;
+    document.getElementById('rep-end').value   = getWeekFriday(mon);
+  }
+  generateReport(true);
+}
+
 async function saveBatchRecords() {
   const date = document.getElementById('batch-date').value;
   if (!date) { toast('날짜를 선택하세요.'); return; }
@@ -2126,18 +2173,21 @@ async function saveBatchRecords() {
   status.className = 'status-msg loading';
 
   let done = 0, failed = 0;
+  const savedList = [];
   for (const p of payloads) {
     status.textContent = `⏳ 저장 중 ${done+failed+1}/${payloads.length}...`;
     try {
       await api('save-record', p);
       const card = document.querySelector(`#batch-rows .batch-card[data-id="${p._id}"]`);
       if (card) { card.style.background = '#f0fdf4'; card.style.borderColor = '#86efac'; }
+      savedList.push({ name: p.name, type: p.type, date: p.date });
       done++;
     } catch(e) { failed++; }
   }
 
   status.className = failed ? 'status-msg error' : 'status-msg success';
   status.textContent = `✅ ${done}명 저장 완료${failed?` · ${failed}명 실패`:''}`;
+  quickGenOffer(status, savedList);
   btn.disabled = false;
   toast(`${done}명 저장 완료!`);
 }
@@ -2171,6 +2221,7 @@ async function saveRecord() {
     });
     status.className = 'status-msg success';
     status.textContent = result.message;
+    quickGenOffer(status, [{ name, type: document.getElementById('r-type').value, date: document.getElementById('r-date').value }]);
     ['r-name','r-word','r-grammar','r-reading','r-listening','r-writing','r-naesin','r-note']
       .forEach(id => document.getElementById(id).value = '');
     // 드롭다운도 초기화
