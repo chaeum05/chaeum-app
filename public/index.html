@@ -856,8 +856,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
     <nav class="sidebar-nav">
       <div class="nav-grp">매일</div>
-      <div class="nav-item"        onclick="showPanel('calendar')"      id="nav-calendar"><i class="ti ti-calendar-event"></i>학원 일정</div>
-      <div class="nav-item active" onclick="showPanel('attendance')"    id="nav-attendance"><i class="ti ti-calendar-check"></i>출결 관리</div>
+      <div class="nav-item active" onclick="showPanel('calendar')"      id="nav-calendar"><i class="ti ti-calendar-event"></i>학원 일정</div>
+      <div class="nav-item"        onclick="showPanel('attendance')"    id="nav-attendance"><i class="ti ti-calendar-check"></i>출결 관리</div>
       <div class="nav-item"        onclick="showPanel('record')"        id="nav-record"><i class="ti ti-pencil"></i>수업 기록</div>
       <div class="nav-grp">학생</div>
       <div class="nav-item"        onclick="showPanel('students')"      id="nav-students"><i class="ti ti-users"></i>학생 관리</div>
@@ -877,8 +877,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   <button class="m-menu-btn" onclick="toggleMobileMenu()" aria-label="메뉴"><i class="ti ti-menu-2"></i></button>
   <div class="m-dim" onclick="toggleMobileMenu(false)"></div>
   <nav class="m-tabbar">
-    <button id="mt-calendar" onclick="showPanel('calendar')"><i class="ti ti-calendar-event"></i>일정</button>
-    <button id="mt-attendance" class="active" onclick="showPanel('attendance')"><i class="ti ti-calendar-check"></i>출결</button>
+    <button id="mt-calendar" class="active" onclick="showPanel('calendar')"><i class="ti ti-calendar-event"></i>일정</button>
+    <button id="mt-attendance" onclick="showPanel('attendance')"><i class="ti ti-calendar-check"></i>출결</button>
     <button id="mt-record" onclick="showPanel('record')"><i class="ti ti-pencil"></i>기록</button>
     <button id="mt-students" onclick="showPanel('students')"><i class="ti ti-users"></i>학생</button>
     <button id="mt-report-status" onclick="showPanel('report-status')"><i class="ti ti-send"></i>리포트</button>
@@ -888,7 +888,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   <main class="main-content">
 
     <!-- 🗓️ 학원 일정 -->
-    <div class="panel" id="panel-calendar">
+    <div class="panel active" id="panel-calendar">
       <div class="panel-title">학원 일정</div>
       <div class="panel-sub" style="margin-bottom:16px;">선생님 누구나 추가·수정할 수 있어요. 학교 시험과 보강은 시험 관리·출결 관리에서 자동으로 들어와요</div>
       <div class="cal-top">
@@ -1455,7 +1455,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </div>
 
     <!-- 출결 관리 패널 -->
-    <div class="panel active" id="panel-attendance">
+    <div class="panel" id="panel-attendance">
       <div class="panel-title">출결 관리</div>
 
       <!-- 퇴원 처리 -->
@@ -1803,7 +1803,7 @@ window.onload = function() {
   document.getElementById('rep-end').value   = today;
   document.getElementById('rep-start').value = weekAgo;
   updateGrades();
-  initAttendance(); // 첫 화면이 출결이므로 바로 로드
+  initCalendar();   // 첫 화면은 학원 일정
   refreshOutboxCount();   // 메뉴의 발송함 숫자
 };
 
