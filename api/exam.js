@@ -218,7 +218,7 @@ export default async function handler(req, res) {
             category: pr['분류']?.select?.name || '기타',
             time: txt(pr['시간']), target: txt(pr['대상']),
             owner: pr['담당']?.select?.name || '', status: pr['상태']?.select?.name || '예정',
-            memo: txt(pr['메모']), author: txt(pr['작성자']), editor: txt(pr['수정자']),
+            memo: txt(pr['메모']), author: txt(pr['작성자']), editor: txt(pr['수정자']), autoId: txt(pr['자동ID']),
             edited: p.last_edited_time,
           });
         });
@@ -280,14 +280,14 @@ export default async function handler(req, res) {
       }
 
       if (action === 'cal_save') {
-        const { id, title, start, end, category, time, target, owner, status, memo, who } = req.body;
+        const { id, title, start, end, category, time, target, owner, status, memo, who, autoId } = req.body;
         if (!title || !start) return res.status(400).json({ error: '제목과 날짜는 꼭 넣어주세요' });
         const rt = v => ({ rich_text: [{ text: { content: String(v || '').slice(0, 1900) } }] });
         const props = {
           '제목': { title: [{ text: { content: String(title).slice(0, 200) } }] },
           '날짜': { date: { start, end: end && end > start ? end : null } },
           '분류': { select: { name: category || '기타' } },
-          '시간': rt(time), '대상': rt(target), '메모': rt(memo),
+          '시간': rt(time), '대상': rt(target), '메모': rt(memo), '자동ID': rt(autoId),
           '상태': { select: { name: status || '예정' } },
           '담당': owner ? { select: { name: owner } } : { select: null },
         };

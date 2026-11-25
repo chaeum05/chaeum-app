@@ -7803,6 +7803,7 @@ let calEvents = [];
 let calOff = new Set();
 let calOwnerFilter = '';
 let calEditing = null;
+let calAutoId = '';
 let calRange = '';
 let calMe = '';
 try { calMe = localStorage.getItem('cal-me') || ''; calOff = new Set(JSON.parse(localStorage.getItem('cal-off') || '[]')); } catch (e) {}
@@ -7850,7 +7851,7 @@ async function calLoad() {
   try {
     const d = await api('exam', { action: 'cal_list', from, to });
     if (calRange !== key) return;
-    calEvents = calMergePre(d.events).concat(calAutoEvents(from, to));
+    calEvents = calApplyOverrides(calMergePre(d.events), calAutoEvents(from, to));
   } catch (e) {
     calEvents = calAutoEvents(from, to);
     toast('일정을 못 불러왔어요: ' + e.message);
@@ -7866,8 +7867,10 @@ function calAutoEvents(from, to) {
   while (localDateStr(m) <= to) {
     const last = new Date(m.getFullYear(), m.getMonth() + 1, 0);
     last.setDate(last.getDate() - ((last.getDay() + 2) % 7));   // 그 달 마지막 금요일
+    const key = localDateStr(last).slice(0, 7);   // 자동ID는 달 기준 (날짜를 옮겨도 같은 일정)
+    while (CAL_HOLIDAYS[localDateStr(last)] || last.getDay() === 0 || last.getDay() === 6) last.setDate(last.getDate() - 1);   // 공휴일이면 그 전 평일로
     const s = localDateStr(last);
-    if (s >= from && s <= to) out.push({ id: 'rep-' + s, src: 'auto', title: '고등 월간 리포트 발송 마감', start: s, end: s, category: '마감·행정' });
+    if (s >= from && s <= to) out.push({ id: 'rep-' + key, src: 'auto', title: '고등 월간 리포트 발송 마감', start: s, end: s, category: '마감·행정' });
     m.setMonth(m.getMonth() + 1);
   }
   return out;
@@ -7885,6 +7888,12 @@ function calRender() {
   if (calView === 'month') calRenderMonth(); else calRenderList();
 }
 
+// ✏️ 자동 일정(공휴일·리포트 마감)을 고치거나 숨긴 경우: 노션에 '자동ID'가 적힌 일정이 원래 자동 일정을 대신함
+function calApplyOverrides(list, autos) {
+  const over = new Set(list.filter(e => e.src === 'own' && e.autoId).map(e => e.autoId));
+  return list.filter(e => !(e.src === 'own' && e.autoId && e.status === '취소'))   // 숨긴 자동 일정
+    .concat(autos.filter(a => !over.has(a.id)).map(a => ({ ...a, edited: undefined })));
+}
 // 직전보강: 같은 날 여러 학교를 한 줄로 묶음 (같은 학교는 학년 묶기: 형곡고1·2)
 function calMergePre(list) {
   const pre = list.filter(e => e.kind === 'premakeup'), rest = list.filter(e => e.kind !== 'premakeup');
@@ -7896,6 +7905,7 @@ function calMergePre(list) {
   });
   return rest;
 }
+const calHol = day => (calEvents.find(e => e.holiday && e.start === day) || {}).title || '';
 const calIsWeekend = s => { const w = calD(s).getDay(); return w === 0 || w === 6; };
 
 function calRenderSummary() {
@@ -7979,7 +7989,7 @@ function calRenderMonth() {
         onclick="event.stopPropagation();calClick('${sg.e.id}')">${calEvInner(sg.e)}</div>`;
     });
     const cells = days.map((day, i) => {
-      const dd = calD(day), hol = CAL_HOLIDAYS[day];
+      const dd = calD(day), hol = calHol(day);
       return `<div class="cal-cell${dd.getMonth() !== month ? ' out' : ''}${day === today ? ' today' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1 / -1;" onclick="calShowDay('${day}')"></div>
         <div class="cal-dn${dd.getMonth() !== month ? ' out' : ''}${i === 6 || hol ? ' sun' : i === 5 ? ' sat' : ''}" style="grid-column:${i + 1};grid-row:1;"><span>${dd.getDate()}</span>${hol ? `<i>${escH(hol)}</i>` : ''}${hidden[i] ? `<b class="cal-more" onclick="event.stopPropagation();calShowDay('${day}')">+${hidden[i]}</b>` : ''}</div>`;
     }).join('');
@@ -7993,13 +8003,13 @@ function calDayMove(n) { calShowDay(calAdd(calDay, n)); }
 function calShowDay(day) {
   calDay = day;
   const today = localDateStr(new Date()), diff = calDiff(today, day);
-  const hol = CAL_HOLIDAYS[day];
+  const hol = calHol(day);
   const order = { premakeup: 0, examday: 1 };
-  const evs = calEvents.filter(e => !e.holiday && calOn(e, day) && !(e.kind === 'period' && calIsWeekend(day)))
+  const evs = calEvents.filter(e => calOn(e, day) && !(e.kind === 'period' && calIsWeekend(day)))
     .sort((x, y) => (order[x.kind] ?? 2) - (order[y.kind] ?? 2) || (x.kind === 'period') - (y.kind === 'period') || calSort(x, y));
   document.getElementById('cal-d-title').textContent = `${+day.slice(5, 7)}월 ${+day.slice(8, 10)}일 (${calDow(day)})`;
   document.getElementById('cal-d-sub').textContent = [diff === 0 ? '오늘' : diff === 1 ? '내일' : diff === -1 ? '어제' : diff > 0 ? 'D-' + diff : -diff + '일 전', hol, evs.length ? `일정 ${evs.length}개` : ''].filter(Boolean).join(' · ');
-  const src = { own: '', exam: '시험 관리에서 자동', makeup: '출결 관리에서 자동', auto: '자동' };
+  const src = { own: '', exam: '시험 관리에서 자동', makeup: '출결 관리에서 자동', auto: '자동 · 눌러서 수정' };
   document.getElementById('cal-d-list').innerHTML = evs.length ? evs.map(e => {
     const multi = e.end && e.end !== e.start;
     const rows = [
@@ -8010,7 +8020,7 @@ function calShowDay(day) {
       e.status && e.status !== '예정' && `<b>상태</b> ${escH(e.status)}`,
       e.author && `작성 ${escH(e.author)}${e.editor ? ' · 수정 ' + escH(e.editor) : ''}`,
     ].filter(Boolean);
-    return `<div class="cal-ditem${e.kind === 'premakeup' ? ' pre' : ''}" onclick="${e.src === 'own' ? `closeModal('modal-calday');calClick('${e.id}')` : `calClick('${e.id}')`}">
+    return `<div class="cal-ditem${e.kind === 'premakeup' ? ' pre' : ''}" onclick="${e.src === 'own' || e.src === 'auto' ? `closeModal('modal-calday');calClick('${e.id}')` : `calClick('${e.id}')`}">
       <div class="h"><span class="${calEvClass(e)}">${calEvInner(e)}</span><span class="w">${escH(e.owner || src[e.src] || '')}</span></div>
       ${rows.length ? `<div class="r">${rows.join('<br>')}</div>` : ''}
       ${e.memo ? `<div class="memo">${escH(e.memo)}</div>` : ''}
@@ -8055,7 +8065,7 @@ function calClick(id) {
   if (e.kind === 'premakeup') { toast(`${calMD(e.start)} 직전보강: ${e.target} — 시험 관리에서 시험일을 고치면 같이 바뀌어요`); return; }
   if (e.src === 'exam') { toast(`${e.title} — 시험 관리에서 고칠 수 있어요`); return showPanel('exam'); }
   if (e.src === 'makeup') { toast(`${calMD(e.start)} 보강: ${e.target} — 출결 관리에서 고칠 수 있어요`); return; }
-  toast(e.title + ' (자동으로 들어간 일정이에요)');
+  calOpen(null, null, { ...e, autoId: e.id });   // 자동 일정 → 고치면 내 일정으로 저장돼서 대신 보임
 }
 
 function calPickCat(c) {
@@ -8065,7 +8075,8 @@ function calOpen(e, day, preset) {
   if (!calMe) toast('위의 "나는"에서 본인을 골라두면 누가 썼는지 남아요');
   calEditing = e || null;
   const v = e || preset || {};
-  document.getElementById('cal-m-title').textContent = e ? '일정 고치기' : '일정 추가';
+  calAutoId = v.autoId || '';
+  document.getElementById('cal-m-title').textContent = e ? '일정 고치기' : calAutoId ? '자동 일정 고치기' : '일정 추가';
   document.getElementById('cal-m-cat').innerHTML = CAL_CATS.map(c => `<span class="cal-chip cc-${c}" data-c="${c}" onclick="calPickCat('${c}')">${c}</span>`).join('');
   calPickCat(v.category || '기타');
   document.getElementById('cal-m-name').value = v.title || '';
@@ -8076,10 +8087,15 @@ function calOpen(e, day, preset) {
   document.getElementById('cal-m-target').value = v.target || '';
   document.getElementById('cal-m-memo').value = v.memo || '';
   document.getElementById('cal-m-status').value = v.status || '예정';
-  document.getElementById('cal-m-del').style.display = e ? '' : 'none';
+  const del = document.getElementById('cal-m-del');
+  del.style.display = e || calAutoId ? '' : 'none';
+  del.textContent = !e && calAutoId ? '숨기기' : e && e.autoId ? '원래대로' : '삭제';
   document.getElementById('cal-m-hist').textContent = e
     ? [e.author && '작성 ' + e.author, e.editor && '마지막 수정 ' + e.editor, e.edited && new Date(e.edited).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })].filter(Boolean).join(' · ')
     : '';
+  if (calAutoId) document.getElementById('cal-m-hist').textContent = e
+    ? '자동 일정을 고친 거예요. "원래대로"를 누르면 자동 일정으로 돌아가요'
+    : '자동으로 들어간 일정이에요. 고쳐서 저장하면 고친 내용으로 바뀌고, "숨기기"를 누르면 달력에서 빠져요';
   document.getElementById('modal-cal').classList.add('open');
   setTimeout(() => document.getElementById('cal-m-name').focus(), 50);
 }
@@ -8096,7 +8112,7 @@ async function calSave() {
     target: document.getElementById('cal-m-target').value.trim(),
     memo: document.getElementById('cal-m-memo').value.trim(),
     status: document.getElementById('cal-m-status').value,
-    who: calMe,
+    who: calMe, autoId: calAutoId,
   };
   if (!body.title) { toast('제목을 넣어주세요'); return document.getElementById('cal-m-name').focus(); }
   if (!body.start) { toast('날짜를 골라주세요'); return; }
@@ -8113,7 +8129,18 @@ async function calSave() {
 }
 
 async function calDelete() {
+  if (!calEditing && calAutoId) {   // 자동 일정 숨기기 = '취소' 상태로 저장
+    if (!confirm('이 자동 일정을 달력에서 숨길까요?')) return;
+    document.getElementById('cal-m-status').value = '취소';
+    return calSave();
+  }
   if (!calEditing) return;
+  if (calEditing.autoId) {
+    if (!confirm('고친 내용을 지우고 원래 자동 일정으로 되돌릴까요?')) return;
+    try { await api('exam', { action: 'cal_delete', id: calEditing.id }); toast('원래 자동 일정으로 되돌렸어요'); closeModal('modal-cal'); calLoad(); }
+    catch (e) { toast('되돌리지 못했어요: ' + e.message); }
+    return;
+  }
   if (!confirm(`"${calEditing.title}" 일정을 지울까요?`)) return;
   try {
     const d = await api('exam', { action: 'cal_delete', id: calEditing.id });
