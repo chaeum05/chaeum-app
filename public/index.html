@@ -864,6 +864,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   .cal-week .cal-ev .cal-sub, .cal-dn i { display:none; }
   .cal-top .cal-month { min-width:0; font-size:17px; }
 }
+
+#sm-search { width: 130px !important; flex: 0 1 130px; margin: 0 0 0 auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #c2a25c; background: #fff; font-size: 12.5px; font-family: 'Pretendard', sans-serif; }
+#sm-search:focus { outline: none; box-shadow: 0 0 0 3px rgba(194,162,92,0.3); }
+.sm-found { display: none; flex-wrap: wrap; gap: 6px; padding: 8px 12px; background: #fffdf6; border-bottom: 1px solid #ece3cf; }
+.sm-found.on { display: flex; }
+.sm-fd { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid #c2a25c; background: #fff; cursor: pointer; font-family: 'Pretendard', sans-serif; font-size: 13px; color: #24364f; }
+.sm-fd small { font-size: 11px; color: #8a6d2f; }
+.sm-fd:hover, .sm-fd.on { background: #24364f; color: #fff; border-color: #24364f; }
+.sm-fd:hover small, .sm-fd.on small { color: #d6bd84; }
+.sm-fd-none { font-size: 12.5px; color: #94a3b8; }
 </style>
 </head>
 <body>
@@ -6119,12 +6129,47 @@ function smRenderTabs() {
   });
 }
 
+// 🔍 발송함 학생 검색: 이름(또는 학부모 카톡명)으로 찾아서 바로 그 학생 리포트로 이동 → 수정
+function smSearch() {
+  const q = (document.getElementById('sm-search').value || '').trim().replace(/\s+/g, '');
+  const box = document.getElementById('sm-found');
+  box.innerHTML = '';
+  if (!q) { box.classList.remove('on'); return; }
+  const hits = smQueue.filter(it => it.name.replace(/\s+/g, '').includes(q) || smKakaoOf(it).replace(/\s+/g, '').includes(q));
+  box.classList.add('on');
+  if (!hits.length) { box.innerHTML = '<span class="sm-fd-none">발송함에 없는 학생이에요</span>'; return; }
+  hits.slice(0, 20).forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sm-fd' + (it === smCur ? ' on' : '');
+    b.innerHTML = `<b>${escapeHtmlSafe(it.name)}</b><small>${escapeHtmlSafe(it.reportType)} · ${escapeHtmlSafe(smFmtDate(it))}</small>`;
+    b.onclick = () => smGoTo(it);
+    box.appendChild(b);
+  });
+}
+function smGoTo(it) {
+  const ft = document.getElementById('sm-filter-type');
+  const ftc = document.getElementById('sm-filter-teacher');
+  // 지금 탭·담임 필터에 안 보이는 학생이면 필터를 풀어서 보이게
+  if (ft.value && ft.value !== it.reportType) ft.value = it.reportType;
+  if (ftc && ftc.value && !smTeacherOk(it)) ftc.value = '';
+  smList = smQueue.filter(x => (!ft.value || x.reportType === ft.value) && smTeacherOk(x));
+  smRenderTabs();
+  smShow(it);
+  document.getElementById('sm-search').value = '';
+  const box = document.getElementById('sm-found');
+  box.innerHTML = ''; box.classList.remove('on');
+  document.getElementById('sm-body')?.scrollIntoView({ block: 'start' });
+}
+
 function closeSendMode() {
   document.getElementById('send-mode').classList.remove('open');
   document.body.style.overflow = '';
   if (smAuto) smAuto.stop = true;
   smAutoPanel('');
   smCur = null; smBlob = null; smExamBlob = null;
+  const se = document.getElementById('sm-search'); if (se) se.value = '';
+  const sf = document.getElementById('sm-found'); if (sf) { sf.innerHTML = ''; sf.classList.remove('on'); }
   refreshOutboxCount();
 }
 
@@ -7776,8 +7821,10 @@ async function saveBookEditor(remove) {
         <option value="성형주">성형주</option>
         <option value="__none__">담임 미지정</option>
       </select>
+      <input id="sm-search" type="search" placeholder="🔍 학생 찾기" autocomplete="off" oninput="smSearch()" onkeydown="if(event.key==='Enter'){const b=document.querySelector('#sm-found .sm-fd');if(b)b.click();}">
       <button class="sm-close" onclick="closeSendMode()">✕ 닫기</button>
     </div>
+    <div class="sm-found" id="sm-found"></div>
     <div class="sm-tabs" id="sm-tabs"></div>
     <div id="sm-body"></div>
     <div class="sm-auto" id="sm-auto" style="display:none;"></div>
